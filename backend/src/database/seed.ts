@@ -1,68 +1,104 @@
 import bcrypt from 'bcryptjs';
 import { sequelize } from '../config/database.js';
-import { setupAssociations } from './associations.js';
 import { Especialidad } from '../modules/especialidades/Especialidad.model.js';
 import { Rol } from '../modules/usuarios/Rol.model.js';
 import { Usuario } from '../modules/usuarios/Usuario.model.js';
+import { setupAssociations } from './associations.js';
 
 const roles = [
   { name: 'AUTOR', description: 'Profesional que envía manuscritos científicos.' },
   {
     name: 'DDI',
-    description: 'Departamento de Docencia e Investigación; valida envíos y asigna revisores.',
+    description: 'Departamento de Docencia e Investigación.',
   },
   {
     name: 'COMITE',
-    description: 'Miembro del Comité Científico que revisa manuscritos y emite dictámenes.',
+    description: 'Miembro del Comité Científico.',
   },
   {
     name: 'PUBLISHER',
-    description: 'Encargado de Publicación / Prensa que prepara y publica artículos.',
+    description: 'Encargado de Publicación / Prensa.',
   },
-  { name: 'ADMIN', description: 'Administrador con control del sistema.' },
+  { name: 'ADMIN', description: 'Administrador del sistema.' },
 ] as const;
 
 const specialties = [
   {
     name: 'Clínica Médica',
-    description: 'Especialidad de clínica médica del Hospital Interdistrital Evita.',
+    description: 'Especialidad de Clínica Médica.',
     active: true,
   },
   {
     name: 'Cirugía General',
-    description: 'Especialidad de cirugía general del Hospital Interdistrital Evita.',
+    description: 'Especialidad de Cirugía General.',
     active: true,
   },
   {
     name: 'Pediatría',
-    description: 'Especialidad de pediatría del Hospital Interdistrital Evita.',
+    description: 'Especialidad de Pediatría.',
     active: true,
   },
   {
     name: 'Terapia Intensiva',
-    description: 'Especialidad de terapia intensiva del Hospital Interdistrital Evita.',
+    description: 'Especialidad de Terapia Intensiva.',
     active: true,
   },
 ] as const;
 
-const testUsers = [
-  { roleName: 'AUTOR', specialtyName: 'Clínica Médica' },
-  { roleName: 'DDI', specialtyName: 'Cirugía General' },
-  { roleName: 'COMITE', specialtyName: 'Pediatría' },
-  { roleName: 'PUBLISHER', specialtyName: 'Terapia Intensiva' },
-  { roleName: 'ADMIN', specialtyName: 'Clínica Médica' },
+const seedUsers = [
+  {
+    username: 'admin',
+    email: 'admin@hief.gob.ar',
+    first_name: 'Administrador',
+    last_name: 'HIEF',
+    dni: 'SEED-ADMIN',
+    roleName: 'ADMIN',
+    specialtyName: null,
+  },
+  {
+    username: 'docencia',
+    email: 'docencia@hief.gob.ar',
+    first_name: 'Docencia',
+    last_name: 'HIEF',
+    dni: 'SEED-DDI',
+    roleName: 'DDI',
+    specialtyName: null,
+  },
+  {
+    username: 'comite',
+    email: 'comite@hief.gob.ar',
+    first_name: 'Comité',
+    last_name: 'Científico',
+    dni: 'SEED-COMITE',
+    roleName: 'COMITE',
+    specialtyName: 'Clínica Médica',
+  },
+  {
+    username: 'prensa',
+    email: 'prensa@hief.gob.ar',
+    first_name: 'Prensa',
+    last_name: 'HIEF',
+    dni: 'SEED-PUBLISHER',
+    roleName: 'PUBLISHER',
+    specialtyName: null,
+  },
+  {
+    username: 'autor',
+    email: 'autor@hief.gob.ar',
+    first_name: 'Autor',
+    last_name: 'HIEF',
+    dni: 'SEED-AUTOR',
+    roleName: 'AUTOR',
+    specialtyName: 'Pediatría',
+  },
 ] as const;
-
-const testPassword = '123456';
 
 const seedDatabase = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
-
-  // Create missing tables without altering existing table schemas.
   await sequelize.sync();
 
-  const passwordHash = await bcrypt.hash(testPassword, 10);
+  const passwordHash = await bcrypt.hash('Hief2026*', 10);
 
   await sequelize.transaction(async (transaction) => {
     for (const role of roles) {
@@ -81,47 +117,45 @@ const seedDatabase = async (): Promise<void> => {
       });
     }
 
-    for (const testUser of testUsers) {
+    for (const userData of seedUsers) {
       const role = await Rol.findOne({
-        where: { name: testUser.roleName },
-        transaction,
-      });
-      const specialty = await Especialidad.findOne({
-        where: { name: testUser.specialtyName },
+        where: { name: userData.roleName },
         transaction,
       });
 
-      if (!role || !specialty) {
-        throw new Error(
-          `Unable to find role "${testUser.roleName}" or specialty "${testUser.specialtyName}".`,
-        );
+      const specialty = userData.specialtyName
+        ? await Especialidad.findOne({
+            where: { name: userData.specialtyName },
+            transaction,
+          })
+        : null;
+
+      if (!role || (userData.specialtyName && !specialty)) {
+        throw new Error(`Required role or specialty is missing for ${userData.email}.`);
       }
 
-      const username = `test_${testUser.roleName.toLowerCase()}`;
       await Usuario.findOrCreate({
-        where: { email: `${username}@example.test` },
+        where: { email: userData.email },
         defaults: {
-          username,
-          email: `${username}@example.test`,
+          username: userData.username,
+          email: userData.email,
           password: passwordHash,
-          first_name: 'Cuenta',
-          last_name: `Prueba ${testUser.roleName}`,
-          dni: `TEST-${testUser.roleName}`,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          dni: userData.dni,
           active: true,
           roleId: role.id,
-          specialtyId: specialty.id,
+          specialtyId: specialty?.id ?? null,
+          must_change_password: false,
         },
         transaction,
       });
     }
   });
 
-  console.info('Database seed completed. Test users (temporary password: 123456):');
-  for (const testUser of testUsers) {
-    const username = `test_${testUser.roleName.toLowerCase()}`;
-    console.info(`- ${username}@example.test (${testUser.roleName})`);
-  }
-  console.warn('These are development-only test accounts; change the shared password before use.');
+  console.info('Database seed completed.');
+  console.info(`Created or confirmed ${roles.length} roles, ${specialties.length} specialties, and ${seedUsers.length} users.`);
+  console.warn('Seed accounts use a shared development password. Change it before real deployment.');
 };
 
 try {

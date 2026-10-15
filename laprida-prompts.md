@@ -18,3 +18,39 @@ El seeder debe realizar las siguientes operaciones utilizando transacciones de S
 3. Crear un usuario de prueba por cada rol (con contraseña hasheada usando `bcrypt`, ej. password "123456"), asociándolos correctamente a sus respectivos `roleId` y `specialtyId`.
 
 Agrega un script en el `package.json` del backend llamado `"db:seed"` para poder ejecutar este archivo fácilmente desde la terminal (ej: `ts-node src/database/seed.ts` o su equivalente con node).
+
+## Implementacion jwt,middlewares y roles:
+
+Actúa como Arquitecto Backend Senior en TypeScript. Basándote estrictamente en #file:spec.md, #file:contrato.md y #file:.github/copilot-instructions.md, implementa la infraestructura base de Autenticación JWT, los middlewares de seguridad y el Módulo 1 (`auth`) en `/backend`.
+
+Reglas de negocio obligatorias (Caso de Uso N°3):
+- No existe registro público abierto (solo el ADMIN crea usuarios).
+- Todas las respuestas deben respetar la interfaz `{ success: boolean, data?: T, error?: string }` definida en `contrato.md`.
+- En credenciales inválidas, devolver siempre el mensaje genérico: "Correo o contraseña incorrectos" (HTTP 401).
+- Bloqueo temporal tras 10 intentos fallidos (`failed_login_attempts` y `locked_until` por 30 minutos).
+- Si `active === false` o la cuenta está bloqueada temporalmente, devolver HTTP 403 con "Cuenta inactiva o bloqueada. Contacte al Administrador".
+
+Genera o actualiza los siguientes archivos en TypeScript estricto (sin usar `any`):
+
+1. `src/types/express.d.ts`:
+   Extiende `Request` de Express con `user?: { id: number; role: 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'ADMIN'; specialtyId: number | null; email: string }`.
+
+2. `src/config/jwt.ts`:
+   Funciones tipadas `signToken(payload)` y `verifyToken(token)` usando `jsonwebtoken` (`JWT_SECRET`, `JWT_EXPIRES_IN = '8h'`).
+
+3. `src/middlewares/auth.middleware.ts` y `src/middlewares/role.middleware.ts`:
+   - `authenticateJWT`: Valida el header `Authorization: Bearer <token>` e inyecta `req.user`. Si no existe o expiró, responde HTTP 401 `{ success: false, error: "Sesión expirada. Inicie sesión nuevamente" }`.
+   - `requireRole(allowedRoles: RoleName[])`: Verifica que `req.user.role` esté incluido en `allowedRoles`. Si no, responde HTTP 403 `{ success: false, error: "No tiene permisos para acceder a esta sección" }`.
+
+4. `src/middlewares/error.middleware.ts`:
+   Middleware global de errores para Express que capture cualquier excepción no controlada y devuelva `{ success: false, error: err.message || "Error interno del servidor" }`.
+
+5. Módulo `src/modules/auth/` (`auth.dto.ts`, `auth.service.ts`, `auth.controller.ts`, `auth.routes.ts`):
+   Implementa los endpoints del Módulo 1 de `#file:contrato.md`:
+   - `POST /api/auth/login`
+   - `POST /api/auth/logout` (protegido por `authenticateJWT`)
+   - `GET /api/auth/me` (protegido por `authenticateJWT`, devuelve los datos actualizados del usuario)
+   - `GET /api/auth/verify` (protegido por `authenticateJWT`, confirma validez del token)
+   - `POST /api/auth/change-password` (protegido por `authenticateJWT`, permite cambiar la contraseña y pasa `must_change_password` a `false`)
+
+6. Registra las rutas bajo `/api/auth` y el `error.middleware.ts` en `src/app.ts` (o `src/server.ts`).
