@@ -76,3 +76,58 @@ Verificar que Tailwind CSS esté correctamente configurado y funcionando en el p
 ## Criterio de aceptación
 
 Me mostrás la tabla con el estado de cada verificación y esperás mi confirmación antes de seguir. Si algo falta, decime exactamente qué es lo que falta.
+
+# Tarea 2a: Configuracion de tailwind.config
+
+bien puedes añadir el primer archivo que no se encontro este debe de esta adaptado para futuras implementacion de contenido es decir no tiene que ser hardcodeado
+
+# Tarea 2b: Crear `postcss.config.js`
+
+## Contexto
+
+Estoy configurando Tailwind CSS en el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya está creado `tailwind.config.js`. Ahora falta configurar PostCSS para que Tailwind funcione.
+
+## Objetivo
+
+Crear el archivo `postcss.config.js` en la raíz del frontend, con la configuración estándar para Tailwind CSS + Autoprefixer.
+
+## Lo que debés hacer
+
+1. Verificar que `postcss.config.js` NO exista ya. Si existe, reportalo y detenete.
+2. Verificar en `package.json` si el proyecto usa ESM (`"type": "module"`) o CommonJS.
+3. Crear `frontend/postcss.config.js` con la sintaxis correspondiente:
+   - **Si es ESM:**
+
+     ```javascript
+     export default {
+       plugins: {
+         tailwindcss: {},
+         autoprefixer: {},
+       },
+     };
+     ```
+
+   - **Si es CommonJS:**
+     ```javascript
+     module.exports = {
+       plugins: {
+         tailwindcss: {},
+         autoprefixer: {},
+       },
+     };
+     ```
+
+## Lo que NO debés hacer
+
+- No modifiques `tailwind.config.js`.
+- No modifiques `package.json`.
+- No toques `index.css`.
+- No avances con ninguna otra tarea.
+
+## Criterio de aceptación
+
+Me mostrás:
+
+1. El contenido final de `postcss.config.js`.
+2. Confirmación de si el proyecto usa ESM o CommonJS (basado en `package.json`).
+3. Esperás mi confirmación antes de seguir.
