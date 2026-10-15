@@ -54,6 +54,7 @@ El sistema reconoce **5 perfiles institucionales operativos** (creados exclusiva
 ---
 
 ## 6. Contratos y Estándares API
+*   **Documento de Contratos (Fuente de la Verdad de Endpoints y DTOs):** Todos los endpoints por módulo, métodos HTTP, roles requeridos y estructuras de payloads/responses están definidos obligatoriamente en el archivo [`contrato.md`](./contrato.md) ubicado en la raíz del proyecto.
 *   **Formato JSON estándar:** 
     *   Éxito: `{ "success": true, "data": <payload> }`
     *   Error: `{ "success": false, "error": "Mensaje legible" }`
