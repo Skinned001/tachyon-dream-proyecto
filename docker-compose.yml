@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: chief-journal-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: chief_journal
+      MYSQL_USER: chief_user
+      MYSQL_PASSWORD: chief_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+    container_name: chief-journal-backend
+    depends_on:
+      - db
+    environment:
+      NODE_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: chief_journal
+      DB_USER: chief_user
+      DB_PASSWORD: chief_pass
+      JWT_SECRET: supersecret
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: chief-journal-ai
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./ai-service:/app
+
+volumes:
+  db_data:
