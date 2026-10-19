@@ -351,3 +351,90 @@ dist-ssr/
 
 ## Respuesta esperada
 Mostrame el contenido final de `frontend/.gitignore` y decime si el `npm run build` pasó o falló.
+
+
+# Tarea 5: Crear el Cliente HTTP (Axios)
+
+## Contexto
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos la estructura de carpetas y los tipos base de la API. El objetivo inmediato es el Login. Como el backend usa cookies HttpOnly, necesitamos configurar Axios de forma global para que envíe y reciba credenciales en cada petición.
+
+## Objetivo
+Crear el archivo `src/api/axiosClient.ts` configurado con `withCredentials: true` y un interceptor para manejar errores.
+
+## Lo que debés hacer
+1. Crear el archivo `src/api/axiosClient.ts`.
+2. Pegar exactamente este código dentro:
+
+```typescript
+// src/api/axiosClient.ts
+import axios from 'axios';
+
+export const axiosClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  withCredentials: true, // CRÍTICO: Permite el envío de cookies HttpOnly
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para transformar los errores del backend
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message =
+      error.response?.data?.error || 'Error de conexión con el servidor';
+    return Promise.reject(new Error(message));
+  }
+);
+```
+
+3. Borrar el archivo `.gitkeep` de la carpeta `src/api/` (si existe).
+4. Correr `npm run build`.
+
+## Lo que NO debés hacer
+- No crees servicios de autenticación ni componentes todavía.
+- No modifiques `App.tsx` ni `main.tsx`.
+- No avances con nada más.
+
+## Respuesta esperada
+Mostrame el código final del archivo, confirmame si borraste el `.gitkeep`, y decime si `npm run build` pasó o falló.
+
+# Tarea 6b: Hacer el interceptor de errores a prueba de balas
+
+## Contexto
+El backend del proyecto devuelve los errores principalmente en la propiedad `error`, pero para evitar problemas futuros (middlewares que devuelvan `mensaje` o `message`), queremos que el interceptor de Axios sea tolerante a diferentes formatos.
+
+## Objetivo
+Actualizar el interceptor en `src/api/axiosClient.ts` para que intente leer el mensaje de error de múltiples propiedades.
+
+## Lo que debés hacer
+1. Leer el archivo `src/api/axiosClient.ts`.
+2. Modificar el bloque `axiosClient.interceptors.response.use` para que quede exactamente así:
+
+```typescript
+// Interceptor para transformar los errores del backend
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Intenta extraer el mensaje en diferentes formatos comunes
+    const backendData = error.response?.data;
+    const message = 
+      backendData?.error || 
+      backendData?.mensaje || 
+      backendData?.message || 
+      'Error de conexión con el servidor';
+      
+    return Promise.reject(new Error(message));
+  }
+);
+```
+
+3. Correr `npm run build`.
+
+## Lo que NO debés hacer
+- No modifiques las URLs de base ni el `withCredentials`.
+- No toques los otros archivos.
+- No avances con nada más.
+
+## Respuesta esperada
+Mostrame el código final del interceptor y decime si `npm run build` pasó o falló.
