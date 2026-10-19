@@ -175,3 +175,51 @@ Me mostrás:
 2. Confirmación de si `index.css` está importado en `main.tsx`.
 3. Confirmación de si `App.css` existe y está importado en `App.tsx`.
 4. Esperás mi confirmación antes de seguir.
+
+# Tarea 2g: Crear `src/vite-env.d.ts`
+
+## Contexto
+
+En el frontend del proyecto HIEF Journal (React + Vite + TypeScript), TypeScript está arrojando el error:
+"Cannot find module or type declarations for side-effect import of './index.css'."
+Esto pasa porque TypeScript no reconoce los archivos `.css` como módulos importables. La solución estándar en proyectos Vite es tener un archivo `vite-env.d.ts` con la referencia a los tipos de Vite.
+
+## Objetivo
+
+Crear el archivo `frontend/src/vite-env.d.ts` con la referencia a los tipos de Vite.
+
+## Lo que debés hacer
+
+### Paso 1 — Verificar
+
+Confirmar que el archivo `frontend/src/vite-env.d.ts` **no existe**. Si existe, mostrarme su contenido y detenerte.
+
+### Paso 2 — Crear el archivo
+
+Crear `frontend/src/vite-env.d.ts` con exactamente este contenido (una sola línea):
+
+```typescript
+/// <reference types="vite/client" />
+```
+
+### Paso 3 — Verificar
+
+1. Ejecutar `npm run build` y confirmar que compila sin errores.
+2. Confirmar que el error de TypeScript en `src/main.tsx` (línea `import './index.css';`) desapareció.
+
+## Lo que NO debés hacer
+
+- No modifiques `main.tsx`.
+- No modifiques `index.css`.
+- No modifiques `tsconfig.json`.
+- No modifiques `tailwind.config.js`.
+- No avances con otra tarea.
+
+## Criterio de aceptación
+
+Mostrame:
+
+1. Confirmación de que el archivo fue creado.
+2. Contenido final de `src/vite-env.d.ts`.
+3. Confirmación de que `npm run build` compila sin errores.
+4. Confirmación de que el error de TypeScript en `main.tsx` desapareció.
