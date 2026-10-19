@@ -223,3 +223,96 @@ Mostrame:
 2. Contenido final de `src/vite-env.d.ts`.
 3. Confirmación de que `npm run build` compila sin errores.
 4. Confirmación de que el error de TypeScript en `main.tsx` desapareció.
+
+Tarea 3 Crear la estructura de carpetas
+
+Ya esta hecho
+
+# Tarea 4: Crear tipos base de la API
+
+## Contexto
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos la estructura de carpetas y Tailwind configurado. Ahora vamos a definir cómo lucen las respuestas del backend para que TypeScript nos ayude a programar sin errores.
+
+## Objetivo
+Crear el archivo `src/types/api.types.ts` que contiene las interfaces para las respuestas estándar del backend y la paginación.
+
+## Lo que debés hacer
+
+### Paso 1 — Crear `src/types/api.types.ts`
+Crear el archivo con exactamente este contenido:
+
+```typescript
+// src/types/api.types.ts
+
+/**
+ * Estructura estándar de respuesta del backend.
+ * Todas las rutas de la API devuelven este formato.
+ */
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * Estructura estándar para respuestas paginadas.
+ */
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+```
+
+### Paso 2 — Limpieza y verificación
+1. Borrar el archivo `.gitkeep` de la carpeta `src/types/` (si es que todavía existe).
+2. Ejecutar `npm run build` y confirmar que compila sin errores.
+
+## Lo que NO debés hacer
+- No crees otros tipos (User, Article, etc.) todavía.
+- No modifiques `App.tsx` ni `main.tsx`.
+- No avances con otra tarea.
+
+## Criterio de aceptación
+Mostrame:
+1. El contenido final de `src/types/api.types.ts`.
+2. Confirmación de que se borró el `.gitkeep` de `types/`.
+3. Confirmación de que `npm run build` compila sin errores.
+4. Esperás mi confirmación antes de seguir.
+
+# Tarea 4b: Crear `index.html` en la raíz del frontend
+
+## Contexto
+El `npm run build` falló porque Vite necesita un archivo `index.html` en la raíz del frontend para funcionar. Ese archivo no existe.
+
+## Objetivo
+Crear el archivo `frontend/index.html` con la estructura mínima necesaria para Vite.
+
+## Lo que debés hacer
+1. Crear el archivo `frontend/index.html`.
+2. Pegar exactamente este código dentro:
+
+```html
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal Científico Evita</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+3. Correr `npm run build`.
+
+## Lo que NO debés hacer
+- No modifiques ningún otro archivo.
+- No avances con nada más.
+
+## Respuesta esperada
+Mostrame el código final y decime si el `npm run build` pasó o falló.
