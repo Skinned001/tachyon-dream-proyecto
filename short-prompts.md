@@ -316,3 +316,38 @@ Crear el archivo `frontend/index.html` con la estructura mínima necesaria para 
 
 ## Respuesta esperada
 Mostrame el código final y decime si el `npm run build` pasó o falló.
+
+# Tarea 4c: Actualizar el archivo `.gitignore` del frontend
+
+## Contexto
+El comando `npm run build` genera una carpeta llamada `dist/` con archivos de producción. No queremos que esa carpeta se suba a GitHub.
+
+## Objetivo
+Asegurarnos de que la carpeta `dist/` y los archivos de entorno local estén ignorados por Git en el frontend.
+
+## Lo que debés hacer
+1. Leer el archivo `frontend/.gitignore` (si no existe, crealo).
+2. Verificar si contiene las reglas para ignorar `dist` y `.env.local`. 
+3. Si faltan, agregalas al final del archivo:
+
+```text
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Env
+.env
+.env.local
+.env.*.local
+```
+
+4. Correr `npm run build` una última vez para confirmar que todo compila bien.
+
+## Lo que NO debés hacer
+- No borres la carpeta `dist/` todavía (solo asegurate de que esté ignorada).
+- No modifiques `package.json`.
+- No avances con nada más.
+
+## Respuesta esperada
+Mostrame el contenido final de `frontend/.gitignore` y decime si el `npm run build` pasó o falló.
