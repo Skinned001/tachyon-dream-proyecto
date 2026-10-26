@@ -1,6 +1,15 @@
 import { axiosClient } from './axiosClient';
+import type { ApiResponse } from '../types/api.types';
+import type { User } from '../types/user.types';
 
-export const authApi = {
-  login: (payload: { email: string; password: string }) => axiosClient.post('/auth/login', payload),
-  register: (payload: { name: string; email: string; password: string }) => axiosClient.post('/auth/register', payload),
+export const login = async (email: string, password: string): Promise<User> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ token: string; user: User }>
+  >('/auth/login', { email, password });
+
+  if (!data.success || !data.data?.user) {
+    throw new Error(data.error || 'Error al iniciar sesión');
+  }
+
+  return data.data.user;
 };
