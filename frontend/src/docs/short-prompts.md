@@ -1331,3 +1331,147 @@ export const useForm = <T extends Record<string, string>>(initialState: T) => {
 ## Respuesta esperada
 
 Mostrame el código final de `useForm.ts` y decime si `npm run build` pasó o falló.
+
+# Tarea 19: Crear la pantalla visual del Login
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos todos los componentes de UI (`Card`, `Input`, `Button`), el hook `useForm`, el `useAuth` y el servicio `auth.api.ts`. Es hora de crear la pantalla visual del Login.
+
+## Objetivo
+
+Crear el archivo `src/pages/Login.tsx` que contenga el formulario y la lógica de inicio de sesión.
+
+## Lo que debés hacer
+
+### 1. Crear `src/pages/Login.tsx`
+
+Crear el archivo con exactamente este contenido:
+
+```tsx
+// src/pages/Login.tsx
+import { useState } from "react";
+import { useForm } from "../hooks/useForm";
+import { useAuth } from "../context/AuthContext";
+import { login as loginApi } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
+
+export const Login = () => {
+  // 1. Estado del formulario
+  const { formulario, handleChange } = useForm({
+    email: "",
+    password: "",
+  });
+
+  // 2. Hooks globales
+  const { login } = useAuth();
+
+  // 3. Estados locales para la petición
+  const [error, setError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // 4. Manejo del envío
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validación básica en el frontend
+    if (!formulario.email || !formulario.password) {
+      setError("Por favor, complete todos los campos.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Llamamos a la API
+      const userData = await loginApi(formulario.email, formulario.password);
+
+      // Guardamos al usuario en el contexto global
+      login(userData);
+
+      // Redirigimos al inicio (por ahora recargamos para probar)
+      window.location.href = "/";
+    } catch (err: any) {
+      // Mostramos el error del backend (ej. "Credenciales inválidas")
+      setError(err.message || "Error al iniciar sesión");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md">
+        {/* Encabezado */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-institucional-700">
+            Portal Científico Evita
+          </h1>
+          <p className="text-gray-500 mt-2">La Voz de la Ciencia</p>
+        </div>
+
+        {/* Tarjeta del formulario */}
+        <Card title="Iniciar Sesión">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              label="Correo Electrónico"
+              name="email"
+              type="email"
+              placeholder="correo@hief.gob.ar"
+              value={formulario.email}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              autoComplete="email"
+            />
+
+            <Input
+              label="Contraseña"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              value={formulario.password}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              autoComplete="current-password"
+            />
+
+            {/* Mensaje de error */}
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+              className="mt-2 w-full"
+            >
+              Ingresar
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2. Limpieza y verificación
+
+1. Borrar el archivo `.gitkeep` de la carpeta `src/pages/` (si existe).
+2. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques `App.tsx` todavía (el siguiente paso será renderizar este Login).
+- No modifiques el contexto ni los componentes de UI.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Mostrame el código final y decime si `npm run build` pasó o falló.
