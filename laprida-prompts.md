@@ -54,3 +54,26 @@ Genera o actualiza los siguientes archivos en TypeScript estricto (sin usar `any
    - `POST /api/auth/change-password` (protegido por `authenticateJWT`, permite cambiar la contraseña y pasa `must_change_password` a `false`)
 
 6. Registra las rutas bajo `/api/auth` y el `error.middleware.ts` en `src/app.ts` (o `src/server.ts`).
+
+# Implementacion de multer con limite de archivos 10mb:
+Actúa como Arquitecto Backend Senior en TypeScript. Basándote en #file:spec.md, crea la configuración de subida de archivos en `backend/src/config/multer.ts` utilizando la librería `multer` y el tipado de Node (`fs`, `path`).
+
+Requisitos obligatorios:
+1. Define el `storage` usando `multer.diskStorage`.
+2. La ruta de destino (`destination`) debe ser dinámica analizando la URL (`req.originalUrl` o `req.baseUrl`):
+   - Si la ruta incluye `/biblioteca`, guardar en `uploads/library/`.
+   - Si la ruta incluye `/articulos`, guardar en `uploads/articles/`.
+   - Usa `fs.existsSync` y `fs.mkdirSync(dir, { recursive: true })` para garantizar que las carpetas existan antes de guardar.
+3. El nombre del archivo (`filename`) debe prefijarse con `Date.now()` para evitar colisiones y sanitizar el nombre original (eliminando espacios).
+4. Implementa un `fileFilter` estricto que valide que el mimetype sea exclusivamente `application/pdf`. Si es otro formato, rechaza el archivo con un error descriptivo.
+5. Configura `limits` estableciendo un tamaño máximo de archivo de 10 MB.
+6. Exporta el middleware (ej. `export const uploadPdf = multer({ storage, fileFilter, limits });`).
+
+# Prueba de multer:
+Actúa como Desarrollador Backend. Necesito probar la configuración de Multer que acabamos de crear. 
+
+Modifica el archivo principal del servidor (por ejemplo, `backend/src/server.ts` o `app.ts`) para incluir una ruta de prueba temporal. Sigue estos pasos:
+1. Importa `uploadPdf` desde `src/config/multer.ts` (recuerda usar la extensión `.js` en la importación si el proyecto usa ES Modules).
+2. Justo antes del bloque donde arranca el servidor (`app.listen`), agrega el siguiente endpoint: `app.post('/api/biblioteca/test-upload', uploadPdf.single('file'), ...)`.
+3. Dentro del controlador de esta ruta, si `req.file` no existe, retorna HTTP 400 con `{ success: false, error: "No se subió ningún archivo válido" }`.
+4. Si el archivo se sube correctamente, retorna HTTP 200 con `{ success: true, data: { message: "Archivo subido con éxito", path: req.file.path, filename: req.file.filename } }`.
