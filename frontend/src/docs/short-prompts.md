@@ -1268,3 +1268,66 @@ export const Card = ({ children, title, className = "" }: CardProps) => {
 ## Respuesta esperada
 
 Mostrame el código final de `Card.tsx` y decime si `npm run build` pasó o falló.
+
+# Tarea 18: Crear el hook useForm genérico
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Vamos a crear la pantalla de Login, pero para mantener el componente visual limpio y libre de lógica repetitiva, primero necesitamos un hook personalizado que maneje el estado de los formularios.
+
+## Objetivo
+
+Crear el archivo `src/hooks/useForm.ts` que maneje los inputs de texto y el evento onChange de forma genérica y tipada.
+
+## Lo que debés hacer
+
+### 1. Crear `src/hooks/useForm.ts`
+
+Crear el archivo con exactamente este código:
+
+```typescript
+// src/hooks/useForm.ts
+import { useState, type ChangeEvent } from "react";
+
+/**
+ * Hook genérico para manejar el estado de formularios.
+ * @param initialState Objeto con los valores iniciales del formulario.
+ */
+export const useForm = <T extends Record<string, string>>(initialState: T) => {
+  const [formulario, setFormulario] = useState<T>(initialState);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormulario((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const resetForm = () => {
+    setFormulario(initialState);
+  };
+
+  return {
+    formulario,
+    handleChange,
+    resetForm,
+    setFormulario, // Lo exponemos por si necesitamos setear valores manualmente
+  };
+};
+```
+
+### 2. Limpieza y verificación
+
+1. Borrar el archivo `.gitkeep` de la carpeta `src/hooks/` (si existe).
+2. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el componente Login todavía.
+- No modifiques los archivos anteriores.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Mostrame el código final de `useForm.ts` y decime si `npm run build` pasó o falló.
