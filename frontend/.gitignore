@@ -1,0 +1,9 @@
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Env
+.env
+.env.local
+.env.*.local
