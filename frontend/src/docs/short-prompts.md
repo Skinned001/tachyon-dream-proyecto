@@ -1144,3 +1144,71 @@ export const Button = ({
 ## Respuesta esperada
 
 Mostrame el código final del botón y decime si `npm run build` pasó o falló.
+
+# Tarea 16: Crear componente UI Input
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript + Tailwind v4). Ya tenemos el componente `Button`. Ahora necesitamos el componente `Input` para el formulario de Login (y futuros formularios).
+
+## Objetivo
+
+Crear el componente `src/components/ui/Input.tsx` que soporte etiquetas (labels), mensajes de error y tipado estricto.
+
+## Lo que debés hacer
+
+### 1. Crear `src/components/ui/Input.tsx`
+
+Crear el archivo con exactamente este contenido:
+
+```tsx
+// src/components/ui/Input.tsx
+import { forwardRef, type InputHTMLAttributes } from "react";
+
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  error?: string;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, className = "", id, ...props }, ref) => {
+    // Genera un ID automático si no se pasa uno (para el htmlFor del label)
+    const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <input
+          id={inputId}
+          ref={ref}
+          className={`px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-institucional-500 focus:border-institucional-500 ${
+            error
+              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300"
+          } ${className}`}
+          {...props}
+        />
+        {error && <span className="text-sm text-red-500">{error}</span>}
+      </div>
+    );
+  },
+);
+
+Input.displayName = "Input";
+```
+
+### 2. Limpieza y verificación
+
+1. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el componente `Card` todavía.
+- No crees la pantalla de Login todavía.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Mostrame el código final del input y decime si `npm run build` pasó o falló.
