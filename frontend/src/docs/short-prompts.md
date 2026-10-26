@@ -1212,3 +1212,59 @@ Input.displayName = "Input";
 ## Respuesta esperada
 
 Mostrame el código final del input y decime si `npm run build` pasó o falló.
+
+# Tarea 17: Crear componente UI Card
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript + Tailwind v4). Ya tenemos los componentes `Button` e `Input`. Ahora necesitamos un componente `Card` para envolver formularios y mostrar información de forma agrupada.
+
+## Objetivo
+
+Crear el componente `src/components/ui/Card.tsx` que reciba contenido (children) y un título opcional.
+
+## Lo que debés hacer
+
+### 1. Crear `src/components/ui/Card.tsx`
+
+Crear el archivo con exactamente este contenido:
+
+```tsx
+// src/components/ui/Card.tsx
+import { type ReactNode } from "react";
+
+interface CardProps {
+  children: ReactNode;
+  title?: string;
+  className?: string;
+}
+
+export const Card = ({ children, title, className = "" }: CardProps) => {
+  return (
+    <div
+      className={`bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden ${className}`}
+    >
+      {title && (
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        </div>
+      )}
+      <div className="p-6">{children}</div>
+    </div>
+  );
+};
+```
+
+### 2. Limpieza y verificación
+
+1. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees la pantalla de Login todavía.
+- No modifiques los archivos anteriores.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Mostrame el código final de `Card.tsx` y decime si `npm run build` pasó o falló.
