@@ -1475,3 +1475,49 @@ export const Login = () => {
 ## Respuesta esperada
 
 Mostrame el código final y decime si `npm run build` pasó o falló.
+
+# Tarea 21: Renderizar el Login en App.tsx
+
+## Contexto
+
+Ya tenemos el componente `src/pages/Login.tsx` completamente funcional. Sin embargo, el archivo principal `src/App.tsx` todavía tiene el código por defecto de Vite (los logos de React y el contador). Necesitamos limpiarlo y mostrar nuestra pantalla de Login.
+
+## Objetivo
+
+Limpiar `src/App.tsx` y renderizar el componente `Login`.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/App.tsx`
+
+Reemplazar todo el contenido actual del archivo con exactamente este código:
+
+```tsx
+// src/App.tsx
+import { Login } from "./pages/Login";
+
+function App() {
+  return <Login />;
+}
+
+export default App;
+```
+
+### 2. Limpieza de estilos por defecto
+
+1. Verificar si existe `src/App.css`. Si existe, borrarlo (ya que no lo vamos a usar y puede inyectar estilos por defecto que rompan Tailwind).
+2. Abrir `src/index.css` y asegurarse de que **NO** contenga los estilos por defecto de Vite (como `body { display: flex; place-items: center; }`). El archivo `index.css` solo debe tener `@import "tailwindcss";` y la configuración de `@theme` que pusimos. Si tiene otros estilos, borralos.
+
+### 3. Verificación
+
+1. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No configures React Router todavía.
+- No modifiques `main.tsx`.
+- No modifiques el componente `Login.tsx`.
+
+## Respuesta esperada
+
+Mostrame el código final de `App.tsx` y decime si `npm run build` pasó o falló.
