@@ -38,3 +38,20 @@ el token dentro de la respuesta estándar y además lo establece como cookie
 HttpOnly; las rutas protegidas aceptan esa cookie o `Authorization: Bearer
 <token>`. El cliente Axios usa `withCredentials` para enviar la cookie.
 Cambiar la contraseña requiere `currentPassword` y `newPassword`.
+
+## Biblioteca virtual
+
+La biblioteca se expone bajo `/api/biblioteca`. La consulta pública lista
+recursos `PUBLICO`; los usuarios autenticados ven los niveles permitidos por
+su rol. Solo `ADMIN` puede crear, actualizar o eliminar recursos. Las cargas
+usan el campo multipart `file` y aceptan PDF de hasta 10 MB.
+
+## Artículos científicos
+
+El módulo de artículos expone `POST /api/articulos` (multipart con los campos
+`title`, `summary`, `specialtyId`, opcionalmente `convocationId`, `keywords`
+y `coauthors`, además del PDF en `file`), `GET /api/articulos` y
+`PUT /api/articulos/:id/status` con `{ "state": "..." }`. Los autores solo
+listan sus propios artículos; DDI, Comité, Publisher y Admin pueden consultar
+el listado completo. Los manuscritos comienzan en `EN_REVISION` y su PDF se
+registra como la primera versión del artículo.
