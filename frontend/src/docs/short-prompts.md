@@ -838,3 +838,309 @@ createRoot(document.getElementById("root")!).render(
 ## Respuesta esperada
 
 Confirmame que los 6 archivos fueron sobrescritos/creados y decime si `npm run build` pasó o falló.
+
+# Tarea 13: Alinear auth.api.ts y AuthContext.tsx con el Backend real
+
+## Contexto
+
+El agente anterior se confundió leyendo el archivo de contrato y omitió funciones. Necesitamos corregir la lógica.
+Aclaraciones IMPORTANTES de la arquitectura real:
+
+1. Usamos **Cookie HttpOnly**. El backend NO devuelve el token en el JSON.
+2. El backend SÍ tiene la ruta `GET /auth/verify` para validar la sesión y `POST /auth/logout`.
+3. El backend devuelve los datos del usuario dentro de la propiedad `usuario` (no `user`).
+
+## Objetivo
+
+Sobrescribir `src/api/auth.api.ts` y `src/context/AuthContext.tsx` con la lógica completa y correcta.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/auth.api.ts`
+
+```typescript
+// src/api/auth.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+import type { User } from "../types/user.types";
+
+export const login = async (email: string, password: string): Promise<User> => {
+  // El backend setea la cookie HttpOnly y devuelve el usuario
+  const { data } = await axiosClient.post<ApiResponse<{ usuario: User }>>(
+    "/auth/login",
+    { email, password },
+  );
+
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al iniciar sesión");
+  }
+
+  return data.data.usuario;
+};
+
+export const logout = async (): Promise<void> => {
+  await axiosClient.post("/auth/logout");
+};
+
+export const verify = async (): Promise<User | null> => {
+  try {
+    const { data } =
+      await axiosClient.get<ApiResponse<{ usuario: User }>>("/auth/verify");
+    return data.success && data.data ? data.data.usuario : null;
+  } catch (error) {
+    return null; // 401 significa que no hay sesión activa, es normal
+  }
+};
+```
+
+### 2. Sobrescribir `src/context/AuthContext.tsx`
+
+```tsx
+// src/context/AuthContext.tsx
+import {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  type ReactNode,
+} from "react";
+import type { User } from "../types/user.types";
+import * as authApi from "../api/auth.api";
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (userData: User) => void;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Verificar sesión al cargar la app (recarga de página)
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authApi.verify();
+        if (currentUser) {
+          setUser(currentUser);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        setUser(null);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = (userData: User) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, isAuthenticated, isLoading, login, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth debe ser usado dentro de un AuthProvider");
+  }
+  return context;
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques `main.tsx` ni `axiosClient.ts`.
+- No crees el formulario visual de Login aún.
+- No uses `data.user`, el backend devuelve `data.usuario`.
+
+## Respuesta esperada
+
+Confirmame que ambos archivos fueron sobrescritos correctamente y decime si `npm run build` pasó o falló.
+
+# Tarea 14: Adaptar auth.api.ts al backend actual
+
+## Contexto
+
+La auditoría reveló que el backend actual responde de la siguiente manera:
+
+- `POST /auth/login`: setea la cookie, y devuelve `data.token` y `data.user`.
+- `GET /auth/verify`: devuelve `data.valid` (booleano).
+- `GET /auth/me`: devuelve el usuario bajo `data` (el objeto usuario directo).
+  Vamos a adaptar el frontend a esta realidad. No vamos a romper el backend.
+
+## Objetivo
+
+Sobrescribir `src/api/auth.api.ts` para que consuma las rutas correctamente.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/auth.api.ts`
+
+```typescript
+// src/api/auth.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+import type { User } from "../types/user.types";
+
+export const login = async (email: string, password: string): Promise<User> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ token: string; user: User }>
+  >("/auth/login", { email, password });
+
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al iniciar sesión");
+  }
+
+  // Adaptado a lo que devuelve el backend real
+  return data.data.user;
+};
+
+export const logout = async (): Promise<void> => {
+  await axiosClient.post("/auth/logout");
+};
+
+export const verify = async (): Promise<User | null> => {
+  try {
+    // 1. Verificamos si la cookie es válida
+    const verifyRes =
+      await axiosClient.get<ApiResponse<{ valid: boolean }>>("/auth/verify");
+
+    if (!verifyRes.data.success || !verifyRes.data.data?.valid) {
+      return null;
+    }
+
+    // 2. Si es válida, traemos los datos del usuario desde /me
+    const meRes = await axiosClient.get<ApiResponse<User>>("/auth/me");
+
+    if (meRes.data.success && meRes.data.data) {
+      return meRes.data.data;
+    }
+
+    return null;
+  } catch (error) {
+    return null; // Si falla (ej. 401), no hay sesión activa
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques `AuthContext.tsx` (ya está preparado para recibir lo que devuelva `verify`).
+- No modifiques `main.tsx` ni `axiosClient.ts`.
+- No crees el formulario visual de Login aún.
+
+## Respuesta esperada
+
+Confirmame que `auth.api.ts` fue sobrescrito correctamente y decime si `npm run build` pasó o falló.
+
+# Tarea 15: Crear componente UI Button
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript + Tailwind v4). Vamos a empezar a crear la interfaz visual para el Login, pero primero necesitamos componentes reutilizables. Empezaremos por el botón.
+
+## Objetivo
+
+Crear el componente `src/components/ui/Button.tsx` que soporte variantes de color y estado de carga.
+
+## Lo que debés hacer
+
+### 1. Crear `src/components/ui/Button.tsx`
+
+Crear el archivo con exactamente este contenido:
+
+```tsx
+// src/components/ui/Button.tsx
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  isLoading?: boolean;
+}
+
+export const Button = ({
+  children,
+  variant = "primary",
+  isLoading = false,
+  className = "",
+  disabled,
+  ...props
+}: ButtonProps) => {
+  // Clases base para todos los botones
+  const baseClasses =
+    "inline-flex items-center justify-center px-4 py-2 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  // Variantes de color (usando la paleta institucional)
+  const variants = {
+    primary:
+      "bg-institucional-600 text-white hover:bg-institucional-700 focus:ring-institucional-500",
+    secondary:
+      "bg-white text-institucional-700 border border-institucional-200 hover:bg-institucional-50 focus:ring-institucional-500",
+    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+  };
+
+  return (
+    <button
+      className={`${baseClasses} ${variants[variant]} ${className}`}
+      disabled={isLoading || disabled}
+      {...props}
+    >
+      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      {children}
+    </button>
+  );
+};
+```
+
+### 2. Limpieza y verificación
+
+1. Borrar el archivo `.gitkeep` de la carpeta `src/components/ui/` (si existe).
+2. Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees otros componentes (Input, Card) todavía.
+- No crees la pantalla de Login todavía.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Mostrame el código final del botón y decime si `npm run build` pasó o falló.
