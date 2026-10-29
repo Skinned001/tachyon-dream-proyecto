@@ -9,4 +9,8 @@ export interface User {
   role: UserRole;
   specialtyId: number | null;
   must_change_password: boolean;
+  // Campos opcionales que vienen en UserDTO
+  dni?: string | null;
+  active?: boolean;
+  createdAt?: string;
 }
