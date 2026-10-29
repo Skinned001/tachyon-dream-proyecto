@@ -1564,3 +1564,98 @@ export interface User {
 ## Respuesta esperada
 
 Confirmame que el archivo fue sobrescrito y si `npm run build` pasó o falló.
+
+# Tarea 23: Crear páginas placeholder para el Dashboard
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos el Login. Ahora necesitamos crear las páginas vacías (placeholders) a las que el usuario podrá acceder una vez logueado, para luego configurar el enrutador (React Router).
+
+## Objetivo
+
+Crear 5 archivos de páginas básicas en `src/pages/` que luego conectaremos al Router.
+
+## Lo que debés hacer
+
+### 1. Crear los archivos en `src/pages/`
+
+Crear los siguientes archivos con un contenido muy simple para que compilen y podamos verificar la navegación:
+
+**`src/pages/DashboardHome.tsx`**
+
+```tsx
+export const DashboardHome = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-institucional-700">
+        Panel de Control
+      </h1>
+      <p className="text-gray-600 mt-2">
+        Bienvenido al sistema de gestión científica.
+      </p>
+    </div>
+  );
+};
+```
+
+**`src/pages/MisArticulos.tsx`**
+
+```tsx
+export const MisArticulos = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Mis Artículos</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/Revisiones.tsx`**
+
+```tsx
+export const Revisiones = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Revisiones Asignadas</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/BibliotecaHome.tsx`**
+
+```tsx
+export const BibliotecaHome = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Biblioteca Virtual</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/Registro.tsx`**
+
+```tsx
+export const Registro = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Registro de Usuario</h1>
+    </div>
+  );
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No configures React Router todavía.
+- No modifiques `App.tsx`.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los 5 archivos fueron creados y decime si `npm run build` pasó o falló.
