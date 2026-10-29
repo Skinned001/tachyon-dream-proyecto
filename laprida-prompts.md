@@ -184,3 +184,33 @@ button { cursor: pointer; }
 }
 .scrollbar-subtle::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-subtle::-webkit-scrollbar-thumb { background: #9fcfc0; border-radius: 99px; }
+
+ # Resolucion de implementacion API para conectar login con homepage:
+
+ Actúa como Frontend Developer Senior. Estamos migrando el diseño del proyecto HIEF. Realiza las siguientes 3 tareas en la carpeta `frontend/`:
+
+1. En `frontend/src/pages/Login.tsx`:
+Actualiza ÚNICAMENTE la función `submit` para que soporte la desestructuración dinámica del token y evite el error 401. Reemplázala por esto:
+```tsx
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    if (!email.trim() || !password) { 
+      setError('Ingresa tu correo institucional y clave para continuar.'); 
+      return; 
+    }
+    try {
+      const response = await axiosClient.post('/auth/login', { email, password });
+      const token = response.data.token || response.data.data?.token;
+      
+      if (response.data.success && token) {
+        localStorage.setItem('token', token);
+        // Usamos window.location para forzar la recarga del AuthContext en la raíz
+        window.location.href = (location.state as any)?.from || '/';
+      } else {
+        setError('Credenciales inválidas.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
+    }
+  }

@@ -14,19 +14,19 @@ export default function Login() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    
-    if (!email.trim() || !password) { 
-      setError('Ingresa tu correo institucional y clave para continuar.'); 
+
+    if (!email.trim() || !password) {
+      setError('Ingresa tu correo institucional y clave para continuar.');
       return; 
     }
-    
+
     try {
-      // Llamada real al backend HIEF
       const response = await axiosClient.post('/auth/login', { email, password });
-      
-      if (response.data.success && response.data.data?.token) {
-        localStorage.setItem('token', response.data.data.token);
-        navigate((location.state as { from?: string } | null)?.from || '/', { replace: true });
+      const token = response.data.token || response.data.data?.token;
+
+      if (response.data.success && token) {
+        localStorage.setItem('token', token);
+        window.location.href = (location.state as any)?.from || '/';
       } else {
         setError('Credenciales inválidas.');
       }
