@@ -1521,3 +1521,46 @@ export default App;
 ## Respuesta esperada
 
 Mostrame el código final de `App.tsx` y decime si `npm run build` pasó o falló.
+
+# Tarea 22: Sincronizar tipos de Usuario con el Contrato Oficial
+
+## Contexto
+
+Acabo de proporcionar el archivo de contratos oficiales de la API. Necesitamos actualizar el tipo de usuario en el frontend para que coincida exactamente con el `AuthUser` del backend.
+
+## Objetivo
+
+Sobrescribir `src/types/user.types.ts` para reflejar el contrato exacto.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/types/user.types.ts`
+
+```typescript
+// src/types/user.types.ts
+
+export type UserRole = "AUTOR" | "DDI" | "COMITE" | "PUBLISHER" | "ADMIN";
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  specialtyId: number | null;
+  must_change_password: boolean;
+  // Campos opcionales que vienen en UserDTO
+  dni?: string | null;
+  active?: boolean;
+  createdAt?: string;
+}
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue sobrescrito y si `npm run build` pasó o falló.
