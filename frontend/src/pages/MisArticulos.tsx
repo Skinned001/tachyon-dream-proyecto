@@ -1,3 +1,3 @@
-export function MisArticulos() {
-  return <div className="p-8"><h1>Mis Art?culos</h1></div>;
-}
+export const MisArticulos = () => {
+  return <div className="p-8"><h1 className="text-2xl font-bold">Mis Artículos</h1></div>;
+};
