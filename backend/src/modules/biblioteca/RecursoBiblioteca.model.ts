@@ -4,8 +4,10 @@ import {
   InferAttributes,
   InferCreationAttributes,
   Model,
+  NonAttribute,
   Sequelize,
 } from 'sequelize';
+import type { Especialidad } from '../especialidades/Especialidad.model.js';
 
 export type ResourceVisibility = 'PUBLICO' | 'INTERNO' | 'CONFIDENCIAL';
 
@@ -17,10 +19,12 @@ export class RecursoBiblioteca extends Model<
   declare title: string;
   declare category: string;
   declare file_path: string;
-  declare file_size: number;
+  declare file_size: string;
   declare visibility: ResourceVisibility;
   declare uploadedBy: number;
   declare specialtyId: number;
+  declare createdAt: CreationOptional<Date>;
+  declare specialty?: NonAttribute<Especialidad>;
 }
 
 export const initializeRecursoBibliotecaModel = (sequelize: Sequelize): void => {
@@ -30,15 +34,22 @@ export const initializeRecursoBibliotecaModel = (sequelize: Sequelize): void => 
       title: { type: DataTypes.STRING, allowNull: false },
       category: { type: DataTypes.STRING, allowNull: false },
       file_path: { type: DataTypes.STRING, allowNull: false },
-      file_size: { type: DataTypes.INTEGER, allowNull: false },
+      file_size: { type: DataTypes.STRING, allowNull: false },
       visibility: {
         type: DataTypes.ENUM('PUBLICO', 'INTERNO', 'CONFIDENCIAL'),
         allowNull: false,
       },
       uploadedBy: { type: DataTypes.INTEGER, allowNull: false },
       specialtyId: { type: DataTypes.INTEGER, allowNull: false },
+      createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     },
-    { sequelize, tableName: 'library_resources', timestamps: false },
+    {
+      sequelize,
+      tableName: 'library_resources',
+      timestamps: true,
+      createdAt: 'createdAt',
+      updatedAt: false,
+    },
   );
 };
 

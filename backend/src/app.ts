@@ -1,7 +1,9 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import articulosRoutes from './modules/articulos/articulo.routes.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import bibliotecaRoutes from './modules/biblioteca/biblioteca.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 dotenv.config();
@@ -22,6 +24,9 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/articulos', articulosRoutes);
+app.use('/api/biblioteca', bibliotecaRoutes);
+
 app.use(errorMiddleware);
 
 export default app;

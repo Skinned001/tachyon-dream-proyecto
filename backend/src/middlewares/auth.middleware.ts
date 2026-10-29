@@ -37,6 +37,32 @@ const getTokenFromRequest = (req: Request): string | undefined => {
   }
 };
 
+export const optionalAuthenticateJWT = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void => {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const payload = verifyToken(token);
+    req.user = {
+      id: payload.id,
+      role: payload.role,
+      specialtyId: payload.specialtyId,
+      email: payload.email,
+    };
+  } catch {
+    req.user = undefined;
+  }
+
+  next();
+};
+
 export const authenticateJWT = async (
   req: Request,
   res: Response,
