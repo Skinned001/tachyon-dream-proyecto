@@ -1,4 +1,3 @@
-// src/api/axiosClient.ts
 import axios from 'axios';
 
 export const axiosClient = axios.create({
@@ -8,6 +7,8 @@ export const axiosClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+export default axiosClient;
 
 axiosClient.interceptors.response.use(
   (response) => response,

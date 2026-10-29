@@ -140,6 +140,47 @@ Crea o actualiza los siguientes archivos en TypeScript estricto:
 
 4. Conecta las rutas en `src/server.ts` bajo el prefijo `/api/articulos`.
 
+# Estructuracion del maquetado del diseño:
 
+Actúa como Desarrollador Frontend Senior (React, TypeScript, Tailwind). Estamos migrando la interfaz visual del proyecto HIEF respetando estrictamente `spec.md` y `contrato.md`.
 
-        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGUiOiJBVVRPUiIsInNwZWNpYWx0eUlkIjozLCJlbWFpbCI6ImF1dG9yQGhpZWYuZ29iLmFyIiwiaWF0IjoxNzkzMDI1MjAwLCJleHAiOjE3OTMwNTQwMDB9.UxWKTX4lUPJzHl396ZeAREFa1t0zLBTQe3wxeS6VTnY
+Ejecuta esta Fase 1 (Estilos, Red y Autenticación). Modifica los siguientes archivos en la carpeta `frontend/`:
+
+1. Sobrescribe `frontend/src/index.css` con este contenido exacto para establecer la paleta institucional y fuentes:
+```css
+@import url('[https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap](https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap)');
+@import "tailwindcss";
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #173d3b;
+  background: #f2f7f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ink: #173d3b;
+  --muted: #526e68;
+  --line: #d5e6df;
+  --canvas: #f2f7f4;
+  --surface: #fcfefd;
+  --teal: #087d70;
+  --teal-dark: #07584f;
+  --mint: #d8f1e8;
+  --gold: #a96612;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--canvas); }
+button, input { font: inherit; }
+button { cursor: pointer; }
+::selection { background: #a8e8d5; color: #123b37; }
+:focus-visible { outline: 3px solid #e09a27; outline-offset: 3px; }
+.font-editorial { font-family: 'Newsreader', Georgia, serif; }
+.font-data { font-family: 'DM Mono', monospace; }
+.page-enter { animation: enter .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+.grain::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .12;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='[http://www.w3.org/2000/svg'%3E%3Cfilter](http://www.w3.org/2000/svg'%3E%3Cfilter) id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.94' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E");
+}
+.scrollbar-subtle::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-subtle::-webkit-scrollbar-thumb { background: #9fcfc0; border-radius: 99px; }
