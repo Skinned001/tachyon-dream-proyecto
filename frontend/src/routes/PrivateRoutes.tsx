@@ -1,16 +1,23 @@
-import { Route, Routes } from 'react-router-dom';
-import { DashboardHome } from '../pages/DashboardHome';
-import { MisArticulos } from '../pages/MisArticulos';
-import { Revisiones } from '../pages/Revisiones';
-import { BibliotecaHome } from '../pages/BibliotecaHome';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
-export function PrivateRoutes() {
+export const PrivateRoutes = () => {
+  const token = localStorage.getItem('token');
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    localStorage.removeItem('token');
+    navigate('/login', { replace: true });
+    window.location.reload();
+  };
+
+  if (!token) return <Navigate replace to="/login" />;
+
   return (
-    <Routes>
-      <Route path="/" element={<DashboardHome />} />
-      <Route path="/mis-articulos" element={<MisArticulos />} />
-      <Route path="/revisiones" element={<Revisiones />} />
-      <Route path="/biblioteca" element={<BibliotecaHome />} />
-    </Routes>
+    <DashboardLayout onSignOut={handleSignOut}>
+      <Outlet />
+    </DashboardLayout>
   );
-}
+};
+
+export default PrivateRoutes;
