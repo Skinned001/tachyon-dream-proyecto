@@ -2044,3 +2044,180 @@ export const deleteUsuario = async (id: number): Promise<void> => {
 ## Respuesta esperada
 
 Confirmame que los archivos fueron creados/actualizados y decime si `npm run build` pasó o falló.
+
+# Tarea 27: Crear la pantalla de Gestión de Usuarios y conectarla al menú
+
+## Contexto
+
+Tenemos el `DashboardLayout`, el enrutador (`AppRoutes`) y el servicio de API (`usuarios.api.ts`). Ahora vamos a crear la pantalla visual para que el rol `ADMIN` pueda ver la lista de usuarios, y agregaremos el acceso en el menú lateral.
+
+## Objetivo
+
+1. Agregar el enlace "Manejo de Usuarios" en el `DashboardLayout` (solo visible para ADMIN).
+2. Crear la página `src/pages/AdminUsuarios.tsx` con una tabla que consuma los datos reales.
+3. Proteger la ruta para que solo los ADMIN puedan entrar.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/layouts/DashboardLayout.tsx`
+
+Agregar el import del ícono `Users` de `lucide-react`.
+Dentro del `<nav>` del Sidebar, después del enlace a Biblioteca, agregar este bloque condicional:
+
+```tsx
+{
+  user?.role === "ADMIN" && (
+    <Link
+      to="/admin/usuarios"
+      className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+    >
+      <Users className="w-5 h-5" />
+      Manejo de Usuarios
+    </Link>
+  );
+}
+```
+
+### 2. Crear `src/pages/AdminUsuarios.tsx`
+
+Crear la pantalla con una tabla básica. Usaremos el hook `useEffect` para traer los datos:
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import { getUsuarios } from "../api/usuarios.api";
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Plus } from "lucide-react";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const data = await getUsuarios();
+        setUsuarios(data);
+      } catch (err: any) {
+        setError(err.message || "Error al cargar usuarios");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUsuarios();
+  }, []);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button variant="primary" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-institucional-500" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-md border border-red-200">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium">Usuario</th>
+                  <th className="py-3 px-4 font-medium">Email</th>
+                  <th className="py-3 px-4 font-medium">Rol</th>
+                  <th className="py-3 px-4 font-medium">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="py-3 px-4 font-medium text-gray-800">
+                      {u.first_name} {u.last_name} <br />
+                      <span className="text-xs text-gray-400 font-normal">
+                        @{u.username}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 bg-institucional-50 text-institucional-700 text-xs font-semibold rounded-full">
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {u.active ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {usuarios.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-gray-500">
+                      No hay usuarios registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar `src/routes/AppRoutes.tsx`
+
+Importar `AdminUsuarios` y `RoleRoute`. Agregar la ruta protegida dentro del `DashboardLayout`:
+
+```tsx
+import { RoleRoute } from "./RoleRoute";
+import { AdminUsuarios } from "../pages/AdminUsuarios";
+
+// ... dentro del <Route path="/" element={<DashboardLayout />}>
+
+{
+  /* Ruta exclusiva para ADMIN */
+}
+<Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+  <Route path="admin/usuarios" element={<AdminUsuarios />} />
+</Route>;
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el formulario modal para crear/editar usuarios todavía (lo haremos en la siguiente tarea).
+- No modifiques la lógica de autenticación.
+
+## Respuesta esperada
+
+Confirmame que la tabla y la ruta están creadas, y si `npm run build` pasó o falló.
