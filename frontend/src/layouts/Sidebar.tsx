@@ -1,11 +1,13 @@
-import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileText, CheckSquare } from 'lucide-react';
+import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileText, CheckSquare, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 type SidebarProps = { onSignOut: () => void; collapsed: boolean; onToggleCollapsed: () => void };
 
 export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
   const links = [
     { to: '/', label: 'Inicio', icon: Activity, end: true },
     { to: '/articulos', label: 'Mis Artículos', icon: FileText },
@@ -36,6 +38,24 @@ export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProp
             <Icon size={18} strokeWidth={1.8} />
             <span className={collapsed ? 'md:hidden' : ''}>{label}</span>
           </NavLink>)}
+          {user?.role === 'ADMIN' && (
+            <NavLink
+              to="/admin/usuarios"
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]'
+                    : 'text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]'
+                }`
+              }
+            >
+              <Users size={18} strokeWidth={1.8} />
+              <span className={collapsed ? 'md:hidden' : ''}>
+                Manejo de Usuarios
+              </span>
+            </NavLink>
+          )}
         </nav>
       </div>
       <div className="mt-auto px-4 pb-5">
