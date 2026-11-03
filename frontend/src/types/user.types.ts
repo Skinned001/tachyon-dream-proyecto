@@ -14,3 +14,24 @@ export interface User {
   active?: boolean;
   createdAt?: string;
 }
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  dni?: string;
+  role: UserRole;
+  specialtyId?: number | null;
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  dni?: string;
+  role?: UserRole;
+  specialtyId?: number | null;
+  active?: boolean;
+}

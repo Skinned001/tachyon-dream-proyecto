@@ -1,15 +1,19 @@
 import { useState, type FormEvent } from 'react';
 import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axiosClient from '../api/axiosClient';
+import * as authApi from '../api/auth.api';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const redirectPath =
+    (location.state as { from?: string } | null)?.from ?? '/';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,17 +25,15 @@ export default function Login() {
     }
 
     try {
-      const response = await axiosClient.post('/auth/login', { email, password });
-      const token = response.data.token || response.data.data?.token;
-
-      if (response.data.success && token) {
-        localStorage.setItem('token', token);
-        window.location.href = (location.state as any)?.from || '/';
-      } else {
-        setError('Credenciales inválidas.');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
+      const userData = await authApi.login(email, password);
+      login(userData);
+      navigate(redirectPath, { replace: true });
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Error al conectar con el servidor.',
+      );
     }
   }
 

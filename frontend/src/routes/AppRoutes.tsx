@@ -15,6 +15,7 @@ export function AppRoutes() {
       <Route element={<PrivateRoutes />}>
         <Route index element={<DashboardHome />} />
         <Route path="articulos" element={<MisArticulos />} />
+        <Route path="mis-articulos" element={<MisArticulos />} />
         <Route path="revisiones" element={<Revisiones />} />
         <Route path="biblioteca" element={<BibliotecaHome />} />
       </Route>
