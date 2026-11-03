@@ -1776,3 +1776,271 @@ export const DashboardLayout = () => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue creado y decime si `npm run build` pasó o falló.
+
+# Tarea 25-Bis: Configurar React Router y Rutas Protegidas por Rol
+
+## Contexto
+
+El DashboardLayout ya está creado (con un diseño envidiable) y el Login funciona. Sin embargo, necesitamos configurar `react-router-dom` para que la navegación sea fluida (sin recargar la página) y, lo más importante, **proteger las rutas para que solo el ADMIN pueda acceder a ciertas vistas en el futuro**.
+
+## Objetivo
+
+1. Configurar el enrutador principal en `main.tsx` y `App.tsx`.
+2. Crear `src/routes/PrivateRoutes.tsx` (protege el acceso general).
+3. Crear `src/routes/RoleRoute.tsx` (protege el acceso por rol, como ADMIN).
+4. Crear `src/routes/AppRoutes.tsx` (el mapa de rutas).
+5. Conectar el botón de Login para que use `useNavigate` en lugar de recargar la página.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/main.tsx`
+
+```tsx
+import "./index.css";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  </StrictMode>,
+);
+```
+
+### 2. Crear `src/routes/PrivateRoutes.tsx`
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+export const PrivateRoutes = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading)
+    return (
+      <div className="p-8 text-center text-gray-500">Cargando sistema...</div>
+    );
+
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+};
+```
+
+### 3. Crear `src/routes/RoleRoute.tsx`
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import type { UserRole } from "../types/user.types";
+
+interface RoleRouteProps {
+  allowedRoles: UserRole[];
+}
+
+export const RoleRoute = ({ allowedRoles }: RoleRouteProps) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading)
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Verificando permisos...
+      </div>
+    );
+  if (!user) return <Navigate to="/login" replace />;
+
+  return allowedRoles.includes(user.role) ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/" replace />
+  );
+};
+```
+
+### 4. Sobrescribir `src/routes/AppRoutes.tsx`
+
+```tsx
+import { Routes, Route } from "react-router-dom";
+import { Login } from "../pages/Login";
+import { DashboardLayout } from "../layouts/DashboardLayout";
+import { DashboardHome } from "../pages/DashboardHome";
+import { MisArticulos } from "../pages/MisArticulos";
+import { Revisiones } from "../pages/Revisiones";
+import { BibliotecaHome } from "../pages/BibliotecaHome";
+import { PrivateRoutes } from "./PrivateRoutes";
+
+export const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* Ruta Pública */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Rutas Privadas (Requieren login) */}
+      <Route element={<PrivateRoutes />}>
+        <Route path="/" element={<DashboardLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="mis-articulos" element={<MisArticulos />} />
+          <Route path="revisiones" element={<Revisiones />} />
+          <Route path="biblioteca" element={<BibliotecaHome />} />
+          {/* Aquí luego agregaremos las rutas de ADMIN */}
+        </Route>
+      </Route>
+    </Routes>
+  );
+};
+```
+
+### 5. Actualizar `src/App.tsx`
+
+```tsx
+import { AppRoutes } from "./routes/AppRoutes";
+
+function App() {
+  return <AppRoutes />;
+}
+
+export default App;
+```
+
+### 6. Actualizar `src/pages/Login.tsx`
+
+- Importar `useNavigate` de `react-router-dom`.
+- Al inicio del componente, declarar: `const navigate = useNavigate();`
+- En el `try` del `handleSubmit`, después de `login(userData);`, borrar `window.location.href = '/'` y poner `navigate('/');`.
+
+### 7. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees la página de Admin todavía.
+- No modifiques el diseño visual de `DashboardLayout`.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados/actualizados y decime si `npm run build` pasó o falló.
+
+# Tarea 26: Crear tipos y servicio API para gestión de usuarios
+
+## Contexto
+
+Estamos construyendo el panel de administración para el rol `ADMIN`. Necesitamos conectar el frontend con los endpoints de usuarios del backend (`/api/usuarios`).
+
+## Objetivo
+
+1. Agregar tipos para la creación/edición de usuarios.
+2. Crear el archivo `src/api/usuarios.api.ts`.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar las siguientes interfaces al final del archivo (manteniendo las que ya existen):
+
+```typescript
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  dni?: string;
+  role: UserRole;
+  specialtyId?: number | null;
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  dni?: string;
+  role?: UserRole;
+  specialtyId?: number | null;
+  active?: boolean;
+}
+```
+
+### 2. Crear `src/api/usuarios.api.ts`
+
+Crear el archivo con exactamente este código (basado en el contrato de la API):
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// Listar usuarios (Admin)
+export const getUsuarios = async (): Promise<User[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Paginated<User>>>("/usuarios");
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al obtener usuarios");
+  }
+  return data.data.items; // Dependiendo de cómo devuelva el backend, puede ser .items o el array directo
+};
+
+// Crear usuario (Admin)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.post<ApiResponse<User>>(
+    "/usuarios",
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+
+// Actualizar usuario (Admin)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Lógica) (Admin)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al dar de baja al usuario");
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques el Sidebar ni el DashboardLayout todavía.
+- No crees las pantallas visuales todavía.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados/actualizados y decime si `npm run build` pasó o falló.
