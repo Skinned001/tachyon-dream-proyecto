@@ -2221,3 +2221,157 @@ import { AdminUsuarios } from "../pages/AdminUsuarios";
 ## Respuesta esperada
 
 Confirmame que la tabla y la ruta están creadas, y si `npm run build` pasó o falló.
+
+# Tarea 28: Implementar datos Mock (falsos) para la tabla de usuarios
+
+## Contexto
+
+El backend aún no tiene implementada la ruta `/api/usuarios` (lo está haciendo otro compañero). Para no frenar el desarrollo del frontend, vamos a simular la respuesta de la API con datos falsos (mocking).
+
+## Objetivo
+
+Modificar `src/api/usuarios.api.ts` para que la función `getUsuarios` devuelva datos simulados en lugar de hacer la petición HTTP real.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/usuarios.api.ts`
+
+Reemplazar todo el contenido del archivo con este código. Nota cómo envolvemos los datos en un `Promise` con un `setTimeout` para simular la latencia de red (así veremos el spinner de carga):
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// ==========================================
+// MOCK DE DATOS (Temporal hasta que el backend esté listo)
+// ==========================================
+const MOCK_USERS: User[] = [
+  {
+    id: 1,
+    username: "admin_hief",
+    email: "admin@hief.gob.ar",
+    first_name: "Admin",
+    last_name: "Sistema",
+    role: "ADMIN",
+    specialtyId: null,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 2,
+    username: "dr_laprida",
+    email: "fernando@hief.gob.ar",
+    first_name: "Fernando",
+    last_name: "Laprida",
+    role: "AUTOR",
+    specialtyId: 1,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 3,
+    username: "dra_gonzalez",
+    email: "maria@hief.gob.ar",
+    first_name: "María",
+    last_name: "Gonzalez",
+    role: "COMITE",
+    specialtyId: 2,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 4,
+    username: "dr_short",
+    email: "lautaro@hief.gob.ar",
+    first_name: "Lautaro",
+    last_name: "Short",
+    role: "AUTOR",
+    specialtyId: 1,
+    must_change_password: false,
+    active: false,
+  },
+];
+
+// Listar usuarios (MOCK)
+export const getUsuarios = async (): Promise<User[]> => {
+  // Simulamos un retraso de 800ms para ver el spinner
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(MOCK_USERS);
+    }, 800);
+  });
+
+  /* 
+  // CÓDIGO REAL (Descomentar cuando el backend esté listo)
+  const { data } = await axiosClient.get<ApiResponse<Paginated<User>>>('/usuarios');
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al obtener usuarios');
+  }
+  return data.data.items; 
+  */
+};
+
+// Crear usuario (MOCK temporal)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  console.log("Mock: Creando usuario", payload);
+  const newUser: User = {
+    id: Math.random(),
+    username: payload.username,
+    email: payload.email,
+    first_name: payload.first_name,
+    last_name: payload.last_name,
+    role: payload.role,
+    specialtyId: payload.specialtyId || null,
+    must_change_password: true,
+    active: true,
+  };
+  MOCK_USERS.push(newUser);
+  return newUser;
+};
+
+// Actualizar usuario (Se deja preparado para el backend real)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Se deja preparado para el backend real)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al dar de baja al usuario");
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques la pantalla `AdminUsuarios.tsx` (debería funcionar sola con este mock).
+- No modifiques el backend.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue modificado y si `npm run build` pasó o falló.
