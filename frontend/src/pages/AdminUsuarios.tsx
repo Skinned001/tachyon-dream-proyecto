@@ -186,7 +186,10 @@ export const AdminUsuarios = () => {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((usuario) => (
+                {usuarios.map((usuario, index) => {
+                  const isNearBottom = index >= usuarios.length - 2;
+
+                  return (
                   <tr
                     key={usuario.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
@@ -234,7 +237,7 @@ export const AdminUsuarios = () => {
                               current === usuario.id ? null : usuario.id,
                             );
                           }}
-                          className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                          className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087d70] focus-visible:ring-offset-2 disabled:opacity-50"
                         >
                           {busyUserId === usuario.id ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
@@ -245,7 +248,11 @@ export const AdminUsuarios = () => {
                         {openMenuId === usuario.id && (
                           <div
                             role="menu"
-                            className="absolute right-8 top-8 z-10 w-52 rounded-md border border-gray-200 bg-white py-1 text-left shadow-lg"
+                            className={`absolute right-8 z-10 w-56 rounded-md border border-gray-200 bg-white py-1 text-left shadow-lg ${
+                              isNearBottom
+                                ? 'bottom-full mb-2'
+                                : 'top-full mt-2'
+                            }`}
                           >
                             <button
                               type="button"
@@ -253,7 +260,7 @@ export const AdminUsuarios = () => {
                               onClick={() =>
                                 void handleResetPassword(usuario.id)
                               }
-                              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
                               <Key className="h-4 w-4 text-blue-500" />
                               Reiniciar contraseña
@@ -263,7 +270,7 @@ export const AdminUsuarios = () => {
                                 type="button"
                                 role="menuitem"
                                 onClick={() => void handleSuspend(usuario.id)}
-                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                               >
                                 <Ban className="h-4 w-4" />
                                 Suspender cuenta
@@ -274,7 +281,8 @@ export const AdminUsuarios = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {usuarios.length === 0 && (
                   <tr>
                     <td
