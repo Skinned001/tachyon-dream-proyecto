@@ -59,4 +59,5 @@ export interface ArticleDTO {
 export interface AuthenticatedArticleUser {
   id: number;
   role: RoleName;
+  is_author: boolean;
 }

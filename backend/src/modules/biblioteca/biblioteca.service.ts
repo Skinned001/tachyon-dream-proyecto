@@ -16,7 +16,7 @@ const allowedVisibilities = (userRole?: RoleName): LibraryVisibility[] => {
   if (userRole === 'DDI' || userRole === 'COMITE' || userRole === 'ADMIN') {
     return ['PUBLICO', 'INTERNO', 'CONFIDENCIAL'];
   }
-  if (userRole === 'AUTOR' || userRole === 'PUBLISHER') {
+  if (userRole === 'STAFF' || userRole === 'EDITOR') {
     return ['PUBLICO', 'INTERNO'];
   }
   return ['PUBLICO'];

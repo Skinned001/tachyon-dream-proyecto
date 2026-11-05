@@ -38,7 +38,11 @@ const getAuthenticatedUser = (req: Request): AuthenticatedArticleUser | undefine
   if (!req.user) {
     return undefined;
   }
-  return { id: req.user.id, role: req.user.role };
+  return {
+    id: req.user.id,
+    role: req.user.role,
+    is_author: req.user.is_author,
+  };
 };
 
 export class ArticuloController {

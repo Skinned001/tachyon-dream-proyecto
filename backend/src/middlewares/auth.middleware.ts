@@ -53,6 +53,7 @@ export const optionalAuthenticateJWT = (
     req.user = {
       id: payload.id,
       role: payload.role,
+      is_author: payload.is_author,
       specialtyId: payload.specialtyId,
       email: payload.email,
     };
@@ -103,6 +104,7 @@ export const authenticateJWT = async (
     req.user = {
       id: user.id,
       role: role.name,
+      is_author: user.is_author,
       specialtyId: user.specialtyId,
       email: user.email,
     };

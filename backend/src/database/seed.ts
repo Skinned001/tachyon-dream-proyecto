@@ -4,25 +4,7 @@ import { Especialidad } from '../modules/especialidades/Especialidad.model.js';
 import { Rol } from '../modules/usuarios/Rol.model.js';
 import { Usuario } from '../modules/usuarios/Usuario.model.js';
 import { setupAssociations } from './associations.js';
-
-const roles = [
-  { name: 'STAFF', description: 'Profesional del sistema.' },
-  { name: 'EDITOR', description: 'Editor de publicaciones.' },
-  { name: 'AUTOR', description: 'Profesional que envía manuscritos científicos.' },
-  {
-    name: 'DDI',
-    description: 'Departamento de Docencia e Investigación.',
-  },
-  {
-    name: 'COMITE',
-    description: 'Miembro del Comité Científico.',
-  },
-  {
-    name: 'PUBLISHER',
-    description: 'Encargado de Publicación / Prensa.',
-  },
-  { name: 'ADMIN', description: 'Administrador del sistema.' },
-] as const;
+import { synchronizeRoles } from './roles.js';
 
 const specialties = [
   {
@@ -76,12 +58,12 @@ const seedUsers = [
     specialtyName: 'Clínica Médica',
   },
   {
-    username: 'prensa',
-    email: 'prensa@hief.gob.ar',
-    first_name: 'Prensa',
+    username: 'editor',
+    email: 'editor@hief.gob.ar',
+    first_name: 'Editor',
     last_name: 'HIEF',
-    dni: 'SEED-PUBLISHER',
-    roleName: 'PUBLISHER',
+    dni: 'SEED-EDITOR',
+    roleName: 'EDITOR',
     specialtyName: null,
   },
   {
@@ -89,8 +71,9 @@ const seedUsers = [
     email: 'autor@hief.gob.ar',
     first_name: 'Autor',
     last_name: 'HIEF',
-    dni: 'SEED-AUTOR',
-    roleName: 'AUTOR',
+    dni: 'SEED-STAFF-AUTHOR',
+    roleName: 'STAFF',
+    is_author: true,
     specialtyName: 'Pediatría',
   },
 ] as const;
@@ -99,18 +82,11 @@ const seedDatabase = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
   await sequelize.sync();
+  await synchronizeRoles();
 
   const passwordHash = await bcrypt.hash('Hief2026*', 10);
 
   await sequelize.transaction(async (transaction) => {
-    for (const role of roles) {
-      await Rol.findOrCreate({
-        where: { name: role.name },
-        defaults: { ...role },
-        transaction,
-      });
-    }
-
     for (const specialty of specialties) {
       await Especialidad.findOrCreate({
         where: { name: specialty.name },
@@ -145,6 +121,7 @@ const seedDatabase = async (): Promise<void> => {
           first_name: userData.first_name,
           last_name: userData.last_name,
           dni: userData.dni,
+          is_author: 'is_author' in userData ? userData.is_author : false,
           active: true,
           roleId: role.id,
           specialtyId: specialty?.id ?? null,
@@ -156,7 +133,7 @@ const seedDatabase = async (): Promise<void> => {
   });
 
   console.info('Database seed completed.');
-  console.info(`Created or confirmed ${roles.length} roles, ${specialties.length} specialties, and ${seedUsers.length} users.`);
+  console.info(`Synchronized 5 roles, ${specialties.length} specialties, and ${seedUsers.length} users.`);
   console.warn('Seed accounts use a shared development password. Change it before real deployment.');
 };
 

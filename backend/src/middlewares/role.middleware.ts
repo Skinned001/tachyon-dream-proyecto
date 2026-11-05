@@ -14,3 +14,19 @@ export const requireRole = (allowedRoles: RoleName[]) => {
     next();
   };
 };
+
+export const requireAuthor = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (!req.user || (!req.user.is_author && req.user.role !== 'ADMIN')) {
+    res.status(403).json({
+      success: false,
+      error: 'No tiene permisos para enviar publicaciones',
+    });
+    return;
+  }
+
+  next();
+};

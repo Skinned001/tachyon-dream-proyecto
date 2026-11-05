@@ -38,6 +38,7 @@ const toAuthUser = (
     first_name: user.first_name,
     last_name: user.last_name,
     role: roleName,
+    is_author: user.is_author,
     specialtyId: user.specialtyId,
     must_change_password: user.must_change_password,
   };
@@ -90,6 +91,7 @@ export class AuthService {
       const payload: AuthTokenPayload = {
         id: user.id,
         role: role.name,
+        is_author: user.is_author,
         specialtyId: user.specialtyId,
         email: user.email,
       };

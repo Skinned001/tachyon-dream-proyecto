@@ -151,7 +151,7 @@ export class ArticuloService {
   }
 
   async listarArticulos(user: AuthenticatedArticleUser): Promise<ArticleDTO[]> {
-    const where: WhereOptions = user.role === 'AUTOR' ? { responsibleId: user.id } : {};
+    const where: WhereOptions = user.role === 'STAFF' ? { responsibleId: user.id } : {};
     const articles = await Articulo.findAll({
       where,
       include: articleIncludes,

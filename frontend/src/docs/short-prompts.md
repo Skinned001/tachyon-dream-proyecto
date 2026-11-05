@@ -4438,3 +4438,76 @@ Asegurate de que al abrir el modal (en `openCreateModal` y `openEditModal`), el 
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 42 (Backend): Actualizar los nombres de los roles en la Base de Datos y Modelos
+
+## Contexto
+
+El frontend ahora envía los roles `STAFF` y `EDITOR`, pero el backend está rechazando la creación/edición de usuarios con el error "el rol no existe". Esto se debe a que el backend y la base de datos todavía tienen los roles antiguos (`AUTOR`, `PUBLISHER`, `MEDICO`, etc.).
+
+## Objetivo
+
+1. Actualizar el modelo (si usa un ENUM) o los seeders/tabla de roles para que los roles válidos sean: `STAFF`, `DDI`, `COMITE`, `EDITOR`, `ADMIN`.
+2. Asegurarse de que los controladores busquen y asignen correctamente estos roles.
+
+## Lo que debés hacer
+
+### 1. Revisar el modelo de Usuario o Rol
+
+Buscar el archivo del modelo (ej. `src/modules/usuarios/Rol.model.ts` o `Usuario.model.ts`).
+Si el rol está definido como un `ENUM`, actualizarlo:
+
+```typescript
+role: {
+  type: DataTypes.ENUM('STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN'),
+  // ...
+}
+```
+
+_(Si usás una tabla relacional `roles`, no hace falta tocar el modelo, solo el paso 3)._
+
+### 2. Actualizar el Seeder (Semilla de datos)
+
+Si tienen un archivo `seed.ts` o `seeder.ts` que llena la tabla de roles al inicio, actualizarlo para que inserte:
+
+- `STAFF`
+- `DDI`
+- `COMITE`
+- `EDITOR`
+- `ADMIN`
+  Y eliminar los antiguos (`AUTOR`, `PUBLISHER`, `MEDICO`).
+
+### 3. Actualizar el Controlador de Usuarios
+
+En `usuarios.controller.ts`, verificar cómo se guarda el rol. Si el frontend envía el nombre (ej. `"STAFF"`) y el controlador espera el ID, ajustar la lógica.
+Por ejemplo, si usan una tabla de roles:
+
+```typescript
+// Dentro de createUsuario o updateUsuario
+import { Rol } from './Rol.model';
+
+// Buscar el rol por nombre
+const rolEncontrado = await Rol.findOne({ where: { name: req.body.role } });
+if (!rolEncontrado) {
+  return res.status(400).json({ success: false, error: 'El rol enviado no existe' });
+}
+
+// Asignar el ID del rol al usuario
+await usuario.update({ roleId: rolEncontrado.id, ... });
+```
+
+### 4. Actualizar la Base de Datos (Sincronización)
+
+- Si usan `sequelize.sync({ alter: true })` en el servidor, al reiniciar el backend la tabla se debería actualizar sola.
+- Si no, deberán hacer un script rápido o usar un cliente SQL (pgAdmin/DBeaver) para actualizar manualmente los roles en la tabla `roles`:
+  `UPDATE roles SET name = 'STAFF' WHERE name IN ('AUTOR', 'MEDICO');`
+  `UPDATE roles SET name = 'EDITOR' WHERE name = 'PUBLISHER';`
+
+### 5. Verificación
+
+- Correr `npm run build` en el backend.
+- Reiniciar el servidor backend para que tome los cambios.
+
+## Respuesta esperada
+
+Confirmame qué archivos modificaste para solucionar el problema de los roles y si el backend compila sin errores.

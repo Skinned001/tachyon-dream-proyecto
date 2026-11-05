@@ -9,7 +9,7 @@ const createUsuarioSchema = z.object({
   first_name: z.string().trim().min(1).max(255),
   last_name: z.string().trim().min(1).max(255),
   dni: z.string().trim().min(1).max(255),
-  role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN', 'AUTOR', 'PUBLISHER']),
+  role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN']),
   is_author: z.boolean().optional().default(false),
   specialtyId: z.number().int().positive().nullable().optional(),
 });
@@ -21,7 +21,7 @@ const updateUsuarioSchema = z
     first_name: z.string().trim().min(1).max(255).optional(),
     last_name: z.string().trim().min(1).max(255).optional(),
     dni: z.string().trim().min(1).max(255).optional(),
-    role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN', 'AUTOR', 'PUBLISHER']).optional(),
+    role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN']).optional(),
     is_author: z.boolean().optional(),
     specialtyId: z.number().int().positive().nullable().optional(),
     active: z.boolean().optional(),

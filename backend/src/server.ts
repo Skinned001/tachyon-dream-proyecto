@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { sequelize } from './config/database.js';
 import { setupAssociations } from './database/associations.js';
+import { synchronizeRoles } from './database/roles.js';
 import app from './app.js';
 
 dotenv.config();
@@ -11,6 +12,7 @@ const startServer = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
   await sequelize.sync({ alter: true });
+  await synchronizeRoles();
 
   app.listen(port, () => {
     console.log(`Backend running on http://localhost:${port}`);
