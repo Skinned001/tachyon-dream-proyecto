@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Ban, Key, Loader2, MoreVertical, Plus } from 'lucide-react';
+import {
+  Ban,
+  Check,
+  CheckCircle,
+  Copy,
+  Key,
+  Loader2,
+  MoreVertical,
+  Plus,
+} from 'lucide-react';
 import {
   createUsuario,
   deleteUsuario,
@@ -42,6 +51,10 @@ export const AdminUsuarios = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [createdUsername, setCreatedUsername] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
   const [createForm, setCreateForm] =
     useState<CreateUserRequest>(initialCreateForm);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,6 +62,10 @@ export const AdminUsuarios = () => {
   const resetCreateForm = () => {
     setCreateForm(initialCreateForm);
     setModalError('');
+    setCreatedPassword(null);
+    setCreatedUsername('');
+    setIsCopied(false);
+    setCopyError('');
   };
 
   const closeCreateModal = () => {
@@ -91,22 +108,34 @@ export const AdminUsuarios = () => {
 
     setIsCreating(true);
     try {
-      const { temporaryPassword, ...newUser } = await createUsuario(payload);
-      setUsuarios((current) => [newUser, ...current]);
+      const { usuario, tempPassword } = await createUsuario(payload);
+      setUsuarios((current) => [usuario, ...current]);
       setActionMessage(
         'Usuario creado correctamente. Deberá cambiar su contraseña al ingresar.',
       );
-      window.alert(
-        `¡Usuario creado exitosamente!\n\nUsuario: ${newUser.username}\nContraseña temporal: ${temporaryPassword}\n\nComparta estos datos con el usuario de forma segura.`,
-      );
-      setIsModalOpen(false);
-      resetCreateForm();
+      setCreatedUsername(usuario.username);
+      setCreatedPassword(tempPassword);
     } catch (err: unknown) {
       setModalError(
         err instanceof Error ? err.message : 'Error al crear usuario.',
       );
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleCopyPassword = async () => {
+    if (!createdPassword) return;
+
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(createdPassword);
+      setIsCopied(true);
+      window.setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      setCopyError(
+        'No se pudo copiar. Selecciona la contraseña y cópiala manualmente.',
+      );
     }
   };
 
@@ -396,8 +425,73 @@ export const AdminUsuarios = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={closeCreateModal}
-        title="Registrar Nuevo Usuario"
+        title={createdPassword ? '¡Usuario Creado!' : 'Registrar Nuevo Usuario'}
       >
+        {createdPassword ? (
+          <div className="flex flex-col gap-4 text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <CheckCircle className="h-6 w-6" />
+            </div>
+            <p className="text-sm text-gray-600">
+              El usuario{' '}
+              <strong className="text-gray-900">{createdUsername}</strong> fue
+              creado correctamente.
+            </p>
+
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-left">
+              <label
+                htmlFor="temporary-password"
+                className="text-xs font-semibold uppercase text-gray-500"
+              >
+                Contraseña temporal
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="temporary-password"
+                  type="text"
+                  readOnly
+                  value={createdPassword}
+                  onFocus={(event) => event.currentTarget.select()}
+                  className="min-w-0 flex-1 select-all rounded border border-gray-300 bg-white px-2 py-1.5 font-mono text-sm text-gray-800"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleCopyPassword()}
+                  aria-label={
+                    isCopied ? 'Contraseña copiada' : 'Copiar contraseña'
+                  }
+                  title={isCopied ? 'Copiada' : 'Copiar contraseña'}
+                  className="rounded p-2 text-blue-600 transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {copyError && (
+                <p className="mt-2 text-xs text-red-600" role="alert">
+                  {copyError}
+                </p>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Guarda o comparte esta contraseña de forma segura. No se volverá
+              a mostrar.
+            </p>
+
+            <Button
+              type="button"
+              variant="primary"
+              onClick={closeCreateModal}
+              className="mt-2 w-full"
+            >
+              Entendido
+            </Button>
+          </div>
+        ) : (
         <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
@@ -518,6 +612,7 @@ export const AdminUsuarios = () => {
             </Button>
           </div>
         </form>
+        )}
       </Modal>
     </div>
   );

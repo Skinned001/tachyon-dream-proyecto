@@ -3,7 +3,14 @@ import { axiosClient } from './axiosClient';
 import type { ApiResponse, Paginated } from '../types/api.types';
 import type { User, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
 
-export type CreateUsuarioResponse = User & { temporaryPassword: string };
+export interface CreateUsuarioResponse {
+  usuario: User;
+  tempPassword: string;
+}
+
+interface CreateUsuarioApiResponse extends User {
+  temporaryPassword: string;
+}
 
 // Listar usuarios (Admin)
 export const getUsuarios = async (): Promise<User[]> => {
@@ -18,14 +25,15 @@ export const getUsuarios = async (): Promise<User[]> => {
 export const createUsuario = async (
   payload: CreateUserRequest,
 ): Promise<CreateUsuarioResponse> => {
-  const { data } = await axiosClient.post<ApiResponse<CreateUsuarioResponse>>(
+  const { data } = await axiosClient.post<ApiResponse<CreateUsuarioApiResponse>>(
     '/usuarios',
     payload,
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al crear usuario');
   }
-  return data.data;
+  const { temporaryPassword, ...usuario } = data.data;
+  return { usuario, tempPassword: temporaryPassword };
 };
 
 // Actualizar usuario (Admin)
