@@ -91,10 +91,13 @@ export const AdminUsuarios = () => {
 
     setIsCreating(true);
     try {
-      const newUser = await createUsuario(payload);
+      const { temporaryPassword, ...newUser } = await createUsuario(payload);
       setUsuarios((current) => [newUser, ...current]);
       setActionMessage(
         'Usuario creado correctamente. Deberá cambiar su contraseña al ingresar.',
+      );
+      window.alert(
+        `¡Usuario creado exitosamente!\n\nUsuario: ${newUser.username}\nContraseña temporal: ${temporaryPassword}\n\nComparta estos datos con el usuario de forma segura.`,
       );
       setIsModalOpen(false);
       resetCreateForm();

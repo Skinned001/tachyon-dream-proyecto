@@ -3479,3 +3479,266 @@ Si falta el botón de "Crear Usuario" (`type="submit"`), agregalo.
 ## Respuesta esperada
 
 Confirmame que el archivo fue modificado y si `npm run build` pasó.
+
+# Tarea 36: Suavizar color de botones y mostrar credenciales de creación
+
+## Contexto
+
+1. El botón `primary` con `bg-blue-600` es demasiado fuerte visualmente para el diseño del sistema.
+2. Al crear un usuario, el backend genera una contraseña genérica (ej. "Hief2026!"), pero el Admin no la ve, por lo que no puede pasarle los datos al nuevo usuario.
+
+## Objetivo
+
+1. Suavizar el color del botón `primary`.
+2. Mostrar un alert o un mensaje en pantalla con las credenciales generadas al momento de crear el usuario.
+
+## Lo que debés hacer
+
+### 1. Suavizar el color del botón en `src/components/ui/Button.tsx`
+
+Buscar la variante `primary` y cambiarla a un tono más suave (blue-500 o el institucional-500):
+
+```tsx
+const variants = {
+  // Cambiamos bg-blue-600 a bg-blue-500
+  primary: "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-400",
+  secondary:
+    "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-500",
+  danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400",
+  ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+};
+```
+
+### 2. Mostrar credenciales en `src/pages/AdminUsuarios.tsx`
+
+En la función `handleCreateSubmit`, después de crear el usuario exitosamente y recargar la tabla, debemos mostrarle al Admin la contraseña.
+
+_(Nota: Como el backend actualmente genera la contraseña fija `Hief2026!`, usaremos ese texto para el mensaje)._
+
+Modificar la función `handleCreateSubmit` así:
+
+```tsx
+const handleCreateSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setModalError("");
+
+  if (
+    !formulario.username ||
+    !formulario.email ||
+    !formulario.first_name ||
+    !formulario.last_name
+  ) {
+    setModalError("Todos los campos son obligatorios");
+    return;
+  }
+
+  setIsCreating(true);
+  try {
+    await createUsuario(formulario as unknown as CreateUserRequest);
+    await fetchUsuarios(); // Recargamos la tabla
+
+    // MOSTRAMOS LAS CREDENCIALES AL ADMIN
+    alert(
+      `¡Usuario creado exitosamente!\n\nUsuario: ${formulario.username}\nContraseña temporal: Hief2026!\n\nPor favor, comparta estos datos con el usuario.`,
+    );
+
+    setIsModalOpen(false);
+    resetForm();
+  } catch (err: any) {
+    setModalError(err.message || "Error al crear usuario");
+  } finally {
+    setIsCreating(false);
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los cambios fueron aplicados y si `npm run build` pasó o falló.
+
+# Tarea 37: Mostrar contraseña generada con botón de copiar
+
+## Contexto
+
+Al crear un usuario, el backend genera una contraseña aleatoria segura y la devuelve en la respuesta. En lugar de mostrar un `alert` (donde es imposible copiar el texto), queremos mostrar un estado de "Éxito" dentro del mismo Modal, con la contraseña en un input de solo lectura y un botón para copiar al portapapeles.
+
+## Objetivo
+
+1. Modificar `src/pages/AdminUsuarios.tsx` para capturar la contraseña que devuelve el backend.
+2. Mostrar un mensaje de éxito en el modal con un botón de "Copiar" usando `navigator.clipboard`.
+
+## Lo que debés hacer
+
+### 1. Asumir la estructura del backend
+
+Vamos a asumir que tu compañero configuró el backend para devolver algo así:
+
+```json
+{
+  "success": true,
+  "data": {
+    "usuario": { ... },
+    "tempPassword": "UNVitDzWIOEJZ_DnEv3y6GE9"
+  }
+}
+```
+
+_(Si el backend devuelve la contraseña en otro campo, como `password` o dentro del mismo objeto usuario, el agente deberá adaptar la variable `tempPassword`)._
+
+### 2. Modificar `src/api/usuarios.api.ts`
+
+Ajustar la función `createUsuario` para que devuelva el tipo correcto:
+
+```typescript
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<{ usuario: User; tempPassword: string }> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ usuario: User; tempPassword: string }>
+  >("/usuarios", payload);
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+```
+
+### 3. Modificar `src/pages/AdminUsuarios.tsx`
+
+Necesitamos estados para guardar la contraseña generada y saber si acabamos de crear el usuario.
+
+Agregar los estados al inicio:
+
+```tsx
+const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+const [isCopied, setIsCopied] = useState(false);
+```
+
+Modificar `handleCreateSubmit`:
+
+```tsx
+const handleCreateSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setModalError("");
+
+  if (
+    !formulario.username ||
+    !formulario.email ||
+    !formulario.first_name ||
+    !formulario.last_name
+  ) {
+    setModalError("Todos los campos son obligatorios");
+    return;
+  }
+
+  setIsCreating(true);
+  try {
+    const response = await createUsuario(
+      formulario as unknown as CreateUserRequest,
+    );
+    await fetchUsuarios();
+
+    // En lugar del alert, guardamos la contraseña y mostramos la pantalla de éxito
+    setCreatedPassword(response.tempPassword);
+  } catch (err: any) {
+    setModalError(err.message || "Error al crear usuario");
+  } finally {
+    setIsCreating(false);
+  }
+};
+
+const handleCopyPassword = () => {
+  if (createdPassword) {
+    navigator.clipboard.writeText(createdPassword);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000); // Vuelve al texto original después de 2s
+  }
+};
+
+const closeModal = () => {
+  setIsModalOpen(false);
+  resetForm();
+  setModalError("");
+  setCreatedPassword(null); // Limpiamos la contraseña al cerrar
+};
+```
+
+### 4. Actualizar el `<Modal>` en `AdminUsuarios.tsx`
+
+Cambiar el contenido del Modal para que muestre el formulario o el mensaje de éxito dependiendo del estado:
+
+```tsx
+<Modal
+  isOpen={isModalOpen}
+  onClose={closeModal}
+  title={createdPassword ? "¡Usuario Creado!" : "Registrar Nuevo Usuario"}
+>
+  {createdPassword ? (
+    // PANTALLA DE ÉXITO
+    <div className="flex flex-col gap-4 text-center">
+      <div className="mx-auto w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+        <CheckCircle className="w-6 h-6" />
+      </div>
+      <p className="text-gray-600 text-sm">
+        El usuario{" "}
+        <strong className="text-gray-900">{formulario.username}</strong> fue
+        creado correctamente.
+      </p>
+
+      <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-left">
+        <label className="text-xs font-semibold text-gray-500 uppercase">
+          Contraseña Temporal
+        </label>
+        <div className="flex items-center justify-between mt-1">
+          <code className="text-sm font-mono text-gray-800 select-all">
+            {createdPassword}
+          </code>
+          <button
+            onClick={handleCopyPassword}
+            className="ml-2 p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Copiar contraseña"
+          >
+            {isCopied ? (
+              <Check className="w-4 h-4 text-green-600" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Asegúrate de guardar o enviar esta contraseña. No se volverá a mostrar.
+      </p>
+
+      <Button
+        type="button"
+        variant="primary"
+        onClick={closeModal}
+        className="mt-2 w-full"
+      >
+        Entendido
+      </Button>
+    </div>
+  ) : (
+    // FORMULARIO (El mismo de la tarea anterior)
+    <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
+      {/* ... Aquí va el mismo formulario de la tarea 34 ... */}
+    </form>
+  )}
+</Modal>
+```
+
+**Importante:** No olvides importar los íconos `CheckCircle`, `Copy` y `Check` de `lucide-react` al inicio del archivo.
+
+### 5. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron modificados y si `npm run build` pasó.
