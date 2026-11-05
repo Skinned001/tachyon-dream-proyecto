@@ -169,8 +169,11 @@ export class UsuariosController {
     }
 
     try {
-      const data = await this.usuariosService.resetPassword(id);
-      res.status(200).json({ success: true, data });
+      const { temporaryPassword } = await this.usuariosService.resetPassword(id);
+      res.status(200).json({
+        success: true,
+        data: { temporaryPassword },
+      });
     } catch (error: unknown) {
       next(error);
     }

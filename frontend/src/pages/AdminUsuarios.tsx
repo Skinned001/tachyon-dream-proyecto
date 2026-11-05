@@ -56,6 +56,7 @@ export const AdminUsuarios = () => {
   const [modalError, setModalError] = useState('');
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const [createdUsername, setCreatedUsername] = useState('');
+  const [passwordAction, setPasswordAction] = useState<'created' | 'reset' | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -85,6 +86,7 @@ export const AdminUsuarios = () => {
     setModalError('');
     setCreatedPassword(null);
     setCreatedUsername('');
+    setPasswordAction(null);
     setIsCopied(false);
     setCopyError('');
   };
@@ -111,6 +113,7 @@ export const AdminUsuarios = () => {
     setShowPermissions(false);
     setCreatedPassword(null);
     setCreatedUsername('');
+    setPasswordAction(null);
     setModalError('');
     setIsModalOpen(true);
     setOpenMenuId(null);
@@ -162,6 +165,7 @@ export const AdminUsuarios = () => {
       await fetchUsuarios();
       setCreatedUsername(response.usuario.username || formulario.username);
       setCreatedPassword(response.tempPassword || 'Revisar sistema');
+      setPasswordAction('created');
     } catch (err: unknown) {
       setModalError(
         err instanceof Error ? err.message : 'Error en la operación',
@@ -286,8 +290,14 @@ export const AdminUsuarios = () => {
     setOpenMenuId(null);
     setBusyUserId(id);
     try {
-      await resetPassword(id);
-      alert('Contraseña reiniciada con éxito.');
+      const response = await resetPassword(id);
+      const usuario = usuarios.find((item) => item.id === id);
+      setCreatedUsername(usuario?.username ?? '');
+      setCreatedPassword(response.tempPassword);
+      setPasswordAction('reset');
+      setIsCopied(false);
+      setCopyError('');
+      setIsModalOpen(true);
     } catch (err: unknown) {
       alert(
         err instanceof Error
@@ -493,7 +503,15 @@ export const AdminUsuarios = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={createdPassword ? '¡Usuario Creado!' : editingUserId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
+        title={
+          createdPassword
+            ? passwordAction === 'reset'
+              ? 'Contraseña reiniciada'
+              : '¡Usuario Creado!'
+            : editingUserId
+              ? 'Editar Usuario'
+              : 'Registrar Nuevo Usuario'
+        }
       >
         {createdPassword ? (
           <div className="flex flex-col gap-4 text-center">
@@ -501,7 +519,9 @@ export const AdminUsuarios = () => {
               <CheckCircle className="h-6 w-6" />
             </div>
             <p className="text-sm text-gray-600">
-              El usuario <strong className="text-gray-900">{createdUsername}</strong> fue creado correctamente.
+              {passwordAction === 'reset' ? 'Nueva contraseña para' : 'El usuario'}{' '}
+              <strong className="text-gray-900">{createdUsername}</strong>
+              {passwordAction === 'reset' ? '.' : ' fue creado correctamente.'}
             </p>
 
             <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-left">

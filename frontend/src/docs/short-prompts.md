@@ -4511,3 +4511,62 @@ await usuario.update({ roleId: rolEncontrado.id, ... });
 ## Respuesta esperada
 
 Confirmame qué archivos modificaste para solucionar el problema de los roles y si el backend compila sin errores.
+
+# Tarea 43 (Backend): Devolver la contraseña generada al reiniciarla
+
+## Contexto
+
+Cuando el Admin reinicia la contraseña de un usuario, el backend genera una nueva, pero actualmente no se la devuelve al frontend. El Admin necesita verla para copiarla y pasársela al usuario.
+
+## Objetivo
+
+Modificar `backend/src/modules/usuarios/usuarios.controller.ts` para que la función `resetPassword` devuelva la contraseña generada en texto plano.
+
+## Lo que debés hacer
+
+### 1. Modificar `resetPassword` en `usuarios.controller.ts`
+
+(Asumimos que tienes una función para generar la contraseña, si no, puedes usar un random string simple).
+
+```typescript
+import crypto from "crypto";
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Generar contraseña temporal (ej: 16 caracteres aleatorios)
+    const tempPassword = crypto.randomBytes(8).toString("hex");
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+    }
+
+    await usuario.update({
+      password: hashedPassword,
+      must_change_password: true,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: { tempPassword }, // Devolvemos la contraseña generada
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al reiniciar contraseña" });
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build` en el backend y reiniciar el servidor.
+
+## Respuesta esperada
+
+Confirmame que el controlador fue modificado y si compila.
