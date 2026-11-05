@@ -3096,19 +3096,22 @@ Confirmame que el archivo fue actualizado y si `npm run build` pasó.
 # Tarea 34: Crear el Modal para registrar un nuevo usuario
 
 ## Contexto
+
 El Admin necesita poder crear usuarios genéricos (Alta). Vamos a crear un componente reutilizable `Modal` y luego armar el formulario de creación dentro de `AdminUsuarios.tsx`. El backend ya se encarga de generar la contraseña genérica y marcar `must_change_password: true`.
 
 ## Objetivo
+
 1. Crear `src/components/ui/Modal.tsx`.
 2. Modificar `src/pages/AdminUsuarios.tsx` para abrir el modal al hacer clic en "Nuevo Usuario" y enviar los datos a la API.
 
 ## Lo que debés hacer
 
 ### 1. Crear `src/components/ui/Modal.tsx`
+
 ```tsx
 // src/components/ui/Modal.tsx
-import { type ReactNode, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { type ReactNode, useEffect } from "react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -3121,10 +3124,10 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
   // Cerrar con la tecla Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    if (isOpen) window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    if (isOpen) window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -3134,13 +3137,14 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
@@ -3148,37 +3152,43 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
 ```
 
 ### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
 Vamos a agregar el estado del modal y el formulario.
 
 ```tsx
 // src/pages/AdminUsuarios.tsx
-import { useEffect, useState } from 'react';
-import { getUsuarios, deleteUsuario, resetPassword, createUsuario } from '../api/usuarios.api';
-import type { User, CreateUserRequest } from '../types/user.types';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/Input';
-import { Loader2, Plus, MoreVertical, Ban, Key } from 'lucide-react';
-import { useForm } from '../hooks/useForm';
+import { useEffect, useState } from "react";
+import {
+  getUsuarios,
+  deleteUsuario,
+  resetPassword,
+  createUsuario,
+} from "../api/usuarios.api";
+import type { User, CreateUserRequest } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
+import { Loader2, Plus, MoreVertical, Ban, Key } from "lucide-react";
+import { useForm } from "../hooks/useForm";
 
 export const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  
+
   // Estados para el Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [modalError, setModalError] = useState('');
+  const [modalError, setModalError] = useState("");
 
   const { formulario, handleChange, resetForm } = useForm({
-    username: '',
-    email: '',
-    first_name: '',
-    last_name: '',
-    role: 'AUTOR', // Rol por defecto
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    role: "AUTOR", // Rol por defecto
   });
 
   const fetchUsuarios = async () => {
@@ -3187,7 +3197,7 @@ export const AdminUsuarios = () => {
       const data = await getUsuarios();
       setUsuarios(data);
     } catch (err: any) {
-      setError(err.message || 'Error al cargar usuarios');
+      setError(err.message || "Error al cargar usuarios");
     } finally {
       setIsLoading(false);
     }
@@ -3198,24 +3208,28 @@ export const AdminUsuarios = () => {
   }, []);
 
   const handleSuspend = async (id: number) => {
-    if (window.confirm('¿Estás seguro de suspender esta cuenta?')) {
+    if (window.confirm("¿Estás seguro de suspender esta cuenta?")) {
       try {
         await deleteUsuario(id);
-        setUsuarios(usuarios.map(u => u.id === id ? { ...u, active: false } : u));
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
       } catch (err) {
-        alert('Error al suspender usuario');
+        alert("Error al suspender usuario");
       }
     }
     setOpenMenuId(null);
   };
 
   const handleResetPassword = async (id: number) => {
-    if (window.confirm('¿Generar nueva contraseña genérica para este usuario?')) {
+    if (
+      window.confirm("¿Generar nueva contraseña genérica para este usuario?")
+    ) {
       try {
         await resetPassword(id);
-        alert('Contraseña reiniciada con éxito.');
+        alert("Contraseña reiniciada con éxito.");
       } catch (err) {
-        alert('Error al reiniciar contraseña');
+        alert("Error al reiniciar contraseña");
       }
     }
     setOpenMenuId(null);
@@ -3223,10 +3237,15 @@ export const AdminUsuarios = () => {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setModalError('');
-    
-    if (!formulario.username || !formulario.email || !formulario.first_name || !formulario.last_name) {
-      setModalError('Todos los campos son obligatorios');
+    setModalError("");
+
+    if (
+      !formulario.username ||
+      !formulario.email ||
+      !formulario.first_name ||
+      !formulario.last_name
+    ) {
+      setModalError("Todos los campos son obligatorios");
       return;
     }
 
@@ -3237,7 +3256,7 @@ export const AdminUsuarios = () => {
       setIsModalOpen(false);
       resetForm();
     } catch (err: any) {
-      setModalError(err.message || 'Error al crear usuario');
+      setModalError(err.message || "Error al crear usuario");
     } finally {
       setIsCreating(false);
     }
@@ -3247,10 +3266,18 @@ export const AdminUsuarios = () => {
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
-          <p className="text-gray-500 text-sm mt-1">Administra las cuentas del sistema</p>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} variant="primary" className="flex items-center gap-2">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          variant="primary"
+          className="flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" />
           Nuevo Usuario
         </Button>
@@ -3262,25 +3289,58 @@ export const AdminUsuarios = () => {
       </Card>
 
       {/* MODAL DE CREACIÓN */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); resetForm(); setModalError(''); }} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          resetForm();
+          setModalError("");
+        }}
         title="Registrar Nuevo Usuario"
       >
         <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Nombre" name="first_name" value={formulario.first_name} onChange={handleChange} required />
-            <Input label="Apellido" name="last_name" value={formulario.last_name} onChange={handleChange} required />
+            <Input
+              label="Nombre"
+              name="first_name"
+              value={formulario.first_name}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Apellido"
+              name="last_name"
+              value={formulario.last_name}
+              onChange={handleChange}
+              required
+            />
           </div>
-          
-          <Input label="Nombre de Usuario" name="username" value={formulario.username} onChange={handleChange} placeholder="ej: jperez" required />
-          <Input label="Correo Electrónico" name="email" type="email" value={formulario.email} onChange={handleChange} placeholder="correo@hief.gob.ar" required />
-          
+
+          <Input
+            label="Nombre de Usuario"
+            name="username"
+            value={formulario.username}
+            onChange={handleChange}
+            placeholder="ej: jperez"
+            required
+          />
+          <Input
+            label="Correo Electrónico"
+            name="email"
+            type="email"
+            value={formulario.email}
+            onChange={handleChange}
+            placeholder="correo@hief.gob.ar"
+            required
+          />
+
           <div className="flex flex-col gap-1.5 w-full">
-            <label className="text-sm font-medium text-gray-700">Rol del Sistema</label>
-            <select 
-              name="role" 
-              value={formulario.role} 
+            <label className="text-sm font-medium text-gray-700">
+              Rol del Sistema
+            </label>
+            <select
+              name="role"
+              value={formulario.role}
               onChange={handleChange}
               className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-institucional-500"
             >
@@ -3293,14 +3353,27 @@ export const AdminUsuarios = () => {
           </div>
 
           <p className="text-xs text-gray-500 mt-2">
-            * Se generará una contraseña genérica automáticamente. El usuario deberá cambiarla al iniciar sesión.
+            * Se generará una contraseña genérica automáticamente. El usuario
+            deberá cambiarla al iniciar sesión.
           </p>
 
-          {modalError && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">{modalError}</div>}
+          {modalError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              {modalError}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 mt-4">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" variant="primary" isLoading={isCreating}>Crear Usuario</Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" isLoading={isCreating}>
+              Crear Usuario
+            </Button>
           </div>
         </form>
       </Modal>
@@ -3310,11 +3383,99 @@ export const AdminUsuarios = () => {
 ```
 
 ### 3. Verificación
+
 - Correr `npm run build`.
 
 ## Lo que NO debés hacer
+
 - No modifiques el backend ni `usuarios.api.ts`.
 - No modifiques el `AuthContext` todavía.
 
 ## Respuesta esperada
+
 Confirmame que los archivos fueron modificados y si `npm run build` pasó o falló.
+
+# Tarea 35: Arreglar estilos de botones y verificar modal
+
+## Contexto
+
+1. Los botones `primary` se están viendo con fondo blanco y texto blanco (invisibles). Esto pasa porque las clases `bg-institucional-600` no están compilando bien o no existen en el tema actual.
+2. En el modal de "Nuevo Usuario", el usuario reporta que no ve el botón para confirmar la creación (probablemente por el mismo problema de color).
+
+## Objetivo
+
+1. Corregir el componente `Button.tsx` usando colores estándar de Tailwind (como `blue-600`) para asegurar que se vean.
+2. Verificar que el botón "Crear Usuario" esté presente en el modal de `AdminUsuarios.tsx`.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/components/ui/Button.tsx`
+
+```tsx
+// src/components/ui/Button.tsx
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  isLoading?: boolean;
+}
+
+export const Button = ({
+  children,
+  variant = "primary",
+  isLoading = false,
+  className = "",
+  disabled,
+  ...props
+}: ButtonProps) => {
+  const baseClasses =
+    "inline-flex items-center justify-center px-4 py-2 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  // Usamos colores estándar de Tailwind (blue-600) para garantizar visibilidad
+  const variants = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+    secondary:
+      "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-500",
+    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+  };
+
+  return (
+    <button
+      className={`${baseClasses} ${variants[variant]} ${className}`}
+      disabled={isLoading || disabled}
+      {...props}
+    >
+      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      {children}
+    </button>
+  );
+};
+```
+
+### 2. Revisar `src/pages/AdminUsuarios.tsx`
+
+Verificar que, dentro del `<form>` del `<Modal>`, al final, estén los dos botones. Si falta el de "Crear Usuario", agregarlo. Debería verse así:
+
+```tsx
+<div className="flex justify-end gap-3 mt-4">
+  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+    Cancelar
+  </Button>
+  <Button type="submit" variant="primary" isLoading={isCreating}>
+    Crear Usuario
+  </Button>
+</div>
+```
+
+Si falta el botón de "Crear Usuario" (`type="submit"`), agregalo.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue modificado y si `npm run build` pasó.
