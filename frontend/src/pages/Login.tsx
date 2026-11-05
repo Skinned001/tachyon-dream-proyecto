@@ -9,11 +9,15 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectPath =
-    (location.state as { from?: string } | null)?.from ?? '/';
+  const from = (
+    location.state as
+      | { from?: { pathname?: string; search?: string; hash?: string } }
+      | null
+  )?.from;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,15 +29,17 @@ export default function Login() {
     }
 
     try {
+      setIsSubmitting(true);
       const userData = await authApi.login(email, password);
       login(userData);
-      navigate(redirectPath, { replace: true });
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Error al conectar con el servidor.',
-      );
+      const returnTo = from?.pathname
+        ? `${from.pathname}${from.search || ''}${from.hash || ''}`
+        : '/';
+      navigate(returnTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al conectar con el servidor.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -92,6 +98,7 @@ export default function Login() {
                 type="email" 
                 autoComplete="username" 
                 required 
+                disabled={isSubmitting}
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
                 placeholder="autor@hief.gob.ar" 
@@ -106,6 +113,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'} 
                   autoComplete="current-password" 
                   required 
+                  disabled={isSubmitting}
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
                   placeholder="Hief2026*" 
@@ -113,7 +121,8 @@ export default function Login() {
                 />
                 <button 
                   type="button" 
-                  onClick={() => setShowPassword(!showPassword)} 
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isSubmitting}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#52766d] hover:text-[#07584f]"
                 >
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -124,10 +133,12 @@ export default function Login() {
             {error && <p role="alert" className="text-xs text-[#a3342d]">{error}</p>}
             
             <button 
-              type="submit" 
-              className="group mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] text-[13px] font-semibold text-white transition hover:bg-[#07584f] focus:outline-none focus:ring-4 focus:ring-[#bce8d8]"
+              type="submit"
+              disabled={isSubmitting}
+              className="group mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] text-[13px] font-semibold text-white transition hover:bg-[#07584f] focus:outline-none focus:ring-4 focus:ring-[#bce8d8] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Iniciar sesión <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+              {isSubmitting ? 'Ingresando...' : 'Iniciar sesión'}
+              {!isSubmitting && <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />}
             </button>
           </form>
            

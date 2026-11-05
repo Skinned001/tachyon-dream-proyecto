@@ -10,6 +10,8 @@ export const PrivateRoutes = () => {
   const handleSignOut = async () => {
     try {
       await logout();
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
     } finally {
       navigate('/login', { replace: true });
     }
@@ -17,20 +19,14 @@ export const PrivateRoutes = () => {
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-gray-500">
-        Cargando sistema...
+      <div role="status" className="flex min-h-[100dvh] items-center justify-center text-sm text-[#52766d]">
+        Verificando sesión...
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return (
-      <Navigate
-        replace
-        to="/login"
-        state={{ from: location.pathname }}
-      />
-    );
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return (

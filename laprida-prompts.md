@@ -1,11 +1,13 @@
 # Iniciacion de proyecto - conexion a base de datos:
+ 
+
+
+
 
 # Seed de roles:
-
 Actúa como Desarrollador Backend Senior. Basándote en #file:spec.md y en la estructura modular existente en /backend, necesito que crees el script de inicialización de datos (Seeder) en `src/database/seed.ts` (o `src/seeders/seed.ts`).
 
 El seeder debe realizar las siguientes operaciones utilizando transacciones de Sequelize:
-
 1. Crear los 5 roles institucionales obligatorios si no existen:
    - `AUTOR`
    - `DDI` (Departamento de Docencia e Investigación)
@@ -22,7 +24,6 @@ Agrega un script en el `package.json` del backend llamado `"db:seed"` para poder
 Actúa como Arquitecto Backend Senior en TypeScript. Basándote estrictamente en #file:spec.md, #file:contrato.md y #file:.github/copilot-instructions.md, implementa la infraestructura base de Autenticación JWT, los middlewares de seguridad y el Módulo 1 (`auth`) en `/backend`.
 
 Reglas de negocio obligatorias (Caso de Uso N°3):
-
 - No existe registro público abierto (solo el ADMIN crea usuarios).
 - Todas las respuestas deben respetar la interfaz `{ success: boolean, data?: T, error?: string }` definida en `contrato.md`.
 - En credenciales inválidas, devolver siempre el mensaje genérico: "Correo o contraseña incorrectos" (HTTP 401).
@@ -55,11 +56,9 @@ Genera o actualiza los siguientes archivos en TypeScript estricto (sin usar `any
 6. Registra las rutas bajo `/api/auth` y el `error.middleware.ts` en `src/app.ts` (o `src/server.ts`).
 
 # Implementacion de multer con limite de archivos 10mb:
-
 Actúa como Arquitecto Backend Senior en TypeScript. Basándote en #file:spec.md, crea la configuración de subida de archivos en `backend/src/config/multer.ts` utilizando la librería `multer` y el tipado de Node (`fs`, `path`).
 
 Requisitos obligatorios:
-
 1. Define el `storage` usando `multer.diskStorage`.
 2. La ruta de destino (`destination`) debe ser dinámica analizando la URL (`req.originalUrl` o `req.baseUrl`):
    - Si la ruta incluye `/biblioteca`, guardar en `uploads/library/`.
@@ -71,11 +70,9 @@ Requisitos obligatorios:
 6. Exporta el middleware (ej. `export const uploadPdf = multer({ storage, fileFilter, limits });`).
 
 # Prueba de multer:
-
-Actúa como Desarrollador Backend. Necesito probar la configuración de Multer que acabamos de crear.
+Actúa como Desarrollador Backend. Necesito probar la configuración de Multer que acabamos de crear. 
 
 Modifica el archivo principal del servidor (por ejemplo, `backend/src/server.ts` o `app.ts`) para incluir una ruta de prueba temporal. Sigue estos pasos:
-
 1. Importa `uploadPdf` desde `src/config/multer.ts` (recuerda usar la extensión `.js` en la importación si el proyecto usa ES Modules).
 2. Justo antes del bloque donde arranca el servidor (`app.listen`), agrega el siguiente endpoint: `app.post('/api/biblioteca/test-upload', uploadPdf.single('file'), ...)`.
 3. Dentro del controlador de esta ruta, si `req.file` no existe, retorna HTTP 400 con `{ success: false, error: "No se subió ningún archivo válido" }`.
@@ -101,10 +98,10 @@ Luego, crea o actualiza los siguientes archivos en TypeScript estricto (sin usar
 4. `src/modules/biblioteca/biblioteca.service.ts`:
    - `listarRecursos(userRole?: RoleName, filters?: { specialtyId?: number; category?: string; search?: string })`:
      Filtra dinámicamente por visibilidad según el rol:
-     - Si no hay `userRole` (visitante público): solo devuelve `visibility = 'PUBLICO'`.
-     - Si `userRole` es `'AUTOR'` o `'PUBLISHER'`: devuelve `'PUBLICO'` e `'INTERNO'`.
-     - Si `userRole` es `'DDI'`, `'COMITE'` o `'ADMIN'`: devuelve `'PUBLICO'`, `'INTERNO'` y `'CONFIDENCIAL'`.
-       Incluye los datos de la `Especialidad` asociada.
+     * Si no hay `userRole` (visitante público): solo devuelve `visibility = 'PUBLICO'`.
+     * Si `userRole` es `'AUTOR'` o `'PUBLISHER'`: devuelve `'PUBLICO'` e `'INTERNO'`.
+     * Si `userRole` es `'DDI'`, `'COMITE'` o `'ADMIN'`: devuelve `'PUBLICO'`, `'INTERNO'` y `'CONFIDENCIAL'`.
+     Incluye los datos de la `Especialidad` asociada.
    - `obtenerPorId(id: number, userRole?: RoleName)`: Obtiene el detalle validando que el rol del usuario tenga permiso para ver ese nivel de `visibility`.
    - `crearRecurso(data, file: Express.Multer.File, uploadedBy: number)`: Calcula `file_size` legible (ej. en KB/MB a partir de `file.size`), guarda `file_path` y crea el registro en BD.
    - `actualizarRecurso(id: number, data)`: Actualiza `title`, `category`, `visibility` o `specialtyId`.
@@ -126,21 +123,154 @@ Actúa como Arquitecto Backend Senior en TypeScript. Basándote en #file:spec.md
 
 Crea o actualiza los siguientes archivos en TypeScript estricto:
 
-1.  `src/modules/articulos/Articulo.model.ts`:
-    Define el modelo Sequelize `Articulo` (`tableName: 'articles'`) con los campos: `id`, `title`, `abstract` (texto largo), `file_path` (string), `status` (ENUM: `'EN_REVISION'`, `'APROBADO'`, `'RECHAZADO'`, `'PUBLICADO'`), `authorId` (FK a `users`), `specialtyId` (FK a `specialties`).
+1. `src/modules/articulos/Articulo.model.ts`:
+   Define el modelo Sequelize `Articulo` (`tableName: 'articles'`) con los campos: `id`, `title`, `abstract` (texto largo), `file_path` (string), `status` (ENUM: `'EN_REVISION'`, `'APROBADO'`, `'RECHAZADO'`, `'PUBLICADO'`), `authorId` (FK a `users`), `specialtyId` (FK a `specialties`).
 
-2.  `src/modules/articulos/articulo.service.ts`:
-    - `crearArticulo(data, file: Express.Multer.File, authorId: number)`: Guarda el PDF (Multer) e inserta en la BD con status inicial `'EN_REVISION'`.
-    - `listarArticulos(user)`:
-      - Si el rol es `AUTOR`: devuelve solo los artículos donde `authorId === user.id`.
-      - Si el rol es `COMITE`, `PUBLISHER` o `ADMIN`: devuelve todos los artículos.
-    - `actualizarEstado(id: number, nuevoEstado: string, revisorId: number)`: Permite al comité cambiar el estado del manuscrito.
+2. `src/modules/articulos/articulo.service.ts`:
+   - `crearArticulo(data, file: Express.Multer.File, authorId: number)`: Guarda el PDF (Multer) e inserta en la BD con status inicial `'EN_REVISION'`.
+   - `listarArticulos(user)`: 
+     * Si el rol es `AUTOR`: devuelve solo los artículos donde `authorId === user.id`.
+     * Si el rol es `COMITE`, `PUBLISHER` o `ADMIN`: devuelve todos los artículos.
+   - `actualizarEstado(id: number, nuevoEstado: string, revisorId: number)`: Permite al comité cambiar el estado del manuscrito.
 
-3.  `src/modules/articulos/articulo.controller.ts` y `src/modules/articulos/articulo.routes.ts`:
-    - `POST /` (protegido por `authenticateJWT`, `requireRole(['AUTOR', 'ADMIN'])` y `uploadPdf.single('file')`).
-    - `GET /` (protegido por `authenticateJWT`).
-    - `PUT /:id/status` (protegido por `authenticateJWT` y `requireRole(['COMITE', 'ADMIN'])`).
+3. `src/modules/articulos/articulo.controller.ts` y `src/modules/articulos/articulo.routes.ts`:
+   - `POST /` (protegido por `authenticateJWT`, `requireRole(['AUTOR', 'ADMIN'])` y `uploadPdf.single('file')`).
+   - `GET /` (protegido por `authenticateJWT`).
+   - `PUT /:id/status` (protegido por `authenticateJWT` y `requireRole(['COMITE', 'ADMIN'])`).
 
-4.  Conecta las rutas en `src/server.ts` bajo el prefijo `/api/articulos`.
+4. Conecta las rutas en `src/server.ts` bajo el prefijo `/api/articulos`.
 
-        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGUiOiJBVVRPUiIsInNwZWNpYWx0eUlkIjozLCJlbWFpbCI6ImF1dG9yQGhpZWYuZ29iLmFyIiwiaWF0IjoxNzkzMDI1MjAwLCJleHAiOjE3OTMwNTQwMDB9.UxWKTX4lUPJzHl396ZeAREFa1t0zLBTQe3wxeS6VTnY
+# Estructuracion del maquetado del diseño:
+
+Actúa como Desarrollador Frontend Senior (React, TypeScript, Tailwind). Estamos migrando la interfaz visual del proyecto HIEF respetando estrictamente `spec.md` y `contrato.md`.
+
+Ejecuta esta Fase 1 (Estilos, Red y Autenticación). Modifica los siguientes archivos en la carpeta `frontend/`:
+
+1. Sobrescribe `frontend/src/index.css` con este contenido exacto para establecer la paleta institucional y fuentes:
+```css
+@import url('[https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap](https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap)');
+@import "tailwindcss";
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #173d3b;
+  background: #f2f7f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ink: #173d3b;
+  --muted: #526e68;
+  --line: #d5e6df;
+  --canvas: #f2f7f4;
+  --surface: #fcfefd;
+  --teal: #087d70;
+  --teal-dark: #07584f;
+  --mint: #d8f1e8;
+  --gold: #a96612;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--canvas); }
+button, input { font: inherit; }
+button { cursor: pointer; }
+::selection { background: #a8e8d5; color: #123b37; }
+:focus-visible { outline: 3px solid #e09a27; outline-offset: 3px; }
+.font-editorial { font-family: 'Newsreader', Georgia, serif; }
+.font-data { font-family: 'DM Mono', monospace; }
+.page-enter { animation: enter .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+.grain::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .12;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='[http://www.w3.org/2000/svg'%3E%3Cfilter](http://www.w3.org/2000/svg'%3E%3Cfilter) id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.94' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E");
+}
+.scrollbar-subtle::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-subtle::-webkit-scrollbar-thumb { background: #9fcfc0; border-radius: 99px; }
+
+ # Resolucion de implementacion API para conectar login con homepage:
+
+ Actúa como Frontend Developer Senior. Estamos migrando el diseño del proyecto HIEF. Realiza las siguientes 3 tareas en la carpeta `frontend/`:
+
+1. En `frontend/src/pages/Login.tsx`:
+Actualiza ÚNICAMENTE la función `submit` para que soporte la desestructuración dinámica del token y evite el error 401. Reemplázala por esto:
+```tsx
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    if (!email.trim() || !password) { 
+      setError('Ingresa tu correo institucional y clave para continuar.'); 
+      return; 
+    }
+    try {
+      const response = await axiosClient.post('/auth/login', { email, password });
+      const token = response.data.token || response.data.data?.token;
+      
+      if (response.data.success && token) {
+        localStorage.setItem('token', token);
+        // Usamos window.location para forzar la recarga del AuthContext en la raíz
+        window.location.href = (location.state as any)?.from || '/';
+      } else {
+        setError('Credenciales inválidas.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
+    }
+  } 
+
+
+# Comenzando modulo biblioteca:
+
+Actúa como Frontend Developer Senior. Vamos a conectar el módulo de Biblioteca Visual del HIEF con la API real, respetando el diseño de la maqueta y el `contrato.md`.
+Modifica los siguientes 2 archivos en la carpeta `frontend/`:
+
+1. Sobrescribe `frontend/src/api/biblioteca.api.ts` para definir el tipado y el servicio de llamada Axios:
+```typescript
+import axiosClient from './axiosClient';
+
+export interface RecursoBiblioteca {
+  id: number;
+  titulo: string;
+  tipo: string;
+  area: string;
+  descripcion: string;
+  archivoUrl: string;
+  visibilidad: 'PUBLICO' | 'INTERNO' | 'CONFIDENCIAL';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getRecursosBiblioteca = async (): Promise<RecursoBiblioteca[]> => {
+  const response = await axiosClient.get('/biblioteca');
+  // Según contrato SDD, la respuesta es { success: boolean, data: [...] }
+  return response.data.data || [];
+};
+
+# Estructuracion de subida de pdf funcional con el modulo de biblioteca:
+
+Actúa como Frontend Developer Senior. Vamos a implementar la subida de PDFs en el módulo de Artículos para el rol AUTOR, respetando el diseño premium actual y el contrato SDD para Multer.
+Realiza las siguientes 2 tareas en la carpeta `frontend/`:
+
+1. Sobrescribe (o crea) `frontend/src/api/articulos.api.ts` para manejar las peticiones, incluyendo el envío de FormData:
+```typescript
+import axiosClient from './axiosClient';
+
+export interface Articulo {
+  id: number;
+  title: string;
+  abstract: string;
+  status: 'BORRADOR' | 'EN_REVISION' | 'APROBADO' | 'RECHAZADO' | 'PUBLICADO';
+  fileUrl: string;
+  createdAt: string;
+}
+
+export const getMisArticulos = async (): Promise<Articulo[]> => {
+  const response = await axiosClient.get('/articulos');
+  return response.data.data || [];
+};
+
+export const subirManuscrito = async (formData: FormData): Promise<any> => {
+  // Axios sobrescribirá el Content-Type automáticamente por el FormData, 
+  // pero el interceptor ya inyecta el token.
+  const response = await axiosClient.post('/articulos', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response.data;
+};

@@ -1,4 +1,4 @@
-import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileText, CheckSquare, Users } from 'lucide-react';
+import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileUp, Inbox, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +10,8 @@ export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProp
   const { user } = useAuth();
   const links = [
     { to: '/', label: 'Inicio', icon: Activity, end: true },
-    { to: '/articulos', label: 'Mis Artículos', icon: FileText },
-    { to: '/revisiones', label: 'Panel de Revisión', icon: CheckSquare },
+    { to: '/articulos', label: 'Mis Manuscritos', icon: FileUp },
+    { to: '/revisiones', label: 'Bandeja del Comité', icon: Inbox },
     { to: '/biblioteca', label: 'Biblioteca virtual', icon: BookOpen },
   ];
 
@@ -51,9 +51,7 @@ export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProp
               }
             >
               <Users size={18} strokeWidth={1.8} />
-              <span className={collapsed ? 'md:hidden' : ''}>
-                Manejo de Usuarios
-              </span>
+              <span className={collapsed ? 'md:hidden' : ''}>Manejo de Usuarios</span>
             </NavLink>
           )}
         </nav>

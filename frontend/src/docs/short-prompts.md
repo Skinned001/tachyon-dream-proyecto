@@ -2307,13 +2307,13 @@ export const getUsuarios = async (): Promise<User[]> => {
     }, 800);
   });
 
-  /* 
+  /*
   // CÓDIGO REAL (Descomentar cuando el backend esté listo)
   const { data } = await axiosClient.get<ApiResponse<Paginated<User>>>('/usuarios');
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al obtener usuarios');
   }
-  return data.data.items; 
+  return data.data.items;
   */
 };
 
