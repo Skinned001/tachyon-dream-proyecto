@@ -1,5 +1,63 @@
 # tachyon-dream-proyecto
 
+## Inicio local de la plataforma
+
+Requisitos: Node.js y npm, Docker Desktop (para iniciar la base local) y dos
+terminales de PowerShell.
+
+1. Desde la raíz del proyecto, inicia MariaDB:
+
+   ```powershell
+   docker compose up -d db
+   ```
+
+2. Crea `backend/.env` con la configuración de desarrollo que coincide con
+   `docker-compose.yml`:
+
+   ```dotenv
+   DB_DIALECT=mariadb
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_NAME=chief_journal
+   DB_USER=chief_user
+   DB_PASSWORD=chief_pass
+   JWT_SECRET=clave-local-de-desarrollo
+   PORT=3000
+   FRONTEND_ORIGIN=http://localhost:5173
+   ```
+
+   Estas credenciales son únicamente para desarrollo local. La base de datos
+   debe estar disponible antes de iniciar el backend.
+
+3. En la primera terminal, instala las dependencias, crea las tablas y carga
+   los usuarios de prueba; luego inicia el backend:
+
+   ```powershell
+   Set-Location backend
+   npm ci
+   npm run seed
+   npm run dev
+   ```
+
+   El API queda disponible en `http://localhost:3000`; comprueba su estado en
+   `http://localhost:3000/health`.
+
+4. En una segunda terminal, inicia el frontend:
+
+   ```powershell
+   Set-Location frontend
+   npm ci
+   npm run dev
+   ```
+
+5. Abre `http://localhost:5173`. La portada es pública; el botón **Acceso
+   institucional** lleva al login. El seeder crea, entre otras, la cuenta
+   `admin@hief.gob.ar` con la contraseña de desarrollo `Hief2026*`.
+
+La primera vez, el archivo público no mostrará artículos hasta que haya
+publicaciones cargadas y en estado `PUBLICADO`. El microservicio de IA no es
+necesario para iniciar la portada, el API y el acceso institucional.
+
 ## Configuración de la base de datos del backend
 
 Crear `backend/.env` con las variables `DB_DIALECT`, `DB_HOST`, `DB_PORT`,
@@ -8,7 +66,7 @@ Crear `backend/.env` con las variables `DB_DIALECT`, `DB_HOST`, `DB_PORT`,
 es 5432 (3306 para MariaDB). Para MariaDB se utiliza el dialecto MySQL de
 Sequelize junto con `mysql2`, que es compatible con el protocolo de MariaDB.
 Configurar también `JWT_SECRET` para habilitar autenticación; `PORT` permite
-cambiar el puerto HTTP del backend y por defecto es 4000. `FRONTEND_ORIGIN`
+cambiar el puerto HTTP del backend y por defecto es 3000. `FRONTEND_ORIGIN`
 permite configurar el origen autorizado por CORS y por defecto es
 `http://localhost:5173`.
 `DB_PASSWORD` puede estar vacía si el usuario de la base no tiene contraseña.
@@ -54,4 +112,7 @@ y `coauthors`, además del PDF en `file`), `GET /api/articulos` y
 `PUT /api/articulos/:id/status` con `{ "state": "..." }`. Los autores solo
 listan sus propios artículos; DDI, Comité, Publisher y Admin pueden consultar
 el listado completo. Los manuscritos comienzan en `EN_REVISION` y su PDF se
-registra como la primera versión del artículo.
+registra como la primera versión del artículo. El portal ofrece
+`GET /api/articulos/publicados` y
+`GET /api/articulos/publicados/:id/pdf` sin autenticación, limitados a artículos
+publicados.

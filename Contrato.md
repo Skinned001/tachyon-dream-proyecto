@@ -230,6 +230,24 @@ export interface LibraryResourceDTO {
 }
 
 // ----------------------------------------------------------------------------
+// 9.1 ARCHIVO PÚBLICO DE ARTÍCULOS (/api/articulos/publicados)
+// ----------------------------------------------------------------------------
+export interface PublishedArticleDTO {
+  id: number;
+  title: string;
+  summary?: string;
+  keywords?: string[];
+  coauthors?: string[];
+  specialty?: { id: number; name: string };
+  createdAt: string;
+  pdfAvailable: boolean;
+}
+
+// GET /articulos/publicados — sin autenticación; solo estado PUBLICADO.
+// GET /articulos/publicados/:id/pdf — sin autenticación; solo mientras el
+// artículo siga PUBLICADO y tenga un archivo PDF asociado.
+
+// ----------------------------------------------------------------------------
 // 10. MÓDULO IA (/api/ai)
 // ----------------------------------------------------------------------------
 export interface AIReportDTO {

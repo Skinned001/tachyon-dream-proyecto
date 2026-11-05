@@ -7,6 +7,8 @@ import { ArticuloController } from './articulo.controller.js';
 const router = Router();
 const articuloController = new ArticuloController();
 
+router.get('/publicados', articuloController.listarPublicados);
+router.get('/publicados/:id/pdf', articuloController.descargarPublicado);
 router.post(
   '/',
   authenticateJWT,

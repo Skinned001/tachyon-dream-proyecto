@@ -10,6 +10,15 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const redirectTo =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'from' in location.state &&
+    typeof location.state.from === 'string' &&
+    location.state.from.startsWith('/') &&
+    !location.state.from.startsWith('//')
+      ? location.state.from
+      : '/dashboard';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +35,7 @@ export default function Login() {
 
       if (response.data.success && token) {
         localStorage.setItem('token', token);
-        window.location.href = (location.state as any)?.from || '/';
+        window.location.href = redirectTo;
       } else {
         setError('Credenciales inválidas.');
       }

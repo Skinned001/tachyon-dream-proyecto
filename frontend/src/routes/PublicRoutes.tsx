@@ -1,12 +1,13 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Login } from '../pages/Login';
-import { Registro } from '../pages/Registro';
+import { PortalHome } from '../pages/PortalHome';
 
 export function PublicRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/registro" element={<Registro />} />
+      <Route path="/" element={<PortalHome />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/registro" element={<Navigate replace to="/login" />} />
     </Routes>
   );
 }

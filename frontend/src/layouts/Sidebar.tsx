@@ -7,7 +7,7 @@ type SidebarProps = { onSignOut: () => void; collapsed: boolean; onToggleCollaps
 export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const links = [
-    { to: '/', label: 'Inicio', icon: Activity, end: true },
+    { to: '/dashboard', label: 'Inicio', icon: Activity, end: true },
     { to: '/articulos', label: 'Mis Artículos', icon: FileText },
     { to: '/revisiones', label: 'Panel de Revisión', icon: CheckSquare },
     { to: '/biblioteca', label: 'Biblioteca virtual', icon: BookOpen },

@@ -30,8 +30,13 @@ export const errorMiddleware = (
   err: unknown,
   _req: Request,
   res: Response<ApiResponse>,
-  _next: NextFunction,
+  next: NextFunction,
 ): void => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
   const message = getErrorMessage(err);
   const statusCode = isErrorWithStatusCode(err) ? err.statusCode : undefined;
   const status = statusCode && statusCode >= 400 && statusCode <= 599 ? statusCode : 500;

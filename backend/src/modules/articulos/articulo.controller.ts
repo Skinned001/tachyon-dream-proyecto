@@ -1,7 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '../auth/auth.dto.js';
-import type { ArticleDTO, AuthenticatedArticleUser } from './articulo.dto.js';
+import type {
+  ArticleDTO,
+  AuthenticatedArticleUser,
+  PublishedArticleDTO,
+} from './articulo.dto.js';
 import { ArticuloService } from './articulo.service.js';
 
 const createArticleSchema = z
@@ -43,6 +47,42 @@ const getAuthenticatedUser = (req: Request): AuthenticatedArticleUser | undefine
 
 export class ArticuloController {
   constructor(private readonly articuloService = new ArticuloService()) {}
+
+  listarPublicados = async (
+    _req: Request,
+    res: Response<ApiResponse<PublishedArticleDTO[]>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const data = await this.articuloService.listarArticulosPublicados();
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  descargarPublicado = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = getId(req.params.id);
+    if (!id) {
+      res.status(400).json({ success: false, error: 'El id debe ser un entero positivo' });
+      return;
+    }
+
+    try {
+      const pdfPath = await this.articuloService.obtenerPdfPublicado(id);
+      res.download(pdfPath, `publicacion-${id}.pdf`, (error) => {
+        if (error) {
+          next(error);
+        }
+      });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
 
   crear = async (
     req: Request,

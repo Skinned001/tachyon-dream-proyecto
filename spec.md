@@ -37,6 +37,42 @@ El sistema reconoce **5 perfiles institucionales operativos** (creados exclusiva
 5. **ENCARGADO DE PUBLICACIÓN / PRENSA (`PUBLISHER`):** Revisa el formato final de artículos aprobados, ejecuta la publicación oficial en el portal y maneja la **Carga Masiva de Históricos** (migración de PDFs antiguos).
 6. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD completo de usuarios, habilitación de especialidades médicas (`specialties`), auditoría de logs y configuración general.
 
+## 4.1 Portal público y acceso institucional
+
+La ruta inicial (`/`) presenta dos accesos claramente diferenciados:
+
+- **Portal público:** no requiere autenticación. Permite consultar manuscritos
+  publicados de este año y de años anteriores, buscar por texto, filtrar por
+  año, ver sus metadatos editoriales y descargar el PDF publicado.
+- **Acceso institucional:** dirige al inicio de sesión de autores y personal
+  hospitalario. No hay registro público; las cuentas son creadas por un
+  administrador.
+
+La API pública solo devuelve artículos con estado `PUBLICADO`. No expone
+borradores, manuscritos en revisión, dictámenes, reportes de IA, identificadores
+de responsables ni rutas internas de archivos. La descarga también verifica
+que el artículo siga publicado y que exista un PDF asociado. Un artículo sin
+PDF no ofrece una descarga.
+
+La ficha pública muestra título, resumen si está disponible, palabras clave,
+especialidad, coautores si fueron declarados y año de publicación (derivado de
+la fecha disponible del artículo hasta que exista una fecha editorial
+específica). El estilo visual reutiliza la paleta institucional definida en el
+frontend.
+
+**Criterios de aceptación**
+
+1. Una persona sin sesión puede abrir `/`, ver publicaciones actuales e
+   históricas, buscar y filtrar por año.
+2. Desde una publicación con PDF disponible, una persona puede descargarlo sin
+   iniciar sesión.
+3. Las rutas públicas nunca devuelven artículos no publicados ni sus archivos.
+4. El acceso institucional lleva al login; después de autenticarse, la ruta
+   inicial del área privada es `/dashboard`.
+5. Si falla la carga del archivo público, la interfaz informa el problema y
+   permite reintentar; no presenta resultados de ejemplo como si fueran datos
+   reales.
+
 ---
 
 ## 5. Modelo de Datos Esencial (Sequelize TS)
