@@ -1,6 +1,16 @@
 import { Router } from 'express';
+import { authenticateJWT } from '../../middlewares/auth.middleware.js';
+import { requireRole } from '../../middlewares/role.middleware.js';
+import { UsuariosController } from './usuarios.controller.js';
 
 const router = Router();
-router.get('/', (_req, res) => res.json({ success: true, data: [] }));
+const usuariosController = new UsuariosController();
+
+router.use(authenticateJWT, requireRole(['ADMIN']));
+
+router.get('/', usuariosController.list);
+router.post('/', usuariosController.create);
+router.delete('/:id', usuariosController.delete);
+router.post('/:id/reset-password', usuariosController.resetPassword);
 
 export default router;

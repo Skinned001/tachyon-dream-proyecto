@@ -8,7 +8,7 @@
 ---
 
 ## 1. Visión General, Propósito y Alcance Legal
-Plataforma web digital institucional diseñada para comunicar conocimiento científico, gestionar el flujo editorial de manuscritos (envío, revisión por pares, dictámenes e IA de plagio) y proveer un repositorio público con métricas de uso y descarga.
+Plataforma web digital institucional diseñada para comunicar conocimiento científico, gestionar el flujo editorial de manuscritos (envío, revisión por pares, dictámenes y análisis asistido de documentos) y proveer un repositorio público con métricas de uso y descarga.
 
 **Restricción Legal Inquebrantable:** El sistema es exclusivamente académico, científico y bibliográfico. Queda estrictamente prohibido el almacenamiento, procesamiento o tratamiento de historias clínicas, turnos médicos o datos sensibles de pacientes (Ley de Protección de Datos Personales).
 
@@ -16,7 +16,7 @@ Plataforma web digital institucional diseñada para comunicar conocimiento cient
 
 ## 2. Stack Tecnológico
 *   **Backend (`/backend`):** Node.js + Express.js, TypeScript (`strict: true`), PostgreSQL (o MariaDB) con ORM Sequelize, `jsonwebtoken` (JWT), `bcrypt`, `multer`.
-*   **Microservicio IA (`/ai-service`):** Python 3.11+ + FastAPI. Módulos dedicados para análisis de similitud (`embeddings.py`), detección de plagio (`checker.py`) y validación de checklists (`requirements.py`).
+*   **Microservicio IA (`/ai-service`):** Python 3.11+ + FastAPI. El alcance propuesto del primer MVP es una checklist editorial explicable y aprobada por el equipo editorial. El análisis de similitud es una etapa independiente, pendiente de corpus autorizado y protocolo de evaluación; sus resultados no constituyen dictámenes de plagio. Ver la [especificación SDD del módulo de IA](./ai-service/spec.md).
 *   **Frontend (`/frontend`):** React 18 + Vite + TypeScript (`.tsx`), Tailwind CSS (estrictamente prohibido estilos en línea), React Router DOM v6, Lucide React, Axios.
 
 ---
@@ -33,7 +33,7 @@ El sistema reconoce **5 perfiles institucionales operativos** (creados exclusiva
 1. **INVITADO (Sin Autenticación):** Consulta pública de artículos con estado `PUBLICO` / `PUBLICADO` y descarga de PDFs.
 2. **AUTOR (`AUTOR`):** Profesionales que inician sesión para enviar manuscritos (`Article`) y subir nuevas versiones (`ArticleVersion`).
 3. **DEPARTAMENTO DE DOCENCIA E INVESTIGACIÓN (`DDI`):** Recibe envíos, valida pertinencia, realiza rechazos en escritorio y asigna manuscritos a los revisores del Comité Científico según especialidad.
-4. **MIEMBRO DEL COMITÉ CIENTÍFICO (`COMITE`):** Lee expedientes asignados, ejecuta análisis de IA (plagio/similitud) y emite dictámenes formales (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`) con comentarios.
+4. **MIEMBRO DEL COMITÉ CIENTÍFICO (`COMITE`):** Lee expedientes asignados, puede revisar análisis asistidos como apoyo (sin que estos determinen plagio ni reemplacen la evaluación humana) y emite dictámenes formales (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`) con comentarios.
 5. **ENCARGADO DE PUBLICACIÓN / PRENSA (`PUBLISHER`):** Revisa el formato final de artículos aprobados, ejecuta la publicación oficial en el portal y maneja la **Carga Masiva de Históricos** (migración de PDFs antiguos).
 6. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD completo de usuarios, habilitación de especialidades médicas (`specialties`), auditoría de logs y configuración general.
 
@@ -90,7 +90,7 @@ frontend.
 ---
 
 ## 6. Contratos y Estándares API
-*   **Documento de Contratos (Fuente de la Verdad de Endpoints y DTOs):** Todos los endpoints por módulo, métodos HTTP, roles requeridos y estructuras de payloads/responses están definidos obligatoriamente en el archivo [`contrato.md`](./contrato.md) ubicado en la raíz del proyecto.
+*   **Documento de Contratos (Fuente de la Verdad de Endpoints y DTOs):** Todos los endpoints por módulo, métodos HTTP, roles requeridos y estructuras de payloads/responses están definidos obligatoriamente en el archivo [`Contrato.md`](./Contrato.md) ubicado en la raíz del proyecto. El contrato de IA sigue pendiente de aprobación; la propuesta está en la [especificación del módulo](./ai-service/spec.md).
 *   **Formato JSON estándar:** 
     *   Éxito: `{ "success": true, "data": <payload> }`
     *   Error: `{ "success": false, "error": "Mensaje legible" }`

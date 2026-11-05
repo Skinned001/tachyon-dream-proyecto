@@ -1,7 +1,118 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
+import type { ApiResponse } from '../auth/auth.dto.js';
+import { UsuariosService } from './usuarios.service.js';
+
+const createUsuarioSchema = z.object({
+  username: z.string().trim().min(1).max(255),
+  email: z.string().trim().email().transform((email) => email.toLowerCase()),
+  first_name: z.string().trim().min(1).max(255),
+  last_name: z.string().trim().min(1).max(255),
+  dni: z.string().trim().min(1).max(255),
+  role: z.enum(['AUTOR', 'DDI', 'COMITE', 'PUBLISHER', 'ADMIN']),
+  specialtyId: z.number().int().positive().nullable().optional(),
+});
+
+const getId = (value: string): number | undefined => {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+};
 
 export class UsuariosController {
-  list(_req: Request, res: Response) {
-    res.json({ success: true, data: [] });
-  }
+  constructor(private readonly usuariosService = new UsuariosService()) {}
+
+  list = async (
+    _req: Request,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const items = await this.usuariosService.findAll();
+      res.status(200).json({
+        success: true,
+        data: { items, total: items.length, page: 1, limit: items.length },
+      });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  create = async (
+    req: Request,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const parsedBody = createUsuarioSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Los datos del usuario son inválidos; nombre, correo, DNI y rol son obligatorios',
+      });
+      return;
+    }
+
+    try {
+      const created = await this.usuariosService.create(parsedBody.data);
+      res.status(201).json({
+        success: true,
+        data: {
+          ...created.user,
+          temporaryPassword: created.temporaryPassword,
+        },
+      });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  delete = async (
+    req: Request<{ id: string }>,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = getId(req.params.id);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'El id debe ser un entero positivo',
+      });
+      return;
+    }
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Sesión expirada. Inicie sesión nuevamente',
+      });
+      return;
+    }
+
+    try {
+      await this.usuariosService.suspend(id, req.user.id);
+      res.status(200).json({ success: true, data: {} });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  resetPassword = async (
+    req: Request<{ id: string }>,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = getId(req.params.id);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'El id debe ser un entero positivo',
+      });
+      return;
+    }
+
+    try {
+      const data = await this.usuariosService.resetPassword(id);
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
 }
