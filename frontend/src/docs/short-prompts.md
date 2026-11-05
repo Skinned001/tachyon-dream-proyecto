@@ -2803,3 +2803,34 @@ export const AdminUsuarios = () => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue modificado y si `npm run build` pasó o falló.
+
+# Tarea 31: Mejorar el estilo del botón de 3 puntos en la tabla
+
+## Contexto
+
+En `src/pages/AdminUsuarios.tsx`, el botón de 3 puntos es muy sutil y no parece clickeable. Queremos darle un fondo y borde sutil usando el color verde/institucional para indicar que es una acción disponible.
+
+## Objetivo
+
+Modificar la clase del botón del menú desplegable en `src/pages/AdminUsuarios.tsx`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/AdminUsuarios.tsx`
+
+Buscar la etiqueta `<button>` que contiene el ícono `<MoreVertical />` (dentro del `<td>` de Acciones) y reemplazar su `className` por este:
+
+```tsx
+className =
+  "p-1.5 rounded-md border border-institucional-200 bg-institucional-50 text-institucional-600 hover:bg-institucional-100 hover:text-institucional-700 transition-colors focus:outline-none";
+```
+
+_(Nota: Si el color verde de tu proyecto se llama diferente en Tailwind, adaptalo, pero por lo que vi en tu captura usás la paleta institucional)._
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el estilo fue aplicado y si `npm run build` pasó o falló.

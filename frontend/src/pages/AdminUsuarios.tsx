@@ -237,7 +237,7 @@ export const AdminUsuarios = () => {
                               current === usuario.id ? null : usuario.id,
                             );
                           }}
-                          className="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087d70] focus-visible:ring-offset-2 disabled:opacity-50"
+                          className="rounded-md border border-[#cfe4dc] bg-[#e6f5ee] p-1.5 text-[#087d70] transition-colors hover:bg-[#d5eee4] hover:text-[#07584f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087d70] focus-visible:ring-offset-2 disabled:opacity-50"
                         >
                           {busyUserId === usuario.id ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
