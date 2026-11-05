@@ -9,15 +9,9 @@ export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProp
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
   const links = [
-<<<<<<< HEAD
     { to: '/dashboard', label: 'Inicio', icon: Activity, end: true },
-    { to: '/articulos', label: 'Mis Artículos', icon: FileText },
-    { to: '/revisiones', label: 'Panel de Revisión', icon: CheckSquare },
-=======
-    { to: '/', label: 'Inicio', icon: Activity, end: true },
     { to: '/articulos', label: 'Mis Manuscritos', icon: FileUp },
     { to: '/revisiones', label: 'Bandeja del Comité', icon: Inbox },
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
     { to: '/biblioteca', label: 'Biblioteca virtual', icon: BookOpen },
   ];
 

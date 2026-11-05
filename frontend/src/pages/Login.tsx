@@ -13,23 +13,23 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-<<<<<<< HEAD
-  const redirectTo =
-    typeof location.state === 'object' &&
-    location.state !== null &&
-    'from' in location.state &&
-    typeof location.state.from === 'string' &&
-    location.state.from.startsWith('/') &&
-    !location.state.from.startsWith('//')
-      ? location.state.from
-      : '/dashboard';
-=======
   const from = (
     location.state as
-      | { from?: { pathname?: string; search?: string; hash?: string } }
+      | {
+          from?: {
+            pathname?: string;
+            search?: string;
+            hash?: string;
+          };
+        }
       | null
   )?.from;
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
+  const redirectTo =
+    typeof from?.pathname === 'string' &&
+    from.pathname.startsWith('/') &&
+    !from.pathname.startsWith('//')
+      ? `${from.pathname}${typeof from.search === 'string' ? from.search : ''}${typeof from.hash === 'string' ? from.hash : ''}`
+      : '/dashboard';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,31 +41,14 @@ export default function Login() {
     }
 
     try {
-<<<<<<< HEAD
-      const response = await axiosClient.post('/auth/login', { email, password });
-      const token = response.data.token || response.data.data?.token;
-
-      if (response.data.success && token) {
-        localStorage.setItem('token', token);
-        window.location.href = redirectTo;
-      } else {
-        setError('Credenciales inválidas.');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
-=======
       setIsSubmitting(true);
       const userData = await authApi.login(email, password);
       login(userData);
-      const returnTo = from?.pathname
-        ? `${from.pathname}${from.search || ''}${from.hash || ''}`
-        : '/';
-      navigate(returnTo, { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al conectar con el servidor.');
     } finally {
       setIsSubmitting(false);
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
     }
   }
 

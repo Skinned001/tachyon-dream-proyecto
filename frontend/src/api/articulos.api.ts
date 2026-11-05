@@ -1,6 +1,5 @@
 import axiosClient from './axiosClient';
 
-<<<<<<< HEAD
 export interface PublishedArticle {
   id: number;
   title: string;
@@ -27,7 +26,8 @@ export const articulosApi = {
 
     return response.data.data;
   },
-=======
+};
+
 export interface Articulo {
   id: number;
   title: string;
@@ -40,7 +40,6 @@ export interface Articulo {
 export const getMisArticulos = async (): Promise<Articulo[]> => {
   const response = await axiosClient.get('/articulos');
   return response.data.data || [];
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
 };
 
 export const subirManuscrito = async (formData: FormData): Promise<any> => {
