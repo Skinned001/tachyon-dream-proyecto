@@ -1564,3 +1564,2181 @@ export interface User {
 ## Respuesta esperada
 
 Confirmame que el archivo fue sobrescrito y si `npm run build` pasó o falló.
+
+# Tarea 23: Crear páginas placeholder para el Dashboard
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos el Login. Ahora necesitamos crear las páginas vacías (placeholders) a las que el usuario podrá acceder una vez logueado, para luego configurar el enrutador (React Router).
+
+## Objetivo
+
+Crear 5 archivos de páginas básicas en `src/pages/` que luego conectaremos al Router.
+
+## Lo que debés hacer
+
+### 1. Crear los archivos en `src/pages/`
+
+Crear los siguientes archivos con un contenido muy simple para que compilen y podamos verificar la navegación:
+
+**`src/pages/DashboardHome.tsx`**
+
+```tsx
+export const DashboardHome = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-institucional-700">
+        Panel de Control
+      </h1>
+      <p className="text-gray-600 mt-2">
+        Bienvenido al sistema de gestión científica.
+      </p>
+    </div>
+  );
+};
+```
+
+**`src/pages/MisArticulos.tsx`**
+
+```tsx
+export const MisArticulos = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Mis Artículos</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/Revisiones.tsx`**
+
+```tsx
+export const Revisiones = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Revisiones Asignadas</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/BibliotecaHome.tsx`**
+
+```tsx
+export const BibliotecaHome = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Biblioteca Virtual</h1>
+    </div>
+  );
+};
+```
+
+**`src/pages/Registro.tsx`**
+
+```tsx
+export const Registro = () => {
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Registro de Usuario</h1>
+    </div>
+  );
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No configures React Router todavía.
+- No modifiques `App.tsx`.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los 5 archivos fueron creados y decime si `npm run build` pasó o falló.
+
+# Tarea 24: Crear el Layout del Dashboard con Logout
+
+## Contexto
+
+Estamos construyendo el frontend del proyecto HIEF Journal (React + Vite + TypeScript). Ya tenemos el Login funcional y las páginas placeholder. Ahora necesitamos el `DashboardLayout`, que es la estructura visual (Sidebar + Header) que envolverá a todas las páginas privadas una vez que el usuario inicie sesión.
+
+## Objetivo
+
+Crear el archivo `src/layouts/DashboardLayout.tsx` con un menú lateral, una barra superior, un botón de "Cerrar Sesión" y el `<Outlet />` (para que React Router renderice las páginas dentro).
+
+## Lo que debés hacer
+
+### 1. Crear `src/layouts/DashboardLayout.tsx`
+
+Crear el archivo con exactamente este contenido:
+
+```tsx
+// src/layouts/DashboardLayout.tsx
+import { Outlet, Link, useNavigate } from "react-router-dom";
+import { LogOut, Home, FileText, CheckSquare, BookOpen } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { Button } from "../components/ui/Button";
+
+export const DashboardLayout = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  return (
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-institucional-700">
+            HIEF Journal
+          </h1>
+        </div>
+
+        <nav className="flex-1 p-4 flex flex-col gap-2">
+          <Link
+            to="/"
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+          >
+            <Home className="w-5 h-5" />
+            Inicio
+          </Link>
+          <Link
+            to="/mis-articulos"
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+          >
+            <FileText className="w-5 h-5" />
+            Mis Artículos
+          </Link>
+          <Link
+            to="/revisiones"
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+          >
+            <CheckSquare className="w-5 h-5" />
+            Revisiones
+          </Link>
+          <Link
+            to="/biblioteca"
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+          >
+            <BookOpen className="w-5 h-5" />
+            Biblioteca
+          </Link>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-500">
+              Usuario: {user?.first_name} {user?.last_name} ({user?.role})
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Cerrar Sesión
+          </Button>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No configures las rutas (AppRoutes) todavía.
+- No modifiques las páginas placeholder.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue creado y decime si `npm run build` pasó o falló.
+
+# Tarea 25-Bis: Configurar React Router y Rutas Protegidas por Rol
+
+## Contexto
+
+El DashboardLayout ya está creado (con un diseño envidiable) y el Login funciona. Sin embargo, necesitamos configurar `react-router-dom` para que la navegación sea fluida (sin recargar la página) y, lo más importante, **proteger las rutas para que solo el ADMIN pueda acceder a ciertas vistas en el futuro**.
+
+## Objetivo
+
+1. Configurar el enrutador principal en `main.tsx` y `App.tsx`.
+2. Crear `src/routes/PrivateRoutes.tsx` (protege el acceso general).
+3. Crear `src/routes/RoleRoute.tsx` (protege el acceso por rol, como ADMIN).
+4. Crear `src/routes/AppRoutes.tsx` (el mapa de rutas).
+5. Conectar el botón de Login para que use `useNavigate` en lugar de recargar la página.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/main.tsx`
+
+```tsx
+import "./index.css";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  </StrictMode>,
+);
+```
+
+### 2. Crear `src/routes/PrivateRoutes.tsx`
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+export const PrivateRoutes = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading)
+    return (
+      <div className="p-8 text-center text-gray-500">Cargando sistema...</div>
+    );
+
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+};
+```
+
+### 3. Crear `src/routes/RoleRoute.tsx`
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import type { UserRole } from "../types/user.types";
+
+interface RoleRouteProps {
+  allowedRoles: UserRole[];
+}
+
+export const RoleRoute = ({ allowedRoles }: RoleRouteProps) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading)
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Verificando permisos...
+      </div>
+    );
+  if (!user) return <Navigate to="/login" replace />;
+
+  return allowedRoles.includes(user.role) ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/" replace />
+  );
+};
+```
+
+### 4. Sobrescribir `src/routes/AppRoutes.tsx`
+
+```tsx
+import { Routes, Route } from "react-router-dom";
+import { Login } from "../pages/Login";
+import { DashboardLayout } from "../layouts/DashboardLayout";
+import { DashboardHome } from "../pages/DashboardHome";
+import { MisArticulos } from "../pages/MisArticulos";
+import { Revisiones } from "../pages/Revisiones";
+import { BibliotecaHome } from "../pages/BibliotecaHome";
+import { PrivateRoutes } from "./PrivateRoutes";
+
+export const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* Ruta Pública */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Rutas Privadas (Requieren login) */}
+      <Route element={<PrivateRoutes />}>
+        <Route path="/" element={<DashboardLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="mis-articulos" element={<MisArticulos />} />
+          <Route path="revisiones" element={<Revisiones />} />
+          <Route path="biblioteca" element={<BibliotecaHome />} />
+          {/* Aquí luego agregaremos las rutas de ADMIN */}
+        </Route>
+      </Route>
+    </Routes>
+  );
+};
+```
+
+### 5. Actualizar `src/App.tsx`
+
+```tsx
+import { AppRoutes } from "./routes/AppRoutes";
+
+function App() {
+  return <AppRoutes />;
+}
+
+export default App;
+```
+
+### 6. Actualizar `src/pages/Login.tsx`
+
+- Importar `useNavigate` de `react-router-dom`.
+- Al inicio del componente, declarar: `const navigate = useNavigate();`
+- En el `try` del `handleSubmit`, después de `login(userData);`, borrar `window.location.href = '/'` y poner `navigate('/');`.
+
+### 7. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees la página de Admin todavía.
+- No modifiques el diseño visual de `DashboardLayout`.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados/actualizados y decime si `npm run build` pasó o falló.
+
+# Tarea 26: Crear tipos y servicio API para gestión de usuarios
+
+## Contexto
+
+Estamos construyendo el panel de administración para el rol `ADMIN`. Necesitamos conectar el frontend con los endpoints de usuarios del backend (`/api/usuarios`).
+
+## Objetivo
+
+1. Agregar tipos para la creación/edición de usuarios.
+2. Crear el archivo `src/api/usuarios.api.ts`.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar las siguientes interfaces al final del archivo (manteniendo las que ya existen):
+
+```typescript
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  dni?: string;
+  role: UserRole;
+  specialtyId?: number | null;
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  dni?: string;
+  role?: UserRole;
+  specialtyId?: number | null;
+  active?: boolean;
+}
+```
+
+### 2. Crear `src/api/usuarios.api.ts`
+
+Crear el archivo con exactamente este código (basado en el contrato de la API):
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// Listar usuarios (Admin)
+export const getUsuarios = async (): Promise<User[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Paginated<User>>>("/usuarios");
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al obtener usuarios");
+  }
+  return data.data.items; // Dependiendo de cómo devuelva el backend, puede ser .items o el array directo
+};
+
+// Crear usuario (Admin)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.post<ApiResponse<User>>(
+    "/usuarios",
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+
+// Actualizar usuario (Admin)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Lógica) (Admin)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al dar de baja al usuario");
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques el Sidebar ni el DashboardLayout todavía.
+- No crees las pantallas visuales todavía.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados/actualizados y decime si `npm run build` pasó o falló.
+
+# Tarea 27: Crear la pantalla de Gestión de Usuarios y conectarla al menú
+
+## Contexto
+
+Tenemos el `DashboardLayout`, el enrutador (`AppRoutes`) y el servicio de API (`usuarios.api.ts`). Ahora vamos a crear la pantalla visual para que el rol `ADMIN` pueda ver la lista de usuarios, y agregaremos el acceso en el menú lateral.
+
+## Objetivo
+
+1. Agregar el enlace "Manejo de Usuarios" en el `DashboardLayout` (solo visible para ADMIN).
+2. Crear la página `src/pages/AdminUsuarios.tsx` con una tabla que consuma los datos reales.
+3. Proteger la ruta para que solo los ADMIN puedan entrar.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/layouts/DashboardLayout.tsx`
+
+Agregar el import del ícono `Users` de `lucide-react`.
+Dentro del `<nav>` del Sidebar, después del enlace a Biblioteca, agregar este bloque condicional:
+
+```tsx
+{
+  user?.role === "ADMIN" && (
+    <Link
+      to="/admin/usuarios"
+      className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+    >
+      <Users className="w-5 h-5" />
+      Manejo de Usuarios
+    </Link>
+  );
+}
+```
+
+### 2. Crear `src/pages/AdminUsuarios.tsx`
+
+Crear la pantalla con una tabla básica. Usaremos el hook `useEffect` para traer los datos:
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import { getUsuarios } from "../api/usuarios.api";
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Plus } from "lucide-react";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const data = await getUsuarios();
+        setUsuarios(data);
+      } catch (err: any) {
+        setError(err.message || "Error al cargar usuarios");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUsuarios();
+  }, []);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button variant="primary" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-institucional-500" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-md border border-red-200">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium">Usuario</th>
+                  <th className="py-3 px-4 font-medium">Email</th>
+                  <th className="py-3 px-4 font-medium">Rol</th>
+                  <th className="py-3 px-4 font-medium">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="py-3 px-4 font-medium text-gray-800">
+                      {u.first_name} {u.last_name} <br />
+                      <span className="text-xs text-gray-400 font-normal">
+                        @{u.username}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 bg-institucional-50 text-institucional-700 text-xs font-semibold rounded-full">
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {u.active ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {usuarios.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-gray-500">
+                      No hay usuarios registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar `src/routes/AppRoutes.tsx`
+
+Importar `AdminUsuarios` y `RoleRoute`. Agregar la ruta protegida dentro del `DashboardLayout`:
+
+```tsx
+import { RoleRoute } from "./RoleRoute";
+import { AdminUsuarios } from "../pages/AdminUsuarios";
+
+// ... dentro del <Route path="/" element={<DashboardLayout />}>
+
+{
+  /* Ruta exclusiva para ADMIN */
+}
+<Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+  <Route path="admin/usuarios" element={<AdminUsuarios />} />
+</Route>;
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el formulario modal para crear/editar usuarios todavía (lo haremos en la siguiente tarea).
+- No modifiques la lógica de autenticación.
+
+## Respuesta esperada
+
+Confirmame que la tabla y la ruta están creadas, y si `npm run build` pasó o falló.
+
+# Tarea 28: Implementar datos Mock (falsos) para la tabla de usuarios
+
+## Contexto
+
+El backend aún no tiene implementada la ruta `/api/usuarios` (lo está haciendo otro compañero). Para no frenar el desarrollo del frontend, vamos a simular la respuesta de la API con datos falsos (mocking).
+
+## Objetivo
+
+Modificar `src/api/usuarios.api.ts` para que la función `getUsuarios` devuelva datos simulados en lugar de hacer la petición HTTP real.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/usuarios.api.ts`
+
+Reemplazar todo el contenido del archivo con este código. Nota cómo envolvemos los datos en un `Promise` con un `setTimeout` para simular la latencia de red (así veremos el spinner de carga):
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// ==========================================
+// MOCK DE DATOS (Temporal hasta que el backend esté listo)
+// ==========================================
+const MOCK_USERS: User[] = [
+  {
+    id: 1,
+    username: "admin_hief",
+    email: "admin@hief.gob.ar",
+    first_name: "Admin",
+    last_name: "Sistema",
+    role: "ADMIN",
+    specialtyId: null,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 2,
+    username: "dr_laprida",
+    email: "fernando@hief.gob.ar",
+    first_name: "Fernando",
+    last_name: "Laprida",
+    role: "AUTOR",
+    specialtyId: 1,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 3,
+    username: "dra_gonzalez",
+    email: "maria@hief.gob.ar",
+    first_name: "María",
+    last_name: "Gonzalez",
+    role: "COMITE",
+    specialtyId: 2,
+    must_change_password: false,
+    active: true,
+  },
+  {
+    id: 4,
+    username: "dr_short",
+    email: "lautaro@hief.gob.ar",
+    first_name: "Lautaro",
+    last_name: "Short",
+    role: "AUTOR",
+    specialtyId: 1,
+    must_change_password: false,
+    active: false,
+  },
+];
+
+// Listar usuarios (MOCK)
+export const getUsuarios = async (): Promise<User[]> => {
+  // Simulamos un retraso de 800ms para ver el spinner
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(MOCK_USERS);
+    }, 800);
+  });
+
+  /*
+  // CÓDIGO REAL (Descomentar cuando el backend esté listo)
+  const { data } = await axiosClient.get<ApiResponse<Paginated<User>>>('/usuarios');
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al obtener usuarios');
+  }
+  return data.data.items;
+  */
+};
+
+// Crear usuario (MOCK temporal)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  console.log("Mock: Creando usuario", payload);
+  const newUser: User = {
+    id: Math.random(),
+    username: payload.username,
+    email: payload.email,
+    first_name: payload.first_name,
+    last_name: payload.last_name,
+    role: payload.role,
+    specialtyId: payload.specialtyId || null,
+    must_change_password: true,
+    active: true,
+  };
+  MOCK_USERS.push(newUser);
+  return newUser;
+};
+
+// Actualizar usuario (Se deja preparado para el backend real)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Se deja preparado para el backend real)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al dar de baja al usuario");
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques la pantalla `AdminUsuarios.tsx` (debería funcionar sola con este mock).
+- No modifiques el backend.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue modificado y si `npm run build` pasó o falló.
+
+# Tarea 29: Agregar menú de 3 puntos (acciones) a la tabla de usuarios
+
+## Contexto
+
+Tenemos la tabla de usuarios funcionando con datos mock. Ahora necesitamos agregar un menú desplegable (tres puntos) al lado de cada usuario para que el Admin pueda "Suspender cuenta" o "Reiniciar contraseña".
+
+## Objetivo
+
+1. Actualizar `src/api/usuarios.api.ts` para agregar la función mock `resetPassword`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para incluir el menú desplegable.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/usuarios.api.ts`
+
+Agregar esta función al final del archivo (simulando la respuesta del backend):
+
+```typescript
+// Reiniciar contraseña (MOCK)
+export const resetPassword = async (id: number): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log(`Mock: Contraseña reiniciada para el usuario ${id}`);
+      resolve();
+    }, 500);
+  });
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+Necesitamos importar el ícono de los tres puntos (`MoreVertical`), agregar estados para manejar qué menú está abierto y crear las funciones de acción.
+
+Reemplazar el archivo con este código:
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import { getUsuarios, deleteUsuario, resetPassword } from "../api/usuarios.api";
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Plus, MoreVertical, Ban, Key } from "lucide-react";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  const fetchUsuarios = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getUsuarios();
+      setUsuarios(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar usuarios");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm("¿Estás seguro de suspender esta cuenta?")) {
+      try {
+        await deleteUsuario(id); // Usamos la función de baja lógica existente
+        // Actualizamos la tabla localmente para reflejar el cambio rápido
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
+      } catch (err) {
+        alert("Error al suspender usuario");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleResetPassword = async (id: number) => {
+    if (
+      window.confirm("¿Generar nueva contraseña genérica para este usuario?")
+    ) {
+      try {
+        await resetPassword(id);
+        alert(
+          "Contraseña reiniciada con éxito. Se envió un correo al usuario.",
+        );
+      } catch (err) {
+        alert("Error al reiniciar contraseña");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button variant="primary" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-institucional-500" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-md border border-red-200">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium">Usuario</th>
+                  <th className="py-3 px-4 font-medium">Email</th>
+                  <th className="py-3 px-4 font-medium">Rol</th>
+                  <th className="py-3 px-4 font-medium">Estado</th>
+                  <th className="py-3 px-4 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 relative"
+                  >
+                    <td className="py-3 px-4 font-medium text-gray-800">
+                      {u.first_name} {u.last_name} <br />
+                      <span className="text-xs text-gray-400 font-normal">
+                        @{u.username}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 bg-institucional-50 text-institucional-700 text-xs font-semibold rounded-full">
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {u.active ? "Activo" : "Suspendido"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right relative">
+                      <button
+                        onClick={() =>
+                          setOpenMenuId(openMenuId === u.id ? null : u.id)
+                        }
+                        className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+
+                      {/* Menú Desplegable */}
+                      {openMenuId === u.id && (
+                        <div className="absolute right-8 top-10 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10 py-1">
+                          <button
+                            onClick={() => handleResetPassword(u.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <Key className="w-4 h-4 text-blue-500" /> Reiniciar
+                            contraseña
+                          </button>
+                          {u.active && (
+                            <button
+                              onClick={() => handleSuspend(u.id)}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Ban className="w-4 h-4" /> Suspender cuenta
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el modal para "Nuevo Usuario" todavía.
+- No modifiques el contexto de autenticación.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue creado y decime si `npm run build` pasó o falló.
+
+# Tarea 30: Arreglar posición y diseño del menú desplegable de usuarios
+
+## Contexto
+
+La tabla de usuarios tiene un menú de 3 puntos. Tiene dos problemas visuales:
+
+1. El texto "Reiniciar contraseña" se rompe en dos líneas porque el menú es muy angosto.
+2. En la última fila de la tabla, el menú se abre hacia abajo y se sale de la pantalla.
+
+## Objetivo
+
+Modificar `src/pages/AdminUsuarios.tsx` para:
+
+1. Evitar que el texto se rompa (`whitespace-nowrap` y un ancho mayor).
+2. Hacer que el menú de las **últimas filas** se abra hacia arriba en lugar de hacia abajo para que no se salga de la pantalla.
+3. Arreglar el anillo amarillo de foco que aparece al hacer clic en el botón de 3 puntos.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/pages/AdminUsuarios.tsx`
+
+Aquí está el código con las correcciones aplicadas:
+
+```tsx
+import { useEffect, useState } from "react";
+import { getUsuarios, deleteUsuario, resetPassword } from "../api/usuarios.api";
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Plus, MoreVertical, Ban, Key } from "lucide-react";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  const fetchUsuarios = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getUsuarios();
+      setUsuarios(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar usuarios");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm("¿Estás seguro de suspender esta cuenta?")) {
+      try {
+        await deleteUsuario(id);
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
+      } catch (err) {
+        alert("Error al suspender usuario");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleResetPassword = async (id: number) => {
+    if (
+      window.confirm("¿Generar nueva contraseña genérica para este usuario?")
+    ) {
+      try {
+        await resetPassword(id);
+        alert(
+          "Contraseña reiniciada con éxito. Se envió un correo al usuario.",
+        );
+      } catch (err) {
+        alert("Error al reiniciar contraseña");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button variant="primary" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-institucional-500" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-md border border-red-200">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium">Usuario</th>
+                  <th className="py-3 px-4 font-medium">Email</th>
+                  <th className="py-3 px-4 font-medium">Rol</th>
+                  <th className="py-3 px-4 font-medium">Estado</th>
+                  <th className="py-3 px-4 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u, index) => {
+                  // Lógica para saber si es una de las últimas filas
+                  const isNearBottom = index >= usuarios.length - 2;
+
+                  return (
+                    <tr
+                      key={u.id}
+                      className="border-b border-gray-100 hover:bg-gray-50 relative"
+                    >
+                      <td className="py-3 px-4 font-medium text-gray-800">
+                        {u.first_name} {u.last_name} <br />
+                        <span className="text-xs text-gray-400 font-normal">
+                          @{u.username}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-1 bg-institucional-50 text-institucional-700 text-xs font-semibold rounded-full">
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                        >
+                          {u.active ? "Activo" : "Suspendido"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right relative">
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(openMenuId === u.id ? null : u.id)
+                          }
+                          // Se quita el focus ring por defecto para que no quede el anillo amarillo
+                          className="p-1 rounded-full hover:bg-gray-200 text-gray-500 transition-colors focus:outline-none"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+
+                        {/* Menú Desplegable Mejorado */}
+                        {openMenuId === u.id && (
+                          <div
+                            className={`absolute right-8 w-56 bg-white border border-gray-200 rounded-md shadow-xl z-50 py-1 ${
+                              isNearBottom ? "bottom-10 mb-1" : "top-10 mt-1"
+                            }`}
+                          >
+                            <button
+                              onClick={() => handleResetPassword(u.id)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 whitespace-nowrap"
+                            >
+                              <Key className="w-4 h-4 text-blue-500" />{" "}
+                              Reiniciar contraseña
+                            </button>
+                            {u.active && (
+                              <button
+                                onClick={() => handleSuspend(u.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 whitespace-nowrap"
+                              >
+                                <Ban className="w-4 h-4" /> Suspender cuenta
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques la lógica de negocio ni los servicios API.
+- No avances con nada más.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue modificado y si `npm run build` pasó o falló.
+
+# Tarea 31: Mejorar el estilo del botón de 3 puntos en la tabla
+
+## Contexto
+
+En `src/pages/AdminUsuarios.tsx`, el botón de 3 puntos es muy sutil y no parece clickeable. Queremos darle un fondo y borde sutil usando el color verde/institucional para indicar que es una acción disponible.
+
+## Objetivo
+
+Modificar la clase del botón del menú desplegable en `src/pages/AdminUsuarios.tsx`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/AdminUsuarios.tsx`
+
+Buscar la etiqueta `<button>` que contiene el ícono `<MoreVertical />` (dentro del `<td>` de Acciones) y reemplazar su `className` por este:
+
+```tsx
+className =
+  "p-1.5 rounded-md border border-institucional-200 bg-institucional-50 text-institucional-600 hover:bg-institucional-100 hover:text-institucional-700 transition-colors focus:outline-none";
+```
+
+_(Nota: Si el color verde de tu proyecto se llama diferente en Tailwind, adaptalo, pero por lo que vi en tu captura usás la paleta institucional)._
+
+### 2. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el estilo fue aplicado y si `npm run build` pasó o falló.
+
+# Tarea 32: Backend - Implementar módulo de Usuarios
+
+## Contexto
+
+El frontend ya tiene la pantalla de Gestión de Usuarios (con mocks). Ahora vamos a implementar la lógica real en el backend usando TypeScript, Express y Sequelize.
+
+## Objetivo
+
+Crear el controlador y las rutas en `backend/src/modules/usuarios/` para listar, crear, suspender y resetear contraseñas. Todo protegido para el rol `ADMIN`.
+
+## Lo que debés hacer
+
+### 1. Crear `backend/src/modules/usuarios/usuarios.controller.ts`
+
+```typescript
+import { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import { Usuario } from "./Usuario.model";
+import { Rol } from "./Rol.model";
+
+// Listar todos los usuarios
+export const getUsuarios = async (req: Request, res: Response) => {
+  try {
+    const usuarios = await Usuario.findAll({
+      attributes: { exclude: ["password"] },
+      include: [{ model: Rol, as: "role" }],
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        items: usuarios,
+        total: usuarios.length,
+        page: 1,
+        limit: usuarios.length,
+      },
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al obtener usuarios" });
+  }
+};
+
+// Crear nuevo usuario (Contraseña genérica)
+export const createUsuario = async (req: Request, res: Response) => {
+  try {
+    const { username, email, first_name, last_name, role, specialtyId } =
+      req.body;
+
+    // Contraseña genérica inicial (ej: Hief2026!)
+    const genericPassword = "Hief2026!";
+    const hashedPassword = await bcrypt.hash(genericPassword, 10);
+
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      first_name,
+      last_name,
+      password: hashedPassword,
+      roleId: role, // Asumiendo que el frontend manda el ID del rol o el nombre
+      specialtyId,
+      must_change_password: true, // Obliga a cambiarla en el primer login
+      active: true,
+    });
+
+    return res.status(201).json({ success: true, data: nuevoUsuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al crear usuario" });
+  }
+};
+
+// Baja lógica (Suspender)
+export const deleteUsuario = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await Usuario.update({ active: false }, { where: { id } });
+    return res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al suspender usuario" });
+  }
+};
+
+// Reiniciar contraseña
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const genericPassword = "Hief2026!";
+    const hashedPassword = await bcrypt.hash(genericPassword, 10);
+
+    await Usuario.update(
+      { password: hashedPassword, must_change_password: true },
+      { where: { id } },
+    );
+
+    return res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al reiniciar contraseña" });
+  }
+};
+```
+
+### 2. Crear `backend/src/modules/usuarios/usuarios.routes.ts`
+
+```typescript
+import { Router } from "express";
+import {
+  getUsuarios,
+  createUsuario,
+  deleteUsuario,
+  resetPassword,
+} from "./usuarios.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { roleMiddleware } from "../../middlewares/role.middleware";
+
+const router = Router();
+
+// Todas estas rutas requieren estar logueado Y ser ADMIN
+router.use(authMiddleware);
+router.use(roleMiddleware(["ADMIN"]));
+
+router.get("/", getUsuarios);
+router.post("/", createUsuario);
+router.delete("/:id", deleteUsuario);
+router.post("/:id/reset-password", resetPassword);
+
+export default router;
+```
+
+### 3. Registrar la ruta en el servidor
+
+En tu archivo principal (usualmente `backend/src/app.ts` o `server.ts`), donde se configuran las rutas:
+
+```typescript
+import usuariosRoutes from "./modules/usuarios/usuarios.routes";
+// ...
+app.use("/api/usuarios", usuariosRoutes);
+```
+
+### 4. Verificación
+
+- Correr `npm run build` en el backend para asegurar que no haya errores de TS.
+
+## Lo que NO debés hacer
+
+- No modifiques el frontend en esta tarea.
+- No crees la lógica de cambio de contraseña para el usuario (eso lo haremos después).
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados, si registraste la ruta, y si compila sin errores.
+
+# Tarea 33: Eliminar los mocks y conectar con la API real de usuarios
+
+## Contexto
+
+El backend ya tiene implementadas las rutas para gestionar usuarios (`/api/usuarios`). Es hora de eliminar los datos simulados (MOCK_USERS) que usamos para pruebas visuales y dejar el archivo listo para hacer las peticiones HTTP reales.
+
+## Objetivo
+
+Sobrescribir `src/api/usuarios.api.ts` para eliminar todos los mocks y usar `axiosClient` en todas las funciones.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/usuarios.api.ts`
+
+Reemplazar todo el contenido del archivo con este código final:
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// Listar usuarios (Admin)
+export const getUsuarios = async (): Promise<User[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Paginated<User>>>("/usuarios");
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al obtener usuarios");
+  }
+  return data.data.items;
+};
+
+// Crear usuario (Admin)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.post<ApiResponse<User>>(
+    "/usuarios",
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+
+// Actualizar usuario (Admin)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Lógica) (Admin)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al suspender usuario");
+  }
+};
+
+// Reiniciar contraseña (Admin)
+export const resetPassword = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    `/usuarios/${id}/reset-password`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al reiniciar contraseña");
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Si el backend está corriendo, iniciar sesión como ADMIN, ir a "Manejo de Usuarios" y comprobar que la tabla carga los datos reales.
+
+## Lo que NO debés hacer
+
+- No modifiques la pantalla `AdminUsuarios.tsx` (la lógica de los botones y el diseño ya están bien).
+- No modifiques el backend.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 34: Crear el Modal para registrar un nuevo usuario
+
+## Contexto
+
+El Admin necesita poder crear usuarios genéricos (Alta). Vamos a crear un componente reutilizable `Modal` y luego armar el formulario de creación dentro de `AdminUsuarios.tsx`. El backend ya se encarga de generar la contraseña genérica y marcar `must_change_password: true`.
+
+## Objetivo
+
+1. Crear `src/components/ui/Modal.tsx`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para abrir el modal al hacer clic en "Nuevo Usuario" y enviar los datos a la API.
+
+## Lo que debés hacer
+
+### 1. Crear `src/components/ui/Modal.tsx`
+
+```tsx
+// src/components/ui/Modal.tsx
+import { type ReactNode, useEffect } from "react";
+import { X } from "lucide-react";
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}
+
+export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+  // Cerrar con la tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (isOpen) window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+Vamos a agregar el estado del modal y el formulario.
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import {
+  getUsuarios,
+  deleteUsuario,
+  resetPassword,
+  createUsuario,
+} from "../api/usuarios.api";
+import type { User, CreateUserRequest } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
+import { Loader2, Plus, MoreVertical, Ban, Key } from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  // Estados para el Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [modalError, setModalError] = useState("");
+
+  const { formulario, handleChange, resetForm } = useForm({
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    role: "AUTOR", // Rol por defecto
+  });
+
+  const fetchUsuarios = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getUsuarios();
+      setUsuarios(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar usuarios");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm("¿Estás seguro de suspender esta cuenta?")) {
+      try {
+        await deleteUsuario(id);
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
+      } catch (err) {
+        alert("Error al suspender usuario");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleResetPassword = async (id: number) => {
+    if (
+      window.confirm("¿Generar nueva contraseña genérica para este usuario?")
+    ) {
+      try {
+        await resetPassword(id);
+        alert("Contraseña reiniciada con éxito.");
+      } catch (err) {
+        alert("Error al reiniciar contraseña");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalError("");
+
+    if (
+      !formulario.username ||
+      !formulario.email ||
+      !formulario.first_name ||
+      !formulario.last_name
+    ) {
+      setModalError("Todos los campos son obligatorios");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await createUsuario(formulario as unknown as CreateUserRequest);
+      await fetchUsuarios(); // Recargamos la tabla
+      setIsModalOpen(false);
+      resetForm();
+    } catch (err: any) {
+      setModalError(err.message || "Error al crear usuario");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          variant="primary"
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {/* ... Aquí va el mismo código de la tabla que ya tenías ... */}
+        {/* (El agente debe mantener el map de usuarios y los menús de 3 puntos) */}
+      </Card>
+
+      {/* MODAL DE CREACIÓN */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          resetForm();
+          setModalError("");
+        }}
+        title="Registrar Nuevo Usuario"
+      >
+        <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nombre"
+              name="first_name"
+              value={formulario.first_name}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Apellido"
+              name="last_name"
+              value={formulario.last_name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <Input
+            label="Nombre de Usuario"
+            name="username"
+            value={formulario.username}
+            onChange={handleChange}
+            placeholder="ej: jperez"
+            required
+          />
+          <Input
+            label="Correo Electrónico"
+            name="email"
+            type="email"
+            value={formulario.email}
+            onChange={handleChange}
+            placeholder="correo@hief.gob.ar"
+            required
+          />
+
+          <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-sm font-medium text-gray-700">
+              Rol del Sistema
+            </label>
+            <select
+              name="role"
+              value={formulario.role}
+              onChange={handleChange}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-institucional-500"
+            >
+              <option value="AUTOR">Autor</option>
+              <option value="COMITE">Miembro del Comité</option>
+              <option value="DDI">Docencia e Investigación</option>
+              <option value="PUBLISHER">Encargado de Publicación</option>
+              <option value="ADMIN">Administrador</option>
+            </select>
+          </div>
+
+          <p className="text-xs text-gray-500 mt-2">
+            * Se generará una contraseña genérica automáticamente. El usuario
+            deberá cambiarla al iniciar sesión.
+          </p>
+
+          {modalError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              {modalError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" isLoading={isCreating}>
+              Crear Usuario
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No modifiques el backend ni `usuarios.api.ts`.
+- No modifiques el `AuthContext` todavía.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron modificados y si `npm run build` pasó o falló.
+
+# Tarea 35: Arreglar estilos de botones y verificar modal
+
+## Contexto
+
+1. Los botones `primary` se están viendo con fondo blanco y texto blanco (invisibles). Esto pasa porque las clases `bg-institucional-600` no están compilando bien o no existen en el tema actual.
+2. En el modal de "Nuevo Usuario", el usuario reporta que no ve el botón para confirmar la creación (probablemente por el mismo problema de color).
+
+## Objetivo
+
+1. Corregir el componente `Button.tsx` usando colores estándar de Tailwind (como `blue-600`) para asegurar que se vean.
+2. Verificar que el botón "Crear Usuario" esté presente en el modal de `AdminUsuarios.tsx`.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/components/ui/Button.tsx`
+
+```tsx
+// src/components/ui/Button.tsx
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  isLoading?: boolean;
+}
+
+export const Button = ({
+  children,
+  variant = "primary",
+  isLoading = false,
+  className = "",
+  disabled,
+  ...props
+}: ButtonProps) => {
+  const baseClasses =
+    "inline-flex items-center justify-center px-4 py-2 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  // Usamos colores estándar de Tailwind (blue-600) para garantizar visibilidad
+  const variants = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+    secondary:
+      "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-500",
+    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+  };
+
+  return (
+    <button
+      className={`${baseClasses} ${variants[variant]} ${className}`}
+      disabled={isLoading || disabled}
+      {...props}
+    >
+      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      {children}
+    </button>
+  );
+};
+```
+
+### 2. Revisar `src/pages/AdminUsuarios.tsx`
+
+Verificar que, dentro del `<form>` del `<Modal>`, al final, estén los dos botones. Si falta el de "Crear Usuario", agregarlo. Debería verse así:
+
+```tsx
+<div className="flex justify-end gap-3 mt-4">
+  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+    Cancelar
+  </Button>
+  <Button type="submit" variant="primary" isLoading={isCreating}>
+    Crear Usuario
+  </Button>
+</div>
+```
+
+Si falta el botón de "Crear Usuario" (`type="submit"`), agregalo.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue modificado y si `npm run build` pasó.
+
+# Tarea 36: Suavizar color de botones y mostrar credenciales de creación
+
+## Contexto
+
+1. El botón `primary` con `bg-blue-600` es demasiado fuerte visualmente para el diseño del sistema.
+2. Al crear un usuario, el backend genera una contraseña genérica (ej. "Hief2026!"), pero el Admin no la ve, por lo que no puede pasarle los datos al nuevo usuario.
+
+## Objetivo
+
+1. Suavizar el color del botón `primary`.
+2. Mostrar un alert o un mensaje en pantalla con las credenciales generadas al momento de crear el usuario.
+
+## Lo que debés hacer
+
+### 1. Suavizar el color del botón en `src/components/ui/Button.tsx`
+
+Buscar la variante `primary` y cambiarla a un tono más suave (blue-500 o el institucional-500):
+
+```tsx
+const variants = {
+  // Cambiamos bg-blue-600 a bg-blue-500
+  primary: "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-400",
+  secondary:
+    "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-500",
+  danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400",
+  ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+};
+```
+
+### 2. Mostrar credenciales en `src/pages/AdminUsuarios.tsx`
+
+En la función `handleCreateSubmit`, después de crear el usuario exitosamente y recargar la tabla, debemos mostrarle al Admin la contraseña.
+
+_(Nota: Como el backend actualmente genera la contraseña fija `Hief2026!`, usaremos ese texto para el mensaje)._
+
+Modificar la función `handleCreateSubmit` así:
+
+```tsx
+const handleCreateSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setModalError("");
+
+  if (
+    !formulario.username ||
+    !formulario.email ||
+    !formulario.first_name ||
+    !formulario.last_name
+  ) {
+    setModalError("Todos los campos son obligatorios");
+    return;
+  }
+
+  setIsCreating(true);
+  try {
+    await createUsuario(formulario as unknown as CreateUserRequest);
+    await fetchUsuarios(); // Recargamos la tabla
+
+    // MOSTRAMOS LAS CREDENCIALES AL ADMIN
+    alert(
+      `¡Usuario creado exitosamente!\n\nUsuario: ${formulario.username}\nContraseña temporal: Hief2026!\n\nPor favor, comparta estos datos con el usuario.`,
+    );
+
+    setIsModalOpen(false);
+    resetForm();
+  } catch (err: any) {
+    setModalError(err.message || "Error al crear usuario");
+  } finally {
+    setIsCreating(false);
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los cambios fueron aplicados y si `npm run build` pasó o falló.
+
+# Tarea 37: Mostrar contraseña generada con botón de copiar
+
+## Contexto
+
+Al crear un usuario, el backend genera una contraseña aleatoria segura y la devuelve en la respuesta. En lugar de mostrar un `alert` (donde es imposible copiar el texto), queremos mostrar un estado de "Éxito" dentro del mismo Modal, con la contraseña en un input de solo lectura y un botón para copiar al portapapeles.
+
+## Objetivo
+
+1. Modificar `src/pages/AdminUsuarios.tsx` para capturar la contraseña que devuelve el backend.
+2. Mostrar un mensaje de éxito en el modal con un botón de "Copiar" usando `navigator.clipboard`.
+
+## Lo que debés hacer
+
+### 1. Asumir la estructura del backend
+
+Vamos a asumir que tu compañero configuró el backend para devolver algo así:
+
+```json
+{
+  "success": true,
+  "data": {
+    "usuario": { ... },
+    "tempPassword": "UNVitDzWIOEJZ_DnEv3y6GE9"
+  }
+}
+```
+
+_(Si el backend devuelve la contraseña en otro campo, como `password` o dentro del mismo objeto usuario, el agente deberá adaptar la variable `tempPassword`)._
+
+### 2. Modificar `src/api/usuarios.api.ts`
+
+Ajustar la función `createUsuario` para que devuelva el tipo correcto:
+
+```typescript
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<{ usuario: User; tempPassword: string }> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ usuario: User; tempPassword: string }>
+  >("/usuarios", payload);
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+```
+
+### 3. Modificar `src/pages/AdminUsuarios.tsx`
+
+Necesitamos estados para guardar la contraseña generada y saber si acabamos de crear el usuario.
+
+Agregar los estados al inicio:
+
+```tsx
+const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+const [isCopied, setIsCopied] = useState(false);
+```
+
+Modificar `handleCreateSubmit`:
+
+```tsx
+const handleCreateSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setModalError("");
+
+  if (
+    !formulario.username ||
+    !formulario.email ||
+    !formulario.first_name ||
+    !formulario.last_name
+  ) {
+    setModalError("Todos los campos son obligatorios");
+    return;
+  }
+
+  setIsCreating(true);
+  try {
+    const response = await createUsuario(
+      formulario as unknown as CreateUserRequest,
+    );
+    await fetchUsuarios();
+
+    // En lugar del alert, guardamos la contraseña y mostramos la pantalla de éxito
+    setCreatedPassword(response.tempPassword);
+  } catch (err: any) {
+    setModalError(err.message || "Error al crear usuario");
+  } finally {
+    setIsCreating(false);
+  }
+};
+
+const handleCopyPassword = () => {
+  if (createdPassword) {
+    navigator.clipboard.writeText(createdPassword);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000); // Vuelve al texto original después de 2s
+  }
+};
+
+const closeModal = () => {
+  setIsModalOpen(false);
+  resetForm();
+  setModalError("");
+  setCreatedPassword(null); // Limpiamos la contraseña al cerrar
+};
+```
+
+### 4. Actualizar el `<Modal>` en `AdminUsuarios.tsx`
+
+Cambiar el contenido del Modal para que muestre el formulario o el mensaje de éxito dependiendo del estado:
+
+```tsx
+<Modal
+  isOpen={isModalOpen}
+  onClose={closeModal}
+  title={createdPassword ? "¡Usuario Creado!" : "Registrar Nuevo Usuario"}
+>
+  {createdPassword ? (
+    // PANTALLA DE ÉXITO
+    <div className="flex flex-col gap-4 text-center">
+      <div className="mx-auto w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+        <CheckCircle className="w-6 h-6" />
+      </div>
+      <p className="text-gray-600 text-sm">
+        El usuario{" "}
+        <strong className="text-gray-900">{formulario.username}</strong> fue
+        creado correctamente.
+      </p>
+
+      <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-left">
+        <label className="text-xs font-semibold text-gray-500 uppercase">
+          Contraseña Temporal
+        </label>
+        <div className="flex items-center justify-between mt-1">
+          <code className="text-sm font-mono text-gray-800 select-all">
+            {createdPassword}
+          </code>
+          <button
+            onClick={handleCopyPassword}
+            className="ml-2 p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Copiar contraseña"
+          >
+            {isCopied ? (
+              <Check className="w-4 h-4 text-green-600" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Asegúrate de guardar o enviar esta contraseña. No se volverá a mostrar.
+      </p>
+
+      <Button
+        type="button"
+        variant="primary"
+        onClick={closeModal}
+        className="mt-2 w-full"
+      >
+        Entendido
+      </Button>
+    </div>
+  ) : (
+    // FORMULARIO (El mismo de la tarea anterior)
+    <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
+      {/* ... Aquí va el mismo formulario de la tarea 34 ... */}
+    </form>
+  )}
+</Modal>
+```
+
+**Importante:** No olvides importar los íconos `CheckCircle`, `Copy` y `Check` de `lucide-react` al inicio del archivo.
+
+### 5. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron modificados y si `npm run build` pasó.
