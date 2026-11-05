@@ -4357,3 +4357,84 @@ router.put("/:id", updateUsuario);
 ## Respuesta esperada
 
 Confirmame que la ruta y el controlador fueron creados y si compila sin errores.
+
+# Tarea 40 (Frontend): Añadir sección desplegable de "Permisos" en el Modal
+
+## Contexto
+
+En el formulario para crear/editar usuarios, queremos agrupar los accesos especiales (como "Permitir publicaciones") dentro de un acordeón o sección desplegable llamada "Permisos", para mantener el formulario limpio.
+
+## Objetivo
+
+Modificar `src/pages/AdminUsuarios.tsx` para agregar una sección desplegable de Permisos que contenga el checkbox de `is_author`.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/pages/AdminUsuarios.tsx`
+
+1. Importar los íconos `ChevronDown` y `ChevronUp` de `lucide-react`.
+2. Agregar un estado para controlar si la sección está abierta o cerrada:
+   `const [showPermissions, setShowPermissions] = useState(false);`
+3. En el formulario (dentro del `<Modal>`), reemplazar el checkbox suelto de `is_author` por esta sección desplegable:
+
+```tsx
+{
+  /* Sección desplegable de Permisos */
+}
+<div className="border border-gray-200 rounded-md overflow-hidden mt-2">
+  <button
+    type="button"
+    onClick={() => setShowPermissions(!showPermissions)}
+    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+  >
+    <span className="text-sm font-medium text-gray-700">
+      Permisos Especiales
+    </span>
+    {showPermissions ? (
+      <ChevronUp className="w-4 h-4 text-gray-500" />
+    ) : (
+      <ChevronDown className="w-4 h-4 text-gray-500" />
+    )}
+  </button>
+
+  {showPermissions && (
+    <div className="p-4 bg-white border-t border-gray-200">
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          id="is_author"
+          name="is_author"
+          checked={formulario.is_author}
+          onChange={(e) =>
+            setFormulario({ ...formulario, is_author: e.target.checked })
+          }
+          className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+        />
+        <div>
+          <label
+            htmlFor="is_author"
+            className="text-sm font-medium text-gray-700 cursor-pointer"
+          >
+            Permitir publicaciones de documentos
+          </label>
+          <p className="text-xs text-gray-500">
+            Habilita al usuario para enviar manuscritos como autor.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+</div>;
+```
+
+### 2. Limpieza
+
+Asegurate de que al abrir el modal (en `openCreateModal` y `openEditModal`), el estado `showPermissions` vuelva a `false` para que empiece cerrado.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.

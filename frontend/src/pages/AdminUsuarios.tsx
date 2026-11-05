@@ -3,6 +3,8 @@ import {
   Ban,
   Check,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Edit,
   Key,
@@ -49,6 +51,7 @@ export const AdminUsuarios = () => {
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [showPermissions, setShowPermissions] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [modalError, setModalError] = useState('');
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
@@ -88,6 +91,7 @@ export const AdminUsuarios = () => {
 
   const openCreateModal = () => {
     setEditingUserId(null);
+    setShowPermissions(false);
     resetCreateForm();
     setIsModalOpen(true);
   };
@@ -104,6 +108,7 @@ export const AdminUsuarios = () => {
       specialtyId: user.specialtyId ?? null,
     });
     setEditingUserId(user.id);
+    setShowPermissions(false);
     setCreatedPassword(null);
     setCreatedUsername('');
     setModalError('');
@@ -616,18 +621,52 @@ export const AdminUsuarios = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 p-3">
-              <input
-                id="is_author"
-                name="is_author"
-                type="checkbox"
-                checked={formulario.is_author}
-                onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="is_author" className="text-sm text-gray-700">
-                Permite publicar artículos
-              </label>
+            <div className="mt-2 overflow-hidden rounded-md border border-gray-200">
+              <button
+                type="button"
+                aria-expanded={showPermissions}
+                aria-controls="user-permissions"
+                onClick={() => setShowPermissions((open) => !open)}
+                className="flex w-full items-center justify-between bg-gray-50 p-3 transition-colors hover:bg-gray-100"
+              >
+                <span className="text-sm font-medium text-gray-700">
+                  Permisos Especiales
+                </span>
+                {showPermissions ? (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                )}
+              </button>
+
+              {showPermissions && (
+                <div
+                  id="user-permissions"
+                  className="border-t border-gray-200 bg-white p-4"
+                >
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_author"
+                      name="is_author"
+                      checked={formulario.is_author}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4 cursor-pointer rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <label
+                        htmlFor="is_author"
+                        className="cursor-pointer text-sm font-medium text-gray-700"
+                      >
+                        Permitir publicaciones de documentos
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        Habilita al usuario para enviar manuscritos como autor.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <p className="mt-2 text-xs text-gray-500">
