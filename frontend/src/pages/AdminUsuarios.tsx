@@ -290,11 +290,12 @@ export const AdminUsuarios = () => {
     setOpenMenuId(null);
     setBusyUserId(id);
     try {
-      const response = await resetPassword(id);
+      const newPassword = await resetPassword(id);
       const usuario = usuarios.find((item) => item.id === id);
       setCreatedUsername(usuario?.username ?? '');
-      setCreatedPassword(response.tempPassword);
+      setCreatedPassword(newPassword);
       setPasswordAction('reset');
+      setEditingUserId(null);
       setIsCopied(false);
       setCopyError('');
       setIsModalOpen(true);

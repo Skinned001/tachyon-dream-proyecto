@@ -8,10 +8,6 @@ export interface CreateUsuarioResponse {
   tempPassword: string;
 }
 
-export interface ResetPasswordResponse {
-  tempPassword: string;
-}
-
 interface CreateUsuarioApiResponse extends User {
   temporaryPassword: string;
 }
@@ -58,12 +54,12 @@ export const deleteUsuario = async (id: number): Promise<void> => {
 };
 
 // Reiniciar contraseña (Admin)
-export const resetPassword = async (id: number): Promise<ResetPasswordResponse> => {
+export const resetPassword = async (id: number): Promise<string> => {
   const { data } = await axiosClient.post<ApiResponse<{ temporaryPassword: string }>>(
     `/usuarios/${id}/reset-password`,
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al reiniciar contraseña');
   }
-  return { tempPassword: data.data.temporaryPassword };
+  return data.data.temporaryPassword;
 };

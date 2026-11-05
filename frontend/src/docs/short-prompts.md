@@ -4439,7 +4439,7 @@ Asegurate de que al abrir el modal (en `openCreateModal` y `openEditModal`), el 
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
 
-# Tarea 42 (Backend): Actualizar los nombres de los roles en la Base de Datos y Modelos
+# Tarea 41 (Backend): Actualizar los nombres de los roles en la Base de Datos y Modelos
 
 ## Contexto
 
@@ -4512,7 +4512,7 @@ await usuario.update({ roleId: rolEncontrado.id, ... });
 
 Confirmame qué archivos modificaste para solucionar el problema de los roles y si el backend compila sin errores.
 
-# Tarea 43 (Backend): Devolver la contraseña generada al reiniciarla
+# Tarea 42 (Backend): Devolver la contraseña generada al reiniciarla
 
 ## Contexto
 
@@ -4570,3 +4570,64 @@ export const resetPassword = async (req: Request, res: Response) => {
 ## Respuesta esperada
 
 Confirmame que el controlador fue modificado y si compila.
+
+# Tarea 43 (Frontend): Mostrar la nueva contraseña en un modal con botón de copiar
+
+## Contexto
+
+El backend ahora devuelve `tempPassword` al reiniciar la contraseña. Queremos mostrar esa contraseña en un modal (igual que cuando creamos un usuario) en lugar de un `alert`.
+
+## Objetivo
+
+1. Actualizar `src/api/usuarios.api.ts`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para reutilizar la pantalla de éxito.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/usuarios.api.ts`
+
+Modificar la función `resetPassword` para que retorne la contraseña:
+
+```typescript
+export const resetPassword = async (id: number): Promise<string> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ tempPassword: string }>
+  >(`/usuarios/${id}/reset-password`);
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al reiniciar contraseña");
+  }
+  return data.data.tempPassword;
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+En la función `handleResetPassword`:
+
+```tsx
+const handleResetPassword = async (id: number) => {
+  if (window.confirm("¿Generar nueva contraseña temporal para este usuario?")) {
+    try {
+      const newPassword = await resetPassword(id);
+
+      // En lugar de un alert, abrimos el modal de éxito
+      setCreatedPassword(newPassword);
+      setIsModalOpen(true);
+      setEditingUserId(null); // Aseguramos que no estamos editando
+    } catch (err) {
+      alert("Error al reiniciar contraseña");
+    }
+  }
+  setOpenMenuId(null);
+};
+```
+
+_(Nota: Usamos el estado `createdPassword` que ya tenías para la creación. Al setearlo, el Modal automáticamente mostrará la vista de la contraseña con el botón de copiar en lugar del formulario)._
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
