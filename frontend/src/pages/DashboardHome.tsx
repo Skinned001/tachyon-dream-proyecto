@@ -1,10 +1,32 @@
 import { ArrowRight, ArrowUpRight, BookOpen, CalendarDays, ChevronRight, ClipboardCheck, FileText, FlaskConical, UsersRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getRecursosBiblioteca } from '../api/biblioteca.api';
 
 export const DashboardHome = () => {
+  const [resourceCount, setResourceCount] = useState<number | null>(null);
+  const [resourceError, setResourceError] = useState('');
   const today = new Intl.DateTimeFormat('es-AR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }).format(new Date());
+
+  useEffect(() => {
+    let active = true;
+
+    getRecursosBiblioteca()
+      .then((resources) => {
+        if (active) setResourceCount(resources.length);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setResourceError(error instanceof Error ? error.message : 'Error al cargar la biblioteca.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const articles = [
     { title: 'Longitudinal outcomes in post-acute cardiac rehabilitation', meta: 'Cardiología · Equipo de investigación', status: 'En revisión', date: 'Actualizado hace 2 horas', tone: 'amber' },
@@ -29,7 +51,7 @@ export const DashboardHome = () => {
           { label: 'Mis artículos', value: '08', note: 'Publicados e inéditos', icon: FileText, tint: 'bg-[#d7f2e6] text-[#08745e]' },
           { label: 'En revisión', value: '03', note: 'Pendientes del Comité', icon: ClipboardCheck, tint: 'bg-[#fff0cf] text-[#985b08]' },
           { label: 'Colaboradores', value: '12', note: 'En 4 especialidades', icon: UsersRound, tint: 'bg-[#e6edc9] text-[#526d1c]' },
-          { label: 'Recursos', value: '246', note: 'Biblioteca HIEF', icon: BookOpen, tint: 'bg-[#dcecf4] text-[#28677c]' },
+          { label: 'Recursos', value: resourceError ? '—' : resourceCount === null ? '…' : String(resourceCount), note: resourceError || (resourceCount === null ? 'Cargando biblioteca...' : 'Biblioteca HIEF'), icon: BookOpen, tint: 'bg-[#dcecf4] text-[#28677c]' },
         ].map(({ label, value, note, icon: Icon, tint }, i) => (
           <article key={label} className={`rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 ${i === 0 ? 'sm:col-span-2 xl:col-span-1' : ''}`}>
             <div className="flex items-center justify-between"><p className="text-[11px] font-medium text-[#42685e]">{label}</p><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tint}`}><Icon size="{16}" strokeWidth="{1.7}"/></span></div>

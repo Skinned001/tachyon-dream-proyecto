@@ -1,4 +1,4 @@
-import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileText, CheckSquare } from 'lucide-react';
+import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileText, CheckSquare, FileUp, Inbox } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -6,10 +6,13 @@ type SidebarProps = { onSignOut: () => void; collapsed: boolean; onToggleCollaps
 
 export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  
+  // Aquí devolvemos Mis Manuscritos a su ruta original (/articulos)
+  // Y asignamos la Bandeja del Comité a la ruta /revisiones
   const links = [
     { to: '/', label: 'Inicio', icon: Activity, end: true },
-    { to: '/articulos', label: 'Mis Artículos', icon: FileText },
-    { to: '/revisiones', label: 'Panel de Revisión', icon: CheckSquare },
+    { to: '/articulos', label: 'Mis Manuscritos', icon: FileUp },
+    { to: '/revisiones', label: 'Bandeja del Comité', icon: Inbox },
     { to: '/biblioteca', label: 'Biblioteca virtual', icon: BookOpen },
   ];
 

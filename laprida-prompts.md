@@ -213,4 +213,64 @@ Actualiza ÚNICAMENTE la función `submit` para que soporte la desestructuració
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al conectar con el servidor.');
     }
-  }
+  } 
+
+
+# Comenzando modulo biblioteca:
+
+Actúa como Frontend Developer Senior. Vamos a conectar el módulo de Biblioteca Visual del HIEF con la API real, respetando el diseño de la maqueta y el `contrato.md`.
+Modifica los siguientes 2 archivos en la carpeta `frontend/`:
+
+1. Sobrescribe `frontend/src/api/biblioteca.api.ts` para definir el tipado y el servicio de llamada Axios:
+```typescript
+import axiosClient from './axiosClient';
+
+export interface RecursoBiblioteca {
+  id: number;
+  titulo: string;
+  tipo: string;
+  area: string;
+  descripcion: string;
+  archivoUrl: string;
+  visibilidad: 'PUBLICO' | 'INTERNO' | 'CONFIDENCIAL';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getRecursosBiblioteca = async (): Promise<RecursoBiblioteca[]> => {
+  const response = await axiosClient.get('/biblioteca');
+  // Según contrato SDD, la respuesta es { success: boolean, data: [...] }
+  return response.data.data || [];
+};
+
+# Estructuracion de subida de pdf funcional con el modulo de biblioteca:
+
+Actúa como Frontend Developer Senior. Vamos a implementar la subida de PDFs en el módulo de Artículos para el rol AUTOR, respetando el diseño premium actual y el contrato SDD para Multer.
+Realiza las siguientes 2 tareas en la carpeta `frontend/`:
+
+1. Sobrescribe (o crea) `frontend/src/api/articulos.api.ts` para manejar las peticiones, incluyendo el envío de FormData:
+```typescript
+import axiosClient from './axiosClient';
+
+export interface Articulo {
+  id: number;
+  title: string;
+  abstract: string;
+  status: 'BORRADOR' | 'EN_REVISION' | 'APROBADO' | 'RECHAZADO' | 'PUBLICADO';
+  fileUrl: string;
+  createdAt: string;
+}
+
+export const getMisArticulos = async (): Promise<Articulo[]> => {
+  const response = await axiosClient.get('/articulos');
+  return response.data.data || [];
+};
+
+export const subirManuscrito = async (formData: FormData): Promise<any> => {
+  // Axios sobrescribirá el Content-Type automáticamente por el FormData, 
+  // pero el interceptor ya inyecta el token.
+  const response = await axiosClient.post('/articulos', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response.data;
+};

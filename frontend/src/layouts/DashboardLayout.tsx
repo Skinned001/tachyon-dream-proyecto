@@ -11,7 +11,7 @@ export function DashboardLayout({ children, onSignOut }: Props) {
   
   const getTitle = () => {
     if (path.includes('biblioteca')) return 'Biblioteca Virtual';
-    if (path.includes('articulos')) return 'Mis Manuscritos';
+    if (path.includes('articulos')) return 'Bandeja del Comité';
     if (path.includes('revisiones')) return 'Panel de Evaluación';
     return 'Resumen de Investigación';
   };
