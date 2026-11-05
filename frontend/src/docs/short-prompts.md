@@ -2834,3 +2834,161 @@ _(Nota: Si el color verde de tu proyecto se llama diferente en Tailwind, adaptal
 ## Respuesta esperada
 
 Confirmame que el estilo fue aplicado y si `npm run build` pasó o falló.
+
+# Tarea 32: Backend - Implementar módulo de Usuarios
+
+## Contexto
+
+El frontend ya tiene la pantalla de Gestión de Usuarios (con mocks). Ahora vamos a implementar la lógica real en el backend usando TypeScript, Express y Sequelize.
+
+## Objetivo
+
+Crear el controlador y las rutas en `backend/src/modules/usuarios/` para listar, crear, suspender y resetear contraseñas. Todo protegido para el rol `ADMIN`.
+
+## Lo que debés hacer
+
+### 1. Crear `backend/src/modules/usuarios/usuarios.controller.ts`
+
+```typescript
+import { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import { Usuario } from "./Usuario.model";
+import { Rol } from "./Rol.model";
+
+// Listar todos los usuarios
+export const getUsuarios = async (req: Request, res: Response) => {
+  try {
+    const usuarios = await Usuario.findAll({
+      attributes: { exclude: ["password"] },
+      include: [{ model: Rol, as: "role" }],
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        items: usuarios,
+        total: usuarios.length,
+        page: 1,
+        limit: usuarios.length,
+      },
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al obtener usuarios" });
+  }
+};
+
+// Crear nuevo usuario (Contraseña genérica)
+export const createUsuario = async (req: Request, res: Response) => {
+  try {
+    const { username, email, first_name, last_name, role, specialtyId } =
+      req.body;
+
+    // Contraseña genérica inicial (ej: Hief2026!)
+    const genericPassword = "Hief2026!";
+    const hashedPassword = await bcrypt.hash(genericPassword, 10);
+
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      first_name,
+      last_name,
+      password: hashedPassword,
+      roleId: role, // Asumiendo que el frontend manda el ID del rol o el nombre
+      specialtyId,
+      must_change_password: true, // Obliga a cambiarla en el primer login
+      active: true,
+    });
+
+    return res.status(201).json({ success: true, data: nuevoUsuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al crear usuario" });
+  }
+};
+
+// Baja lógica (Suspender)
+export const deleteUsuario = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await Usuario.update({ active: false }, { where: { id } });
+    return res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al suspender usuario" });
+  }
+};
+
+// Reiniciar contraseña
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const genericPassword = "Hief2026!";
+    const hashedPassword = await bcrypt.hash(genericPassword, 10);
+
+    await Usuario.update(
+      { password: hashedPassword, must_change_password: true },
+      { where: { id } },
+    );
+
+    return res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al reiniciar contraseña" });
+  }
+};
+```
+
+### 2. Crear `backend/src/modules/usuarios/usuarios.routes.ts`
+
+```typescript
+import { Router } from "express";
+import {
+  getUsuarios,
+  createUsuario,
+  deleteUsuario,
+  resetPassword,
+} from "./usuarios.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { roleMiddleware } from "../../middlewares/role.middleware";
+
+const router = Router();
+
+// Todas estas rutas requieren estar logueado Y ser ADMIN
+router.use(authMiddleware);
+router.use(roleMiddleware(["ADMIN"]));
+
+router.get("/", getUsuarios);
+router.post("/", createUsuario);
+router.delete("/:id", deleteUsuario);
+router.post("/:id/reset-password", resetPassword);
+
+export default router;
+```
+
+### 3. Registrar la ruta en el servidor
+
+En tu archivo principal (usualmente `backend/src/app.ts` o `server.ts`), donde se configuran las rutas:
+
+```typescript
+import usuariosRoutes from "./modules/usuarios/usuarios.routes";
+// ...
+app.use("/api/usuarios", usuariosRoutes);
+```
+
+### 4. Verificación
+
+- Correr `npm run build` en el backend para asegurar que no haya errores de TS.
+
+## Lo que NO debés hacer
+
+- No modifiques el frontend en esta tarea.
+- No crees la lógica de cambio de contraseña para el usuario (eso lo haremos después).
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados, si registraste la ruta, y si compila sin errores.

@@ -4,8 +4,10 @@ import {
   InferAttributes,
   InferCreationAttributes,
   Model,
+  NonAttribute,
   Sequelize,
 } from 'sequelize';
+import type { Rol } from './Rol.model.js';
 
 export class Usuario extends Model<InferAttributes<Usuario>, InferCreationAttributes<Usuario>> {
   declare id: CreationOptional<number>;
@@ -21,6 +23,7 @@ export class Usuario extends Model<InferAttributes<Usuario>, InferCreationAttrib
   declare must_change_password: CreationOptional<boolean>;
   declare failed_login_attempts: CreationOptional<number>;
   declare locked_until: CreationOptional<Date | null>;
+  declare role?: NonAttribute<Rol>;
 }
 
 export const initializeUsuarioModel = (sequelize: Sequelize): void => {
