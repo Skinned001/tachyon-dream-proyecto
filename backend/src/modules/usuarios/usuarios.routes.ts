@@ -10,6 +10,7 @@ router.use(authenticateJWT, requireRole(['ADMIN']));
 
 router.get('/', usuariosController.list);
 router.post('/', usuariosController.create);
+router.put('/:id', usuariosController.update);
 router.delete('/:id', usuariosController.delete);
 router.post('/:id/reset-password', usuariosController.resetPassword);
 

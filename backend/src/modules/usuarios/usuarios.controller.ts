@@ -9,9 +9,26 @@ const createUsuarioSchema = z.object({
   first_name: z.string().trim().min(1).max(255),
   last_name: z.string().trim().min(1).max(255),
   dni: z.string().trim().min(1).max(255),
-  role: z.enum(['AUTOR', 'DDI', 'COMITE', 'PUBLISHER', 'ADMIN']),
+  role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN', 'AUTOR', 'PUBLISHER']),
+  is_author: z.boolean().optional().default(false),
   specialtyId: z.number().int().positive().nullable().optional(),
 });
+
+const updateUsuarioSchema = z
+  .object({
+    username: z.string().trim().min(1).max(255).optional(),
+    email: z.string().trim().email().transform((email) => email.toLowerCase()).optional(),
+    first_name: z.string().trim().min(1).max(255).optional(),
+    last_name: z.string().trim().min(1).max(255).optional(),
+    dni: z.string().trim().min(1).max(255).optional(),
+    role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN', 'AUTOR', 'PUBLISHER']).optional(),
+    is_author: z.boolean().optional(),
+    specialtyId: z.number().int().positive().nullable().optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'Debe proporcionar al menos un campo para actualizar',
+  });
 
 const getId = (value: string): number | undefined => {
   const id = Number(value);
@@ -60,6 +77,49 @@ export class UsuariosController {
           temporaryPassword: created.temporaryPassword,
         },
       });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  update = async (
+    req: Request<{ id: string }>,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = getId(req.params.id);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'El id debe ser un entero positivo',
+      });
+      return;
+    }
+
+    const parsedBody = updateUsuarioSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Los datos del usuario son inválidos',
+      });
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Sesión expirada. Inicie sesión nuevamente',
+      });
+      return;
+    }
+
+    try {
+      const usuario = await this.usuariosService.update(
+        id,
+        parsedBody.data,
+        req.user.id,
+      );
+      res.status(200).json({ success: true, data: usuario });
     } catch (error: unknown) {
       next(error);
     }

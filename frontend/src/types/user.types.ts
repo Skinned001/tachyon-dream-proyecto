@@ -1,4 +1,4 @@
-export type UserRole = 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'ADMIN';
+export type UserRole = 'STAFF' | 'DDI' | 'COMITE' | 'EDITOR' | 'ADMIN';
 
 export interface User {
   id: number;
@@ -7,11 +7,11 @@ export interface User {
   first_name: string;
   last_name: string;
   role: UserRole;
+  is_author: boolean;
   specialtyId: number | null;
   must_change_password: boolean;
-  // Campos opcionales que vienen en UserDTO
   dni?: string | null;
-  active?: boolean;
+  active: boolean;
   createdAt?: string;
 }
 
@@ -20,9 +20,10 @@ export interface CreateUserRequest {
   email: string;
   first_name: string;
   last_name: string;
-  dni?: string;
   role: UserRole;
+  is_author: boolean;
   specialtyId?: number | null;
+  dni?: string;
 }
 
 export interface UpdateUserRequest {
@@ -30,8 +31,9 @@ export interface UpdateUserRequest {
   email?: string;
   first_name?: string;
   last_name?: string;
-  dni?: string;
   role?: UserRole;
+  is_author?: boolean;
   specialtyId?: number | null;
+  dni?: string;
   active?: boolean;
 }

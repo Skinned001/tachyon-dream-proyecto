@@ -15,6 +15,7 @@ export interface UsuarioDTO {
   last_name: string;
   dni: string;
   role: RoleName;
+  is_author: boolean;
   specialtyId: number | null;
   must_change_password: boolean;
   active: boolean;
@@ -27,7 +28,20 @@ export interface CreateUsuarioData {
   last_name: string;
   dni: string;
   role: RoleName;
+  is_author: boolean;
   specialtyId?: number | null;
+}
+
+export interface UpdateUsuarioData {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  dni?: string;
+  role?: RoleName;
+  is_author?: boolean;
+  specialtyId?: number | null;
+  active?: boolean;
 }
 
 export class UsuariosError extends Error {
@@ -56,6 +70,7 @@ const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
     last_name: usuario.last_name,
     dni: usuario.dni,
     role: roleName,
+    is_author: usuario.is_author,
     specialtyId: usuario.specialtyId,
     must_change_password: usuario.must_change_password,
     active: usuario.active,
@@ -133,6 +148,7 @@ export class UsuariosService {
           first_name: input.first_name,
           last_name: input.last_name,
           dni: input.dni,
+          is_author: input.is_author,
           password,
           roleId: role.id,
           specialtyId,
@@ -157,6 +173,97 @@ export class UsuariosService {
 
     usuario.active = false;
     await usuario.save();
+  }
+
+  async update(
+    id: number,
+    input: UpdateUsuarioData,
+    requesterId: number,
+  ): Promise<UsuarioDTO> {
+    return sequelize.transaction(async (transaction) => {
+      const usuario = await Usuario.findByPk(id, { transaction });
+      if (!usuario) {
+        throw new UsuariosError(404, 'Usuario no encontrado');
+      }
+
+      if (usuario.id === requesterId && input.active === false) {
+        throw new UsuariosError(400, 'No puede suspender su propia cuenta');
+      }
+
+      const duplicateConditions = [];
+      if (input.username !== undefined) {
+        duplicateConditions.push({ username: input.username });
+      }
+      if (input.email !== undefined) {
+        duplicateConditions.push({ email: input.email });
+      }
+      if (input.dni !== undefined) {
+        duplicateConditions.push({ dni: input.dni });
+      }
+      if (duplicateConditions.length > 0) {
+        const duplicate = await Usuario.findOne({
+          where: {
+            id: { [Op.ne]: id },
+            [Op.or]: duplicateConditions,
+          },
+          transaction,
+        });
+        if (duplicate) {
+          throw new UsuariosError(
+            409,
+            'El nombre de usuario, correo o DNI ya está registrado',
+          );
+        }
+      }
+
+      let roleName: string | undefined;
+      if (input.role !== undefined) {
+        const role = await Rol.findOne({
+          where: { name: input.role },
+          transaction,
+        });
+        if (!role) {
+          throw new UsuariosError(400, 'El rol seleccionado no existe');
+        }
+        usuario.roleId = role.id;
+        roleName = role.name;
+      }
+
+      if (input.specialtyId !== undefined && input.specialtyId !== null) {
+        const specialty = await Especialidad.findByPk(input.specialtyId, {
+          transaction,
+        });
+        if (!specialty || !specialty.active) {
+          throw new UsuariosError(
+            400,
+            'La especialidad seleccionada no existe o está inactiva',
+          );
+        }
+      }
+
+      if (input.username !== undefined) usuario.username = input.username;
+      if (input.email !== undefined) usuario.email = input.email;
+      if (input.first_name !== undefined) usuario.first_name = input.first_name;
+      if (input.last_name !== undefined) usuario.last_name = input.last_name;
+      if (input.dni !== undefined) usuario.dni = input.dni;
+      if (input.is_author !== undefined) usuario.is_author = input.is_author;
+      if (input.specialtyId !== undefined) {
+        usuario.specialtyId = input.specialtyId;
+      }
+      if (input.active !== undefined) usuario.active = input.active;
+
+      await usuario.save({ transaction });
+
+      if (!roleName) {
+        const role = await Rol.findByPk(usuario.roleId, { transaction });
+        if (!role) {
+          throw new Error(`No se encontró el rol del usuario ${usuario.id}.`);
+        }
+        roleName = role.name;
+      }
+
+      return toUsuarioDTO(usuario, roleName);
+    });
   }
 
   async resetPassword(id: number): Promise<{ temporaryPassword: string }> {

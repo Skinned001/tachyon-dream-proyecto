@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export type RoleName = 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'ADMIN';
+export type RoleName =
+  | 'STAFF'
+  | 'DDI'
+  | 'COMITE'
+  | 'EDITOR'
+  | 'ADMIN'
+  | 'AUTOR'
+  | 'PUBLISHER';
 
 export interface LoginRequest {
   email: string;
@@ -45,6 +52,8 @@ export const changePasswordRequestSchema = z.object({
 });
 
 export const roleNames: readonly RoleName[] = [
+  'STAFF',
+  'EDITOR',
   'AUTOR',
   'DDI',
   'COMITE',

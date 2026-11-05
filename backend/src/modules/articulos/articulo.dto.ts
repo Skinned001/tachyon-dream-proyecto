@@ -1,4 +1,5 @@
 import type { ArticleState } from './Articulo.model.js';
+import type { RoleName } from '../auth/auth.dto.js';
 
 export type { ArticleState };
 
@@ -57,5 +58,5 @@ export interface ArticleDTO {
 
 export interface AuthenticatedArticleUser {
   id: number;
-  role: 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'ADMIN';
+  role: RoleName;
 }

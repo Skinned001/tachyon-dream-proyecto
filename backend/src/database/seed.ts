@@ -6,6 +6,8 @@ import { Usuario } from '../modules/usuarios/Usuario.model.js';
 import { setupAssociations } from './associations.js';
 
 const roles = [
+  { name: 'STAFF', description: 'Profesional del sistema.' },
+  { name: 'EDITOR', description: 'Editor de publicaciones.' },
   { name: 'AUTOR', description: 'Profesional que envía manuscritos científicos.' },
   {
     name: 'DDI',

@@ -3743,3 +3743,617 @@ Cambiar el contenido del Modal para que muestre el formulario o el mensaje de é
 
 Confirmame que los archivos fueron modificados y si `npm run build` pasó.
 
+# Tarea 38 (Corregida): Actualizar roles a STAFF/EDITOR, atributo autor y edición
+
+## Contexto
+
+El sistema cambió sus reglas de negocio:
+
+1. El rol `AUTOR` desaparece. Ahora los profesionales base son `STAFF`.
+2. Tener permiso para publicar ahora es un atributo booleano llamado `is_author`.
+3. Los nuevos roles son: `'STAFF' | 'DDI' | 'COMITE' | 'EDITOR' | 'ADMIN'`.
+4. El Admin debe poder editar usuarios y reactivar cuentas suspendidas.
+
+## Objetivo
+
+1. Actualizar `src/types/user.types.ts`.
+2. Actualizar `src/api/usuarios.api.ts`.
+3. Actualizar `src/pages/AdminUsuarios.tsx` (Formulario con Checkbox de Autor y menú de acciones con Editar y Reactivar).
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/types/user.types.ts`
+
+```typescript
+export type UserRole = "STAFF" | "DDI" | "COMITE" | "EDITOR" | "ADMIN";
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  is_author: boolean;
+  specialtyId: number | null;
+  must_change_password: boolean;
+  dni?: string | null;
+  active: boolean;
+  createdAt?: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  is_author: boolean;
+  specialtyId?: number | null;
+  dni?: string;
+}
+
+export interface UpdateUserRequest {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  role?: UserRole;
+  is_author?: boolean;
+  specialtyId?: number | null;
+  dni?: string;
+  active?: boolean;
+}
+```
+
+### 2. Actualizar `src/api/usuarios.api.ts`
+
+Asegurate de que la función `updateUsuario` esté correcta:
+
+```typescript
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+```
+
+### 3. Sobrescribir `src/pages/AdminUsuarios.tsx`
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import {
+  getUsuarios,
+  deleteUsuario,
+  resetPassword,
+  createUsuario,
+  updateUsuario,
+} from "../api/usuarios.api";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
+import {
+  Loader2,
+  Plus,
+  MoreVertical,
+  Ban,
+  Key,
+  CheckCircle,
+  Copy,
+  Check,
+  Edit,
+  UserCheck,
+} from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const { formulario, handleChange, resetForm, setFormulario } = useForm({
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    role: "STAFF",
+    is_author: false,
+  });
+
+  const fetchUsuarios = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getUsuarios();
+      setUsuarios(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar usuarios");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const openCreateModal = () => {
+    resetForm();
+    setEditingUserId(null);
+    setCreatedPassword(null);
+    setModalError("");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setFormulario({
+      username: user.username,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role,
+      is_author: user.is_author,
+    });
+    setEditingUserId(user.id);
+    setCreatedPassword(null);
+    setModalError("");
+    setIsModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm("¿Suspender esta cuenta?")) {
+      try {
+        await updateUsuario(id, { active: false });
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
+      } catch (err) {
+        alert("Error al suspender");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleReactivate = async (id: number) => {
+    if (window.confirm("¿Reactivar esta cuenta?")) {
+      try {
+        await updateUsuario(id, { active: true });
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: true } : u)),
+        );
+      } catch (err) {
+        alert("Error al reactivar");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleResetPassword = async (id: number) => {
+    if (window.confirm("¿Generar nueva contraseña?")) {
+      try {
+        await resetPassword(id);
+        alert("Contraseña reiniciada con éxito.");
+      } catch (err) {
+        alert("Error al reiniciar contraseña");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalError("");
+    if (
+      !formulario.username ||
+      !formulario.email ||
+      !formulario.first_name ||
+      !formulario.last_name
+    ) {
+      setModalError("Todos los campos son obligatorios");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      if (editingUserId) {
+        // EDITAR
+        await updateUsuario(editingUserId, formulario as UpdateUserRequest);
+        await fetchUsuarios();
+        setIsModalOpen(false);
+      } else {
+        // CREAR
+        const response = await createUsuario(
+          formulario as unknown as CreateUserRequest,
+        );
+        await fetchUsuarios();
+        setCreatedPassword(response.tempPassword || "Revisar sistema");
+      }
+    } catch (err: any) {
+      setModalError(err.message || "Error en la operación");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (createdPassword) {
+      navigator.clipboard.writeText(createdPassword);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+        </div>
+        <Button
+          onClick={openCreateModal}
+          variant="primary"
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4">Usuario</th>
+                  <th className="py-3 px-4">Rol / Autor</th>
+                  <th className="py-3 px-4">Estado</th>
+                  <th className="py-3 px-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u, index) => {
+                  const isNearBottom = index >= usuarios.length - 2;
+                  return (
+                    <tr
+                      key={u.id}
+                      className="border-b border-gray-100 hover:bg-gray-50 relative"
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-medium text-gray-800">
+                          {u.first_name} {u.last_name}
+                        </span>
+                        <br />
+                        <span className="text-xs text-gray-400">
+                          @{u.username}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full mr-2">
+                          {u.role}
+                        </span>
+                        {u.is_author && (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                            Autor
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                        >
+                          {u.active ? "Activo" : "Suspendido"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right relative">
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(openMenuId === u.id ? null : u.id)
+                          }
+                          className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-100 focus:outline-none"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+
+                        {openMenuId === u.id && (
+                          <div
+                            className={`absolute right-8 w-52 bg-white border border-gray-200 rounded-md shadow-xl z-50 py-1 ${isNearBottom ? "bottom-10" : "top-10"}`}
+                          >
+                            <button
+                              onClick={() => openEditModal(u)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4 text-blue-500" /> Editar
+                            </button>
+                            <button
+                              onClick={() => handleResetPassword(u.id)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              <Key className="w-4 h-4 text-blue-500" />{" "}
+                              Reiniciar clave
+                            </button>
+                            {u.active ? (
+                              <button
+                                onClick={() => handleSuspend(u.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              >
+                                <Ban className="w-4 h-4" /> Suspender
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleReactivate(u.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
+                              >
+                                <UserCheck className="w-4 h-4" /> Reactivar
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={
+          createdPassword
+            ? "¡Usuario Creado!"
+            : editingUserId
+              ? "Editar Usuario"
+              : "Registrar Usuario"
+        }
+      >
+        {createdPassword ? (
+          <div className="flex flex-col gap-4 text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-left">
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                Contraseña Temporal
+              </label>
+              <div className="flex items-center justify-between mt-1">
+                <code className="text-sm font-mono text-gray-800 select-all">
+                  {createdPassword}
+                </code>
+                <button
+                  onClick={handleCopyPassword}
+                  className="ml-2 p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  {isCopied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <Button
+              onClick={() => setIsModalOpen(false)}
+              className="w-full mt-2"
+            >
+              Entendido
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Nombre"
+                name="first_name"
+                value={formulario.first_name}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Apellido"
+                name="last_name"
+                value={formulario.last_name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <Input
+              label="Usuario"
+              name="username"
+              value={formulario.username}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Email"
+              type="email"
+              name="email"
+              value={formulario.email}
+              onChange={handleChange}
+              required
+            />
+
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-sm font-medium text-gray-700">
+                Rol Principal
+              </label>
+              <select
+                name="role"
+                value={formulario.role}
+                onChange={handleChange}
+                className="px-3 py-2 border rounded-md"
+              >
+                <option value="STAFF">Staff (Médico/Profesional)</option>
+                <option value="COMITE">Comité Científico</option>
+                <option value="DDI">Docencia e Investigación</option>
+                <option value="EDITOR">Editor de Publicación</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                id="is_author"
+                name="is_author"
+                checked={formulario.is_author}
+                onChange={(e) =>
+                  setFormulario({ ...formulario, is_author: e.target.checked })
+                }
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor="is_author"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                Habilitar como Autor (puede publicar artículos)
+              </label>
+            </div>
+
+            {modalError && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 rounded">
+                {modalError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" isLoading={isCreating}>
+                {editingUserId ? "Guardar Cambios" : "Crear Usuario"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+    </div>
+  );
+};
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 39 (Backend): Crear endpoint PUT /api/usuarios/:id
+
+## Contexto
+
+El frontend ya está enviando la petición para editar un usuario (`PUT /api/usuarios/:id`), pero el backend no tiene esta ruta implementada. Necesitamos crearla para actualizar los datos, el rol y el estado de autor.
+
+## Objetivo
+
+Implementar el controlador y la ruta para actualizar un usuario existente.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/usuarios/usuarios.controller.ts`
+
+Agregar la siguiente función al final del archivo:
+
+```typescript
+// Actualizar usuario
+export const updateUsuario = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { username, email, first_name, last_name, role, is_author, active } =
+      req.body;
+
+    const usuario = await Usuario.findByPk(id);
+
+    if (!usuario) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+    }
+
+    // Actualizamos los campos (sin tocar la contraseña)
+    await usuario.update({
+      username,
+      email,
+      first_name,
+      last_name,
+      roleId: role, // o el nombre del campo que use tu modelo
+      is_author, // Asumiendo que agregaste esta columna en la BD
+      active,
+    });
+
+    // Devolvemos el usuario actualizado sin la contraseña
+    const usuarioActualizado = await Usuario.findByPk(id, {
+      attributes: { exclude: ["password"] },
+    });
+
+    return res.status(200).json({ success: true, data: usuarioActualizado });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar usuario" });
+  }
+};
+```
+
+### 2. Modificar `src/modules/usuarios/usuarios.routes.ts`
+
+Importar `updateUsuario` y agregar la ruta:
+
+```typescript
+import {
+  getUsuarios,
+  createUsuario,
+  deleteUsuario,
+  resetPassword,
+  updateUsuario,
+} from "./usuarios.controller";
+
+// ... (las rutas que ya tenías)
+router.put("/:id", updateUsuario);
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.
+
+## Respuesta esperada
+
+Confirmame que la ruta y el controlador fueron creados y si compila sin errores.
