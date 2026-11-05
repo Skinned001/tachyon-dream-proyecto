@@ -2992,3 +2992,103 @@ app.use("/api/usuarios", usuariosRoutes);
 ## Respuesta esperada
 
 Confirmame que los archivos fueron creados, si registraste la ruta, y si compila sin errores.
+
+# Tarea 33: Eliminar los mocks y conectar con la API real de usuarios
+
+## Contexto
+
+El backend ya tiene implementadas las rutas para gestionar usuarios (`/api/usuarios`). Es hora de eliminar los datos simulados (MOCK_USERS) que usamos para pruebas visuales y dejar el archivo listo para hacer las peticiones HTTP reales.
+
+## Objetivo
+
+Sobrescribir `src/api/usuarios.api.ts` para eliminar todos los mocks y usar `axiosClient` en todas las funciones.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/api/usuarios.api.ts`
+
+Reemplazar todo el contenido del archivo con este código final:
+
+```typescript
+// src/api/usuarios.api.ts
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse, Paginated } from "../types/api.types";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+
+// Listar usuarios (Admin)
+export const getUsuarios = async (): Promise<User[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Paginated<User>>>("/usuarios");
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al obtener usuarios");
+  }
+  return data.data.items;
+};
+
+// Crear usuario (Admin)
+export const createUsuario = async (
+  payload: CreateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.post<ApiResponse<User>>(
+    "/usuarios",
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al crear usuario");
+  }
+  return data.data;
+};
+
+// Actualizar usuario (Admin)
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    `/usuarios/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al actualizar usuario");
+  }
+  return data.data;
+};
+
+// Dar de baja (Lógica) (Admin)
+export const deleteUsuario = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.delete<ApiResponse<void>>(
+    `/usuarios/${id}`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al suspender usuario");
+  }
+};
+
+// Reiniciar contraseña (Admin)
+export const resetPassword = async (id: number): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    `/usuarios/${id}/reset-password`,
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al reiniciar contraseña");
+  }
+};
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Si el backend está corriendo, iniciar sesión como ADMIN, ir a "Manejo de Usuarios" y comprobar que la tabla carga los datos reales.
+
+## Lo que NO debés hacer
+
+- No modifiques la pantalla `AdminUsuarios.tsx` (la lógica de los botones y el diseño ya están bien).
+- No modifiques el backend.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
