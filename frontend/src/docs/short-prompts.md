@@ -2375,3 +2375,219 @@ export const deleteUsuario = async (id: number): Promise<void> => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue modificado y si `npm run build` pasó o falló.
+
+# Tarea 29: Agregar menú de 3 puntos (acciones) a la tabla de usuarios
+
+## Contexto
+
+Tenemos la tabla de usuarios funcionando con datos mock. Ahora necesitamos agregar un menú desplegable (tres puntos) al lado de cada usuario para que el Admin pueda "Suspender cuenta" o "Reiniciar contraseña".
+
+## Objetivo
+
+1. Actualizar `src/api/usuarios.api.ts` para agregar la función mock `resetPassword`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para incluir el menú desplegable.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/usuarios.api.ts`
+
+Agregar esta función al final del archivo (simulando la respuesta del backend):
+
+```typescript
+// Reiniciar contraseña (MOCK)
+export const resetPassword = async (id: number): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log(`Mock: Contraseña reiniciada para el usuario ${id}`);
+      resolve();
+    }, 500);
+  });
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+Necesitamos importar el ícono de los tres puntos (`MoreVertical`), agregar estados para manejar qué menú está abierto y crear las funciones de acción.
+
+Reemplazar el archivo con este código:
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import { getUsuarios, deleteUsuario, resetPassword } from "../api/usuarios.api";
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Plus, MoreVertical, Ban, Key } from "lucide-react";
+
+export const AdminUsuarios = () => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  const fetchUsuarios = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getUsuarios();
+      setUsuarios(data);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar usuarios");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsuarios();
+  }, []);
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm("¿Estás seguro de suspender esta cuenta?")) {
+      try {
+        await deleteUsuario(id); // Usamos la función de baja lógica existente
+        // Actualizamos la tabla localmente para reflejar el cambio rápido
+        setUsuarios(
+          usuarios.map((u) => (u.id === id ? { ...u, active: false } : u)),
+        );
+      } catch (err) {
+        alert("Error al suspender usuario");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleResetPassword = async (id: number) => {
+    if (
+      window.confirm("¿Generar nueva contraseña genérica para este usuario?")
+    ) {
+      try {
+        await resetPassword(id);
+        alert(
+          "Contraseña reiniciada con éxito. Se envió un correo al usuario.",
+        );
+      } catch (err) {
+        alert("Error al reiniciar contraseña");
+      }
+    }
+    setOpenMenuId(null);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra las cuentas del sistema
+          </p>
+        </div>
+        <Button variant="primary" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Usuario
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-institucional-500" />
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-md border border-red-200">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium">Usuario</th>
+                  <th className="py-3 px-4 font-medium">Email</th>
+                  <th className="py-3 px-4 font-medium">Rol</th>
+                  <th className="py-3 px-4 font-medium">Estado</th>
+                  <th className="py-3 px-4 font-medium text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 relative"
+                  >
+                    <td className="py-3 px-4 font-medium text-gray-800">
+                      {u.first_name} {u.last_name} <br />
+                      <span className="text-xs text-gray-400 font-normal">
+                        @{u.username}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 bg-institucional-50 text-institucional-700 text-xs font-semibold rounded-full">
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {u.active ? "Activo" : "Suspendido"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right relative">
+                      <button
+                        onClick={() =>
+                          setOpenMenuId(openMenuId === u.id ? null : u.id)
+                        }
+                        className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+
+                      {/* Menú Desplegable */}
+                      {openMenuId === u.id && (
+                        <div className="absolute right-8 top-10 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10 py-1">
+                          <button
+                            onClick={() => handleResetPassword(u.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <Key className="w-4 h-4 text-blue-500" /> Reiniciar
+                            contraseña
+                          </button>
+                          {u.active && (
+                            <button
+                              onClick={() => handleSuspend(u.id)}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Ban className="w-4 h-4" /> Suspender cuenta
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Lo que NO debés hacer
+
+- No crees el modal para "Nuevo Usuario" todavía.
+- No modifiques el contexto de autenticación.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue creado y decime si `npm run build` pasó o falló.

@@ -99,10 +99,26 @@ export const updateUsuario = async (id: number, payload: UpdateUserRequest): Pro
   return data.data;
 };
 
-// Dar de baja (Se deja preparado para el backend real)
+// Dar de baja (MOCK temporal)
 export const deleteUsuario = async (id: number): Promise<void> => {
-  const { data } = await axiosClient.delete<ApiResponse<void>>(`/usuarios/${id}`);
-  if (!data.success) {
-    throw new Error(data.error || 'Error al dar de baja al usuario');
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 500);
+  });
+
+  const usuario = MOCK_USERS.find((user) => user.id === id);
+  if (!usuario) {
+    throw new Error('No se encontró el usuario para suspender');
   }
+
+  usuario.active = false;
+};
+
+// Reiniciar contraseña (MOCK)
+export const resetPassword = async (id: number): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log(`Mock: Contraseña reiniciada para el usuario ${id}`);
+      resolve();
+    }, 500);
+  });
 };
