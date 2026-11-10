@@ -1,5 +1,5 @@
 import axiosClient from "./axiosClient";
-import { type Articulo } from "./articulos.api";
+import { getMisArticulos, type Articulo } from "./articulos.api";
 
 export const especialistasMock = [
   { id: 101, nombre: "Dr. Roberto Fernández", especialidad: "Cardiología" },
@@ -8,8 +8,7 @@ export const especialistasMock = [
 ];
 
 export const getArticulosGenerales = async (): Promise<Articulo[]> => {
-  const response = await axiosClient.get("/articulos");
-  return response.data.data || [];
+  return getMisArticulos();
 };
 
 // Modificado para aceptar un array de revisores

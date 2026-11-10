@@ -16,8 +16,10 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PortalHome />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/registro" element={<Navigate replace to="/login" />} />
+      <Route element={<PublicRoutes />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
+      </Route>
       <Route element={<PrivateRoutes />}>
         <Route path="/dashboard" element={<DashboardHome />} />
         <Route path="articulos" element={<MisArticulos />} />

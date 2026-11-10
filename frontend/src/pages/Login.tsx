@@ -34,7 +34,7 @@ export default function Login() {
       login(userData);
       const returnTo = from?.pathname
         ? `${from.pathname}${from.search || ""}${from.hash || ""}`
-        : "/";
+        : "/dashboard";
       navigate(returnTo, { replace: true });
     } catch (err) {
       setError(
