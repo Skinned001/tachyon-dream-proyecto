@@ -4631,3 +4631,155 @@ _(Nota: Usamos el estado `createdPassword` que ya tenías para la creación. Al 
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 44 (Frontend): Mostrar la nueva contraseña en un modal con botón de copiar
+
+## Contexto
+
+El backend ahora devuelve `tempPassword` al reiniciar la contraseña. Queremos mostrar esa contraseña en un modal (igual que cuando creamos un usuario) en lugar de un `alert`.
+
+## Objetivo
+
+1. Actualizar `src/api/usuarios.api.ts`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para reutilizar la pantalla de éxito.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/usuarios.api.ts`
+
+Modificar la función `resetPassword` para que retorne la contraseña:
+
+```typescript
+export const resetPassword = async (id: number): Promise<string> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ tempPassword: string }>
+  >(`/usuarios/${id}/reset-password`);
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al reiniciar contraseña");
+  }
+  return data.data.tempPassword;
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+En la función `handleResetPassword`:
+
+```tsx
+const handleResetPassword = async (id: number) => {
+  if (window.confirm("¿Generar nueva contraseña temporal para este usuario?")) {
+    try {
+      const newPassword = await resetPassword(id);
+
+      // En lugar de un alert, abrimos el modal de éxito
+      setCreatedPassword(newPassword);
+      setIsModalOpen(true);
+      setEditingUserId(null); // Aseguramos que no estamos editando
+    } catch (err) {
+      alert("Error al reiniciar contraseña");
+    }
+  }
+  setOpenMenuId(null);
+};
+```
+
+_(Nota: Usamos el estado `createdPassword` que ya tenías para la creación. Al setearlo, el Modal automáticamente mostrará la vista de la contraseña con el botón de copiar en lugar del formulario)._
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 45 (Frontend): Menú desplegable de Perfil de Usuario
+
+## Contexto
+
+En la barra superior (`DashboardLayout.tsx`), al lado del nombre del usuario hay un triángulo (chevron). Queremos que al hacer clic se abra un menú desplegable con opciones para ir al Perfil (cambiar contraseña, foto, etc.) y Cerrar Sesión.
+
+## Objetivo
+
+Modificar `src/layouts/DashboardLayout.tsx` para agregar el menú desplegable.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/layouts/DashboardLayout.tsx`
+
+Agregar un estado para abrir/cerrar el menú:
+
+```tsx
+const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+```
+
+Reemplazar la sección del `<header>` donde se muestra el usuario por esta estructura:
+
+```tsx
+// Asegurate de importar los íconos: ChevronDown, User, LogOut
+import { ChevronDown, User, LogOut } from "lucide-react";
+
+// ... dentro del header:
+<div className="flex items-center gap-4 relative">
+  <button
+    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+    className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-md transition-colors"
+  >
+    {/* Avatar (círculo con iniciales o imagen) */}
+    <div className="w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm">
+      {user?.first_name?.charAt(0)}
+      {user?.last_name?.charAt(0)}
+    </div>
+    <div className="text-left hidden md:block">
+      <p className="text-sm font-medium text-gray-800">
+        {user?.first_name} {user?.last_name}
+      </p>
+      <p className="text-xs text-gray-500">{user?.role}</p>
+    </div>
+    <ChevronDown className="w-4 h-4 text-gray-400" />
+  </button>
+
+  {/* MENÚ DESPLEGABLE DE PERFIL */}
+  {isProfileMenuOpen && (
+    <div className="absolute top-12 right-0 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+      <Link
+        to="/perfil"
+        onClick={() => setIsProfileMenuOpen(false)}
+        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+      >
+        <User className="w-4 h-4 text-blue-500" /> Editar Perfil
+      </Link>
+      <div className="border-t border-gray-100 my-1"></div>
+      <button
+        onClick={handleLogout}
+        className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+      >
+        <LogOut className="w-4 h-4" /> Cerrar Sesión
+      </button>
+    </div>
+  )}
+</div>;
+```
+
+### 2. Limpieza
+
+- Quitar el botón de "Cerrar Sesión" que estaba suelto a la derecha (ya que ahora está dentro del menú desplegable).
+- Crear un archivo placeholder `src/pages/Perfil.tsx` para que la ruta `/perfil` no rompa la app:
+
+```tsx
+export const Perfil = () => (
+  <div className="p-8">
+    <h1>Mi Perfil</h1>
+  </div>
+);
+```
+
+- Agregar la ruta en `src/routes/AppRoutes.tsx`: `<Route path="perfil" element={<Perfil />} />`.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.

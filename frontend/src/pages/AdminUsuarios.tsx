@@ -282,7 +282,7 @@ export const AdminUsuarios = () => {
   };
 
   const handleResetPassword = async (id: number) => {
-    if (!window.confirm('¿Generar nueva contraseña?')) {
+    if (!window.confirm('¿Generar nueva contraseña temporal para este usuario?')) {
       setOpenMenuId(null);
       return;
     }
