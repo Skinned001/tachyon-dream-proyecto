@@ -4783,3 +4783,40 @@ export const Perfil = () => (
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 46 (Backend): Agregar atributo is_guest para usuarios autoregistrados
+
+## Contexto
+
+Los usuarios ahora pueden registrarse a sí mismos para participar en convocatorias (Invitados). No queremos crear un nuevo Rol para esto, sino un atributo booleano `is_guest` que indique que la cuenta fue creada por el propio usuario y no por un administrador.
+
+## Objetivo
+
+1. Agregar `is_guest` al modelo de Usuario.
+2. Asegurar que los controladores de creación y edición acepten este campo.
+
+## Lo que debés hacer
+
+### 1. Modificar el modelo de Usuario (ej. `src/modules/usuarios/Usuario.model.ts`)
+
+Agregar el campo booleano en la definición del modelo Sequelize:
+
+```typescript
+  is_guest: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
+```
+
+### 2. Actualizar controladores (`usuarios.controller.ts`)
+
+Asegurarse de que `createUsuario` y `updateUsuario` guarden/actualicen el campo `is_guest` si viene en el `req.body` (por si el admin quiere quitarle la condición de invitado a alguien).
+
+### 3. Verificación
+
+- Si usan `sequelize.sync({ alter: true })`, reiniciar el backend para que se cree la columna en la base de datos.
+
+## Respuesta esperada
+
+Confirmame que el modelo fue actualizado y si compila.

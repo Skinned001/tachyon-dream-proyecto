@@ -16,6 +16,7 @@ export interface UsuarioDTO {
   dni: string;
   role: RoleName;
   is_author: boolean;
+  is_guest: boolean;
   specialtyId: number | null;
   must_change_password: boolean;
   active: boolean;
@@ -29,6 +30,7 @@ export interface CreateUsuarioData {
   dni: string;
   role: RoleName;
   is_author: boolean;
+  is_guest: boolean;
   specialtyId?: number | null;
 }
 
@@ -40,6 +42,7 @@ export interface UpdateUsuarioData {
   dni?: string;
   role?: RoleName;
   is_author?: boolean;
+  is_guest?: boolean;
   specialtyId?: number | null;
   active?: boolean;
 }
@@ -71,6 +74,7 @@ const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
     dni: usuario.dni,
     role: roleName,
     is_author: usuario.is_author,
+    is_guest: usuario.is_guest,
     specialtyId: usuario.specialtyId,
     must_change_password: usuario.must_change_password,
     active: usuario.active,
@@ -149,6 +153,7 @@ export class UsuariosService {
           last_name: input.last_name,
           dni: input.dni,
           is_author: input.is_author,
+          is_guest: input.is_guest,
           password,
           roleId: role.id,
           specialtyId,
@@ -247,6 +252,7 @@ export class UsuariosService {
       if (input.last_name !== undefined) usuario.last_name = input.last_name;
       if (input.dni !== undefined) usuario.dni = input.dni;
       if (input.is_author !== undefined) usuario.is_author = input.is_author;
+      if (input.is_guest !== undefined) usuario.is_guest = input.is_guest;
       if (input.specialtyId !== undefined) {
         usuario.specialtyId = input.specialtyId;
       }
