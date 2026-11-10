@@ -15,8 +15,8 @@ import { PortalHome } from "../pages/PortalHome";
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PortalHome />} />
       <Route element={<PublicRoutes />}>
+        <Route path="/" element={<PortalHome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
       </Route>

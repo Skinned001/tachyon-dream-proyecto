@@ -8,6 +8,7 @@ export interface User {
   last_name: string;
   role: UserRole;
   is_author: boolean;
+  is_guest?: boolean;
   specialtyId: number | null;
   must_change_password: boolean;
   dni?: string | null;
@@ -22,6 +23,7 @@ export interface CreateUserRequest {
   last_name: string;
   role: UserRole;
   is_author: boolean;
+  is_guest?: boolean;
   specialtyId?: number | null;
   dni?: string;
 }
@@ -33,6 +35,7 @@ export interface UpdateUserRequest {
   last_name?: string;
   role?: UserRole;
   is_author?: boolean;
+  is_guest?: boolean;
   specialtyId?: number | null;
   dni?: string;
   active?: boolean;

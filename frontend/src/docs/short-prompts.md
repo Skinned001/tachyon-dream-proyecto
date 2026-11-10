@@ -4820,3 +4820,93 @@ Asegurarse de que `createUsuario` y `updateUsuario` guarden/actualicen el campo 
 ## Respuesta esperada
 
 Confirmame que el modelo fue actualizado y si compila.
+
+# Tarea 47 (Frontend): Etiquetas apiladas en la tabla y soporte para Invitado
+
+## Contexto
+
+Vamos a mejorar el diseño de la tabla de usuarios para que las etiquetas (Rol, Autor, Invitado) se apilen verticalmente como en el diseño de referencia. Además, agregaremos el campo `is_guest` a los tipos y a la lógica visual.
+
+## Objetivo
+
+1. Actualizar los tipos en `src/types/user.types.ts`.
+2. Modificar la columna "Rol / Autor" en `src/pages/AdminUsuarios.tsx` para usar un flex vertical.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar `is_guest` a `User`, `CreateUserRequest` y `UpdateUserRequest`:
+
+```typescript
+// En la interfaz User y Create/Update:
+is_guest?: boolean;
+```
+
+### 2. Actualizar `src/pages/AdminUsuarios.tsx`
+
+En la tabla (dentro del `<tbody>`), reemplazar la celda de "Rol / Autor" por esta estructura:
+
+```tsx
+<td className="py-3 px-4">
+  <div className="flex flex-col gap-1.5 items-start">
+    {/* Etiqueta del Rol Principal */}
+    <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-200">
+      {u.role}
+    </span>
+
+    {/* Etiquetas secundarias (Permisos) */}
+    {u.is_author && (
+      <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-200">
+        AUTOR
+      </span>
+    )}
+
+    {u.is_guest && (
+      <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+        INVITADO
+      </span>
+    )}
+  </div>
+</td>
+```
+
+### 3. Actualizar el Formulario del Modal (Opcional pero recomendado)
+
+En la sección "Permisos Especiales" del modal, agregar un checkbox para el estado de invitado, por si el Admin decide ascender a un invitado a un usuario regular:
+
+```tsx
+<div className="flex items-start gap-2 mt-3">
+  <input
+    type="checkbox"
+    id="is_guest"
+    name="is_guest"
+    checked={formulario.is_guest || false}
+    onChange={(e) =>
+      setFormulario({ ...formulario, is_guest: e.target.checked })
+    }
+    className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+  />
+  <div>
+    <label
+      htmlFor="is_guest"
+      className="text-sm font-medium text-gray-700 cursor-pointer"
+    >
+      Usuario Invitado (Autoregistrado)
+    </label>
+    <p className="text-xs text-gray-500">
+      Indica que el usuario se registró por su cuenta para una convocatoria.
+    </p>
+  </div>
+</div>
+```
+
+_(No olvides agregar `is_guest: false` al estado inicial del `useForm`)._
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.

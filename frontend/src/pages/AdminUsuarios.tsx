@@ -68,6 +68,7 @@ export const AdminUsuarios = () => {
     last_name: string;
     role: UserRole;
     is_author: boolean;
+    is_guest: boolean;
     dni?: string;
     specialtyId?: number | null;
   }>({
@@ -77,6 +78,7 @@ export const AdminUsuarios = () => {
     last_name: '',
     role: 'STAFF',
     is_author: false,
+    is_guest: false,
     dni: '',
     specialtyId: null,
   });
@@ -106,6 +108,7 @@ export const AdminUsuarios = () => {
       last_name: user.last_name,
       role: user.role,
       is_author: user.is_author,
+      is_guest: user.is_guest ?? false,
       dni: user.dni ?? '',
       specialtyId: user.specialtyId ?? null,
     });
@@ -384,13 +387,18 @@ export const AdminUsuarios = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span className="rounded-full bg-[#e6f5ee] px-2 py-1 text-xs font-semibold text-[#07584f]">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="rounded-full border border-green-200 bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
                             {usuario.role}
                           </span>
                           {usuario.is_author && (
-                            <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
-                              Autor
+                            <span className="rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                              AUTOR
+                            </span>
+                          )}
+                          {usuario.is_guest && (
+                            <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+                              INVITADO
                             </span>
                           )}
                         </div>
@@ -683,6 +691,27 @@ export const AdminUsuarios = () => {
                       </label>
                       <p className="text-xs text-gray-500">
                         Habilita al usuario para enviar manuscritos como autor.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_guest"
+                      name="is_guest"
+                      checked={formulario.is_guest}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4 cursor-pointer rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <label
+                        htmlFor="is_guest"
+                        className="cursor-pointer text-sm font-medium text-gray-700"
+                      >
+                        Usuario Invitado (Autoregistrado)
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        Indica que el usuario se registró por su cuenta para una convocatoria.
                       </p>
                     </div>
                   </div>
