@@ -1,71 +1,49 @@
-import { useState, type FormEvent } from 'react';
-import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import * as authApi from '../api/auth.api';
-import { useAuth } from '../context/AuthContext';
+import { useState, type FormEvent } from "react";
+import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import * as authApi from "../api/auth.api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-<<<<<<< HEAD
-  const redirectTo =
-    typeof location.state === 'object' &&
-    location.state !== null &&
-    'from' in location.state &&
-    typeof location.state.from === 'string' &&
-    location.state.from.startsWith('/') &&
-    !location.state.from.startsWith('//')
-      ? location.state.from
-      : '/dashboard';
-=======
   const from = (
-    location.state as
-      | { from?: { pathname?: string; search?: string; hash?: string } }
-      | null
+    location.state as {
+      from?: { pathname?: string; search?: string; hash?: string };
+    } | null
   )?.from;
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
+    setError("");
 
     if (!email.trim() || !password) {
-      setError('Ingresa tu correo institucional y clave para continuar.');
-      return; 
+      setError("Ingresa tu correo institucional y clave para continuar.");
+      return;
     }
 
     try {
-<<<<<<< HEAD
-      const response = await axiosClient.post('/auth/login', { email, password });
-      const token = response.data.token || response.data.data?.token;
-
-      if (response.data.success && token) {
-        localStorage.setItem('token', token);
-        window.location.href = redirectTo;
-      } else {
-        setError('Credenciales inválidas.');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
-=======
       setIsSubmitting(true);
       const userData = await authApi.login(email, password);
       login(userData);
       const returnTo = from?.pathname
-        ? `${from.pathname}${from.search || ''}${from.hash || ''}`
-        : '/';
+        ? `${from.pathname}${from.search || ""}${from.hash || ""}`
+        : "/";
       navigate(returnTo, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al conectar con el servidor.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al conectar con el servidor.",
+      );
     } finally {
       setIsSubmitting(false);
->>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
     }
   }
 
@@ -81,18 +59,24 @@ export default function Login() {
           </div>
           <div>
             <p className="text-xs font-bold tracking-[.12em]">HOSPITAL EVITA</p>
-            <p className="mt-0.5 text-[10px] uppercase tracking-[.16em] text-[#c7f0df]">Universitario</p>
+            <p className="mt-0.5 text-[10px] uppercase tracking-[.16em] text-[#c7f0df]">
+              Universitario
+            </p>
           </div>
         </div>
         <div className="relative max-w-[540px] pb-10">
           <p className="mb-5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.2em] text-[#d0f2e3]">
-            <span className="h-px w-7 bg-[#b3e8d3]" />Chief Journal
+            <span className="h-px w-7 bg-[#b3e8d3]" />
+            Chief Journal
           </p>
           <h1 className="font-editorial text-[clamp(44px,5vw,72px)] leading-[.98] tracking-[-.04em]">
-            La evidencia<br /><i className="font-medium text-[#c0f2df]">mejora la atención.</i>
+            La evidencia
+            <br />
+            <i className="font-medium text-[#c0f2df]">mejora la atención.</i>
           </h1>
           <p className="mt-7 max-w-[420px] text-[14px] leading-7 text-[#e0f4eb]">
-            Un espacio compartido para investigar, generar conocimiento y contribuir a una mejor atención de salud en Formosa.
+            Un espacio compartido para investigar, generar conocimiento y
+            contribuir a una mejor atención de salud en Formosa.
           </p>
         </div>
         <div className="relative flex items-end justify-between border-t border-[#b3e8d3]/30 pt-5 text-[10px] text-[#d0f2e3]">
@@ -100,7 +84,7 @@ export default function Login() {
           <span className="font-data">HIEF</span>
         </div>
       </section>
-      
+
       <section className="flex min-h-[100dvh] items-center justify-center px-6 py-12 sm:px-12">
         <div className="w-full max-w-[400px] page-enter">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
@@ -108,45 +92,59 @@ export default function Login() {
               <Activity size={20} />
             </div>
             <div>
-              <p className="text-xs font-bold tracking-[.12em] text-[#173d3b]">HOSPITAL EVITA</p>
-              <p className="text-[10px] uppercase tracking-[.15em] text-[#52766d]">Chief Journal</p>
+              <p className="text-xs font-bold tracking-[.12em] text-[#173d3b]">
+                HOSPITAL EVITA
+              </p>
+              <p className="text-[10px] uppercase tracking-[.15em] text-[#52766d]">
+                Chief Journal
+              </p>
             </div>
           </div>
-          
-          <p className="text-[10px] font-semibold uppercase tracking-[.19em] text-[#52766d]">Espacio de investigación</p>
-          <h2 className="font-editorial mt-3 text-[42px] leading-tight tracking-[-.035em] text-[#173d3b]">Te damos la bienvenida.</h2>
-          <p className="mt-2 text-[13px] leading-6 text-[#526e68]">Ingresa con tus credenciales institucionales.</p>
-           
+
+          <p className="text-[10px] font-semibold uppercase tracking-[.19em] text-[#52766d]">
+            Espacio de investigación
+          </p>
+          <h2 className="font-editorial mt-3 text-[42px] leading-tight tracking-[-.035em] text-[#173d3b]">
+            Te damos la bienvenida.
+          </h2>
+          <p className="mt-2 text-[13px] leading-6 text-[#526e68]">
+            Ingresa con tus credenciales institucionales.
+          </p>
+
           <form onSubmit={submit} className="mt-9 space-y-5">
             <label className="block">
-              <span className="mb-2 block text-[11px] font-semibold text-[#244f47]">Correo institucional</span>
-              <input 
-                type="email" 
-                autoComplete="username" 
-                required 
+              <span className="mb-2 block text-[11px] font-semibold text-[#244f47]">
+                Correo institucional
+              </span>
+              <input
+                type="email"
+                autoComplete="username"
+                required
                 disabled={isSubmitting}
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                placeholder="autor@hief.gob.ar" 
-                className="h-12 w-full rounded-xl border border-[#bfdcd0] bg-[#fcfefd] px-4 text-[13px] text-[#173d3b] outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#bce8d8]/70" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="autor@hief.gob.ar"
+                className="h-12 w-full rounded-xl border border-[#bfdcd0] bg-[#fcfefd] px-4 text-[13px] text-[#173d3b] outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#bce8d8]/70"
               />
             </label>
-            
+
             <label className="block">
-              <span className="mb-2 block text-[11px] font-semibold text-[#244f47]">Contraseña</span>
+              <span className="mb-2 block text-[11px] font-semibold text-[#244f47]">
+                Contraseña
+              </span>
               <span className="relative block">
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
-                  autoComplete="current-password" 
-                  required 
+                <input
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
                   disabled={isSubmitting}
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  placeholder="Hief2026*" 
-                  className="h-12 w-full rounded-xl border border-[#bfdcd0] bg-[#fcfefd] px-4 pr-12 text-[13px] text-[#173d3b] outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#bce8d8]/70" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Hief2026*"
+                  className="h-12 w-full rounded-xl border border-[#bfdcd0] bg-[#fcfefd] px-4 pr-12 text-[13px] text-[#173d3b] outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#bce8d8]/70"
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isSubmitting}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#52766d] hover:text-[#07584f]"
@@ -155,24 +153,38 @@ export default function Login() {
                 </button>
               </span>
             </label>
-            
-            {error && <p role="alert" className="text-xs text-[#a3342d]">{error}</p>}
-            
-            <button 
+
+            {error && (
+              <p role="alert" className="text-xs text-[#a3342d]">
+                {error}
+              </p>
+            )}
+
+            <button
               type="submit"
               disabled={isSubmitting}
               className="group mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] text-[13px] font-semibold text-white transition hover:bg-[#07584f] focus:outline-none focus:ring-4 focus:ring-[#bce8d8] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? 'Ingresando...' : 'Iniciar sesión'}
-              {!isSubmitting && <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />}
+              {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
+              {!isSubmitting && (
+                <ArrowRight
+                  size={16}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              )}
             </button>
           </form>
-           
+
           <div className="mt-8 flex items-start gap-3 rounded-xl border border-[#cfe4dc] bg-[#e6f5ee] p-4">
             <LockKeyhole size={16} className="mt-0.5 shrink-0 text-[#087366]" />
-            <p className="text-[10px] leading-5 text-[#42685e]">Utiliza las credenciales de prueba proporcionadas (ej. admin@hief.gob.ar / Hief2026*).</p>
+            <p className="text-[10px] leading-5 text-[#42685e]">
+              Utiliza las credenciales de prueba proporcionadas (ej.
+              admin@hief.gob.ar / Hief2026*).
+            </p>
           </div>
-          <p className="mt-9 text-center text-[10px] text-[#607c73]">© 2026 Hospital Interdistrital Evita</p>
+          <p className="mt-9 text-center text-[10px] text-[#607c73]">
+            © 2026 Hospital Interdistrital Evita
+          </p>
         </div>
       </section>
     </main>

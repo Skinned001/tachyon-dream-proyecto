@@ -10,6 +10,7 @@ import { Revisiones } from "../pages/Revisiones";
 import { PrivateRoutes } from "./PrivateRoutes";
 import { RoleRoute } from "./RoleRoute";
 import { PublicRoutes } from "./PublicRoutes";
+import { PortalHome } from "../pages/PortalHome";
 
 export function AppRoutes() {
   return (
