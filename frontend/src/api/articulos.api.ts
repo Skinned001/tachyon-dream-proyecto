@@ -1,5 +1,33 @@
 import axiosClient from './axiosClient';
 
+<<<<<<< HEAD
+export interface PublishedArticle {
+  id: number;
+  title: string;
+  summary?: string;
+  keywords?: string[];
+  coauthors?: string[];
+  specialty?: { id: number; name: string };
+  createdAt: string;
+  pdfAvailable: boolean;
+}
+
+export const articulosApi = {
+  list: () => axiosClient.get('/articulos'),
+  listPublished: async (): Promise<PublishedArticle[]> => {
+    const response = await axiosClient.get<{
+      success: boolean;
+      data?: PublishedArticle[];
+      error?: string;
+    }>('/articulos/publicados');
+
+    if (!response.data.success || !Array.isArray(response.data.data)) {
+      throw new Error(response.data.error || 'No se pudo cargar el archivo público.');
+    }
+
+    return response.data.data;
+  },
+=======
 export interface Articulo {
   id: number;
   title: string;
@@ -12,6 +40,7 @@ export interface Articulo {
 export const getMisArticulos = async (): Promise<Articulo[]> => {
   const response = await axiosClient.get('/articulos');
   return response.data.data || [];
+>>>>>>> 9b0ceac6cead46569a8b1d827f07b41f3a9988d8
 };
 
 export const subirManuscrito = async (formData: FormData): Promise<any> => {
