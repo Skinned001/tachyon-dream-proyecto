@@ -51,3 +51,19 @@ export const changePassword = async (
     throw new Error(data.error || 'Error al cambiar la contraseña');
   }
 };
+
+export const updateProfile = async (profile: {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image?: string | null;
+}): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    '/auth/profile',
+    profile,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al actualizar perfil');
+  }
+  return data.data;
+};

@@ -5185,3 +5185,329 @@ router.put("/profile", authMiddleware, updateProfile);
 ## Respuesta esperada
 
 Confirmame que el modelo y el controlador fueron actualizados y si compila.
+
+# Tarea 50 (Frontend): Interfaz completa de Perfil con edición, foto y ver contraseña
+
+## Contexto
+
+Vamos a rediseñar `src/pages/Perfil.tsx` para que sea una pantalla completa. Necesitamos:
+
+1. Un botón de "ojito" (mostrar/ocultar) en los campos de contraseña.
+2. Un formulario para editar Nombre, Apellido y Usuario.
+3. Un campo para subir una URL de imagen de perfil.
+4. (El error de Firefox suele ser por variables de entorno mal configuradas, pero al reescribir el componente nos aseguramos de que no sea un error del código de React).
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar el campo de imagen al tipo User:
+
+```typescript
+  profile_image?: string | null;
+```
+
+### 2. Actualizar `src/api/auth.api.ts`
+
+Agregar la función para guardar los datos del perfil:
+
+```typescript
+export const updateProfile = async (data: {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image?: string;
+}): Promise<User> => {
+  const { data: resData } = await axiosClient.put<ApiResponse<User>>(
+    "/auth/profile",
+    data,
+  );
+  if (!resData.success || !resData.data)
+    throw new Error(resData.error || "Error al actualizar perfil");
+  return resData.data;
+};
+```
+
+### 3. Crear un componente InputPassword en `src/components/ui/InputPassword.tsx`
+
+Para reutilizar el "ojito" (esto arregla el problema de UX):
+
+```tsx
+import { useState, forwardRef, type InputHTMLAttributes } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+interface InputPasswordProps extends InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  error?: string;
+}
+
+export const InputPassword = forwardRef<HTMLInputElement, InputPasswordProps>(
+  ({ label, error, className = "", id, ...props }, ref) => {
+    const [show, setShow] = useState(false);
+    const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <div className="relative">
+          <input
+            id={inputId}
+            ref={ref}
+            type={show ? "text" : "password"}
+            className={`w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${className}`}
+            {...props}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {show ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {error && <span className="text-sm text-red-500">{error}</span>}
+      </div>
+    );
+  },
+);
+InputPassword.displayName = "InputPassword";
+```
+
+### 4. Sobrescribir `src/pages/Perfil.tsx`
+
+Aquí unimos todo. Usamos un estado local para manejar los cambios y actualizar el contexto:
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword, updateProfile } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { InputPassword } from "../components/ui/InputPassword"; // El nuevo
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Camera } from "lucide-react";
+
+export const Perfil = () => {
+  const { user, login } = useAuth(); // 'login' actualiza el contexto global
+
+  // Estados para los datos del perfil
+  const [profileData, setProfileData] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    username: user?.username || "",
+    profile_image: user?.profile_image || "",
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
+
+  // Estados para la contraseña
+  const [passData, setPassData] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState({ type: "", text: "" });
+
+  // Sincronizar si el usuario cambia
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        username: user.username || "",
+        profile_image: user.profile_image || "",
+      });
+    }
+  }, [user]);
+
+  // --- Lógica de Perfil ---
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileMsg({ type: "", text: "" });
+
+    try {
+      const updatedUser = await updateProfile(profileData);
+      login(updatedUser); // Actualizamos el contexto global con los nuevos datos
+      setProfileMsg({
+        type: "success",
+        text: "Perfil actualizado correctamente.",
+      });
+    } catch (err: any) {
+      setProfileMsg({ type: "error", text: err.message });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  // --- Lógica de Contraseña ---
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passData.new !== passData.confirm) {
+      return setPassMsg({
+        type: "error",
+        text: "Las contraseñas nuevas no coinciden.",
+      });
+    }
+
+    setIsChangingPass(true);
+    setPassMsg({ type: "", text: "" });
+
+    try {
+      await changePassword(passData.current, passData.new);
+      setPassMsg({ type: "success", text: "Contraseña actualizada." });
+      setPassData({ current: "", new: "", confirm: "" }); // Limpiar
+    } catch (err: any) {
+      setPassMsg({ type: "error", text: err.message });
+    } finally {
+      setIsChangingPass(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* COLUMNA 1: Mis Datos */}
+      <Card title="Mis Datos Personales">
+        <form onSubmit={handleUpdateProfile} className="flex flex-col gap-4">
+          {/* Foto de Perfil */}
+          <div className="flex flex-col items-center gap-3 mb-2">
+            <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-200 overflow-hidden relative group">
+              {profileData.profile_image ? (
+                <img
+                  src={profileData.profile_image}
+                  alt="Perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <UserIcon className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              )}
+            </div>
+            <div className="w-full">
+              <Input
+                label="URL de Imagen de Perfil"
+                name="profile_image"
+                placeholder="https://ejemplo.com/foto.jpg"
+                value={profileData.profile_image}
+                onChange={(e) =>
+                  setProfileData({
+                    ...profileData,
+                    profile_image: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nombre"
+              value={profileData.first_name}
+              onChange={(e) =>
+                setProfileData({ ...profileData, first_name: e.target.value })
+              }
+              required
+            />
+            <Input
+              label="Apellido"
+              value={profileData.last_name}
+              onChange={(e) =>
+                setProfileData({ ...profileData, last_name: e.target.value })
+              }
+              required
+            />
+          </div>
+          <Input
+            label="Nombre de Usuario"
+            value={profileData.username}
+            onChange={(e) =>
+              setProfileData({ ...profileData, username: e.target.value })
+            }
+            required
+          />
+          <Input
+            label="Correo Electrónico (No editable)"
+            value={user?.email || ""}
+            disabled
+            className="bg-gray-50 text-gray-500"
+          />
+
+          {profileMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${profileMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {profileMsg.text}
+            </div>
+          )}
+
+          <Button type="submit" variant="primary" isLoading={isUpdatingProfile}>
+            Guardar Cambios
+          </Button>
+        </form>
+      </Card>
+
+      {/* COLUMNA 2: Seguridad (Contraseña) */}
+      <Card title="Seguridad">
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+          <p className="text-sm text-gray-500 mb-2">
+            Si tienes una contraseña genérica, cámbiala aquí.
+          </p>
+
+          <InputPassword
+            label="Contraseña Actual"
+            value={passData.current}
+            onChange={(e) =>
+              setPassData({ ...passData, current: e.target.value })
+            }
+            required
+          />
+          <InputPassword
+            label="Nueva Contraseña"
+            value={passData.new}
+            onChange={(e) => setPassData({ ...passData, new: e.target.value })}
+            required
+          />
+          <InputPassword
+            label="Confirmar Nueva Contraseña"
+            value={passData.confirm}
+            onChange={(e) =>
+              setPassData({ ...passData, confirm: e.target.value })
+            }
+            required
+          />
+
+          {passMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${passMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {passMsg.text}
+            </div>
+          )}
+
+          <Button type="submit" variant="primary" isLoading={isChangingPass}>
+            Actualizar Contraseña
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+};
+```
+
+### 5. Verificación
+
+- Correr `npm run build`.
+- Probar en Chrome y en Firefox.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados y si `npm run build` pasó. Si hay algún error en Firefox, pasame el mensaje exacto de la consola.

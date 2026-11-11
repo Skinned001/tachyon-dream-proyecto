@@ -1,54 +1,139 @@
-import { useState, type FormEvent } from 'react';
-import { KeyRound, UserRound } from 'lucide-react';
-import { changePassword } from '../api/auth.api';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Camera, UserRound } from 'lucide-react';
+import { changePassword, updateProfile } from '../api/auth.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { InputPassword } from '../components/ui/InputPassword';
 import { useAuth } from '../context/AuthContext';
-import { useForm } from '../hooks/useForm';
+
+type Message = {
+  type: 'success' | 'error';
+  text: string;
+};
+
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const resolveImageUrl = (image: string): string => {
+  try {
+    return new URL(image, apiBaseUrl).toString();
+  } catch {
+    return image;
+  }
+};
 
 export const Perfil = () => {
-  const { user } = useAuth();
-  const [isChanging, setIsChanging] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const { formulario, handleChange, resetForm } = useForm({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+  const { user, login } = useAuth();
+  const [profileData, setProfileData] = useState({
+    first_name: user?.first_name ?? '',
+    last_name: user?.last_name ?? '',
+    username: user?.username ?? '',
+    profile_image: user?.profile_image ?? '',
   });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<Message | null>(null);
+  const [passwordData, setPasswordData] = useState({
+    current: '',
+    next: '',
+    confirm: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<Message | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!user) return;
+    setProfileData({
+      first_name: user.first_name,
+      last_name: user.last_name,
+      username: user.username,
+      profile_image: user.profile_image ?? '',
+    });
+  }, [user]);
+
+  const handleUpdateProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError('');
-    setSuccess('');
+    setProfileMessage(null);
 
-    if (formulario.newPassword !== formulario.confirmPassword) {
-      setError('Las contraseñas nuevas no coinciden.');
+    const updatedProfile = {
+      first_name: profileData.first_name.trim(),
+      last_name: profileData.last_name.trim(),
+      username: profileData.username.trim(),
+      profile_image: profileData.profile_image.trim() || null,
+    };
+    if (
+      !updatedProfile.first_name ||
+      !updatedProfile.last_name ||
+      !updatedProfile.username
+    ) {
+      setProfileMessage({
+        type: 'error',
+        text: 'Nombre, apellido y nombre de usuario son obligatorios.',
+      });
       return;
     }
 
-    if (formulario.newPassword.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-
-    setIsChanging(true);
+    setIsUpdatingProfile(true);
     try {
-      await changePassword(formulario.currentPassword, formulario.newPassword);
-      setSuccess('Contraseña actualizada correctamente.');
-      resetForm();
-    } catch (submitError: unknown) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Error al cambiar la contraseña',
-      );
+      const updatedUser = await updateProfile(updatedProfile);
+      login(updatedUser);
+      setProfileMessage({
+        type: 'success',
+        text: 'Perfil actualizado correctamente.',
+      });
+    } catch (error: unknown) {
+      setProfileMessage({
+        type: 'error',
+        text:
+          error instanceof Error ? error.message : 'Error al actualizar perfil.',
+      });
     } finally {
-      setIsChanging(false);
+      setIsUpdatingProfile(false);
     }
   };
+
+  const handleChangePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordMessage(null);
+
+    if (passwordData.next !== passwordData.confirm) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'Las contraseñas nuevas no coinciden.',
+      });
+      return;
+    }
+    if (passwordData.next.length < 6) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'La nueva contraseña debe tener al menos 6 caracteres.',
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword(passwordData.current, passwordData.next);
+      setPasswordData({ current: '', next: '', confirm: '' });
+      setPasswordMessage({
+        type: 'success',
+        text: 'Contraseña actualizada correctamente.',
+      });
+    } catch (error: unknown) {
+      setPasswordMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Error al cambiar la contraseña.',
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const profileImageSrc = profileData.profile_image.trim()
+    ? resolveImageUrl(profileData.profile_image.trim())
+    : '';
 
   return (
     <div className="space-y-6">
@@ -60,93 +145,196 @@ export const Perfil = () => {
           Mi Perfil
         </h2>
         <p className="mt-1 text-[13px] text-[#526e68]">
-          Consulta tus datos y administra la seguridad de tu cuenta.
+          Administra tus datos personales y la seguridad de tu cuenta.
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Mis Datos" className="h-full">
-          <div className="mb-6 flex flex-col items-center text-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#d7f2e6] text-[#087366]">
-              <UserRound className="h-10 w-10" />
+      <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
+        <Card title="Mis Datos Personales" className="h-full">
+          <form
+            onSubmit={handleUpdateProfile}
+            className="flex flex-col gap-4"
+          >
+            <div className="mb-2 flex flex-col items-center gap-3">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100">
+                {profileImageSrc ? (
+                  <img
+                    src={profileImageSrc}
+                    alt={`Foto de perfil de ${profileData.first_name}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <UserRound className="h-12 w-12 text-gray-400" />
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Camera className="h-4 w-4" />
+                Foto mediante URL
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-800">
-              {user ? `${user.first_name} ${user.last_name}`.trim() : 'Usuario'}
-            </h3>
-            {user?.username && (
-              <p className="text-sm text-gray-500">@{user.username}</p>
-            )}
-            {user?.role && (
-              <span className="mt-2 rounded-full bg-[#e6f5ee] px-3 py-1 text-xs font-semibold text-[#07584f]">
-                Rol: {user.role}
-              </span>
-            )}
-          </div>
 
-          <dl className="space-y-3 text-sm text-gray-600">
-            <div className="flex justify-between gap-4 border-b border-gray-100 pb-2">
-              <dt className="font-medium text-gray-500">Correo</dt>
-              <dd className="break-all text-right">{user?.email || 'No disponible'}</dd>
+            <Input
+              label="URL de imagen de perfil"
+              type="url"
+              name="profile_image"
+              placeholder="https://ejemplo.com/foto.jpg"
+              value={profileData.profile_image}
+              onChange={(event) =>
+                setProfileData((current) => ({
+                  ...current,
+                  profile_image: event.target.value,
+                }))
+              }
+              disabled={isUpdatingProfile}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Nombre"
+                name="first_name"
+                autoComplete="given-name"
+                value={profileData.first_name}
+                onChange={(event) =>
+                  setProfileData((current) => ({
+                    ...current,
+                    first_name: event.target.value,
+                  }))
+                }
+                disabled={isUpdatingProfile}
+                required
+              />
+              <Input
+                label="Apellido"
+                name="last_name"
+                autoComplete="family-name"
+                value={profileData.last_name}
+                onChange={(event) =>
+                  setProfileData((current) => ({
+                    ...current,
+                    last_name: event.target.value,
+                  }))
+                }
+                disabled={isUpdatingProfile}
+                required
+              />
             </div>
-            <div className="flex justify-between gap-4 border-b border-gray-100 pb-2">
-              <dt className="font-medium text-gray-500">Especialidad</dt>
-              <dd>{user?.specialtyId ?? 'No asignada'}</dd>
-            </div>
-          </dl>
+
+            <Input
+              label="Nombre de usuario"
+              name="username"
+              autoComplete="username"
+              value={profileData.username}
+              onChange={(event) =>
+                setProfileData((current) => ({
+                  ...current,
+                  username: event.target.value,
+                }))
+              }
+              disabled={isUpdatingProfile}
+              required
+            />
+            <Input
+              label="Correo electrónico (no editable)"
+              value={user?.email ?? ''}
+              disabled
+              className="bg-gray-50 text-gray-500"
+            />
+
+            {profileMessage && (
+              <p
+                className={`rounded-md p-3 text-sm ${
+                  profileMessage.type === 'error'
+                    ? 'bg-red-50 text-red-600'
+                    : 'bg-green-50 text-green-700'
+                }`}
+                role={profileMessage.type === 'error' ? 'alert' : 'status'}
+              >
+                {profileMessage.text}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isUpdatingProfile}
+            >
+              Guardar cambios
+            </Button>
+          </form>
         </Card>
 
         <Card title="Seguridad" className="h-full">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="mb-2 flex items-center gap-2 text-gray-700">
-              <KeyRound className="h-5 w-5 text-[#087366]" />
-              <p className="text-sm">Actualiza la contraseña de tu cuenta.</p>
-            </div>
+          <form
+            onSubmit={handleChangePassword}
+            className="flex flex-col gap-4"
+          >
+            <p className="mb-2 text-sm text-gray-500">
+              Si tienes una contraseña temporal, cámbiala aquí.
+            </p>
 
-            <Input
+            <InputPassword
               label="Contraseña actual"
-              type="password"
-              name="currentPassword"
+              name="current"
               autoComplete="current-password"
-              value={formulario.currentPassword}
-              onChange={handleChange}
-              disabled={isChanging}
+              value={passwordData.current}
+              onChange={(event) =>
+                setPasswordData((current) => ({
+                  ...current,
+                  current: event.target.value,
+                }))
+              }
+              disabled={isChangingPassword}
               required
             />
-            <Input
+            <InputPassword
               label="Nueva contraseña"
-              type="password"
-              name="newPassword"
+              name="next"
               autoComplete="new-password"
-              value={formulario.newPassword}
-              onChange={handleChange}
-              disabled={isChanging}
+              value={passwordData.next}
+              onChange={(event) =>
+                setPasswordData((current) => ({
+                  ...current,
+                  next: event.target.value,
+                }))
+              }
+              disabled={isChangingPassword}
               minLength={6}
               required
             />
-            <Input
+            <InputPassword
               label="Confirmar nueva contraseña"
-              type="password"
-              name="confirmPassword"
+              name="confirm"
               autoComplete="new-password"
-              value={formulario.confirmPassword}
-              onChange={handleChange}
-              disabled={isChanging}
+              value={passwordData.confirm}
+              onChange={(event) =>
+                setPasswordData((current) => ({
+                  ...current,
+                  confirm: event.target.value,
+                }))
+              }
+              disabled={isChangingPassword}
               minLength={6}
               required
             />
 
-            {error && (
-              <p className="rounded-md bg-red-50 p-3 text-sm text-red-600" role="alert">
-                {error}
-              </p>
-            )}
-            {success && (
-              <p className="rounded-md bg-green-50 p-3 text-sm text-green-700" role="status">
-                {success}
+            {passwordMessage && (
+              <p
+                className={`rounded-md p-3 text-sm ${
+                  passwordMessage.type === 'error'
+                    ? 'bg-red-50 text-red-600'
+                    : 'bg-green-50 text-green-700'
+                }`}
+                role={passwordMessage.type === 'error' ? 'alert' : 'status'}
+              >
+                {passwordMessage.text}
               </p>
             )}
 
-            <Button type="submit" variant="primary" isLoading={isChanging} className="mt-2">
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isChangingPassword}
+            >
               Actualizar contraseña
             </Button>
           </form>
