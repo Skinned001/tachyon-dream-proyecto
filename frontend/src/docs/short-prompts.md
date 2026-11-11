@@ -4910,3 +4910,205 @@ _(No olvides agregar `is_guest: false` al estado inicial del `useForm`)._
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 48: Crear pantalla de Perfil y conectar cambio de contraseña
+
+## Contexto
+
+El usuario logueado necesita una pantalla en `/perfil` para ver sus datos y, lo más importante, cambiar la contraseña temporal que le asignó el administrador. El backend ya tiene el endpoint `POST /api/auth/change-password`.
+
+## Objetivo
+
+1. Actualizar `src/api/auth.api.ts` con la función `changePassword`.
+2. Crear la pantalla `src/pages/Perfil.tsx` con un formulario de cambio de contraseña.
+3. Conectar el botón "Editar Perfil" del menú desplegable para que navegue a esta pantalla.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/auth.api.ts`
+
+Agregar esta función al final del archivo:
+
+```typescript
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    "/auth/change-password",
+    {
+      currentPassword,
+      newPassword,
+    },
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al cambiar la contraseña");
+  }
+};
+```
+
+### 2. Crear `src/pages/Perfil.tsx`
+
+Crear la pantalla con los datos del usuario (solo lectura) y un formulario seguro para cambiar la contraseña.
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Key } from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const Perfil = () => {
+  const { user } = useAuth();
+  const [isChanging, setIsChanging] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const { formulario, handleChange, resetForm } = useForm({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (formulario.newPassword !== formulario.confirmPassword) {
+      setError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+    if (formulario.newPassword.length < 6) {
+      setError("La nueva contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setIsChanging(true);
+    try {
+      await changePassword(formulario.currentPassword, formulario.newPassword);
+      setSuccess("Contraseña actualizada correctamente.");
+      resetForm();
+    } catch (err: any) {
+      setError(err.message || "Error al cambiar la contraseña");
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6">
+      {/* Tarjeta de Datos del Usuario */}
+      <div className="flex-1">
+        <Card title="Mis Datos">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-24 h-24 bg-institucional-100 text-institucional-700 rounded-full flex items-center justify-center mb-4">
+              <UserIcon className="w-12 h-12" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">
+              {user?.first_name} {user?.last_name}
+            </h2>
+            <p className="text-gray-500 text-sm">@{user?.username}</p>
+            <span className="mt-2 px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
+              Rol: {user?.role}
+            </span>
+          </div>
+
+          <div className="space-y-3 text-sm text-gray-600">
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-medium text-gray-500">Correo:</span>
+              <span>{user?.email}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-medium text-gray-500">
+                Especialidad ID:
+              </span>
+              <span>{user?.specialtyId || "No asignada"}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tarjeta de Cambio de Contraseña */}
+      <div className="flex-1">
+        <Card title="Seguridad">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 mb-2 text-gray-700">
+              <Key className="w-5 h-5 text-blue-500" />
+              <p className="text-sm">Cambia tu contraseña regularmente.</p>
+            </div>
+
+            <Input
+              label="Contraseña Actual"
+              type="password"
+              name="currentPassword"
+              value={formulario.currentPassword}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Nueva Contraseña"
+              type="password"
+              name="newPassword"
+              value={formulario.newPassword}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Confirmar Nueva Contraseña"
+              type="password"
+              name="confirmPassword"
+              value={formulario.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 text-sm text-green-600 bg-green-50 rounded-md">
+                {success}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isChanging}
+              className="mt-2"
+            >
+              Actualizar Contraseña
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar `src/routes/AppRoutes.tsx`
+
+Asegurate de importar y agregar la ruta de perfil dentro de las rutas privadas:
+
+```tsx
+import { Perfil } from "../pages/Perfil";
+
+// Dentro de <Route element={<PrivateRoutes />}> y <Route path="/" element={<DashboardLayout />}>
+<Route path="perfil" element={<Perfil />} />;
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados y si `npm run build` pasó.

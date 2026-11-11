@@ -38,3 +38,16 @@ export const verify = async (): Promise<User | null> => {
     return null;
   }
 };
+
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    '/auth/change-password',
+    { currentPassword, newPassword },
+  );
+  if (!data.success) {
+    throw new Error(data.error || 'Error al cambiar la contraseña');
+  }
+};
