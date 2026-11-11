@@ -17,7 +17,7 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 const allowedAvatarTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 export const Perfil = () => {
-  const { user, updateUser } = useAuth();
+  const { user, login } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     first_name: '',
@@ -117,7 +117,7 @@ export const Perfil = () => {
     setIsUpdatingProfile(true);
     try {
       const updatedUser = await updateProfile(formData);
-      updateUser(updatedUser);
+      login(updatedUser);
       setAvatarFile(null);
       setIsEditing(false);
       setProfileMessage({

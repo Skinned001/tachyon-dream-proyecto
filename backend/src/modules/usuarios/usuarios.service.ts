@@ -13,6 +13,7 @@ export interface UsuarioDTO {
   email: string;
   first_name: string;
   last_name: string;
+  profile_image: string | null;
   dni: string;
   role: RoleName;
   is_author: boolean;
@@ -71,6 +72,7 @@ const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
     email: usuario.email,
     first_name: usuario.first_name,
     last_name: usuario.last_name,
+    profile_image: usuario.profile_image,
     dni: usuario.dni,
     role: roleName,
     is_author: usuario.is_author,

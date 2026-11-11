@@ -6202,3 +6202,220 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 - Reiniciar el servidor backend.
 - Abrir en el navegador: `http://localhost:3000/uploads/avatars/` (si hay alguna imagen ahí, debería descargarla o mostrarla, no dar error).
+
+# Tarea 57 (Frontend): Forzar actualización de imágenes de perfil
+
+## Contexto
+
+El problema de las imágenes es doble: el navegador cachea las fotos viejas y el componente `Navbar` no se vuelve a renderizar cuando cambia el usuario en el contexto.
+
+## Lo que debés hacer
+
+### 1. Arreglar la vista del Admin (`src/pages/AdminUsuarios.tsx`)
+
+Si el backend ya sirve las imágenes, para evitar la caché, vamos a usar el `id` del usuario y un número aleatorio.
+En la celda de la tabla, cambiar el `src` de la imagen:
+
+```tsx
+{
+  u.profile_image ? (
+    <img
+      src={`http://localhost:3000${u.profile_image}?v=${u.id}`}
+      alt="Perfil"
+      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      onError={(e) => {
+        // Si la imagen falla, ocultarla y mostrar las iniciales
+        e.currentTarget.style.display = "none";
+        e.currentTarget.nextElementSibling?.classList.remove("hidden");
+      }}
+    />
+  ) : null;
+}
+
+{
+  /* El div de las iniciales. Si hay imagen, se oculta. */
+}
+<div
+  className={`w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm ${u.profile_image ? "hidden" : ""}`}
+>
+  {u.first_name?.charAt(0)}
+  {u.last_name?.charAt(0)}
+</div>;
+```
+
+### 2. Arreglar el Navbar (`src/layouts/DashboardLayout.tsx`)
+
+Hacer lo mismo con la foto en la barra superior:
+
+```tsx
+<div className="relative w-8 h-8">
+  {user?.profile_image ? (
+    <img
+      src={`http://localhost:3000${user.profile_image}?v=${new Date().getTime()}`}
+      alt="Perfil"
+      className="w-8 h-8 rounded-full object-cover border border-gray-200 absolute inset-0"
+    />
+  ) : null}
+  <div
+    className={`w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm absolute inset-0 ${user?.profile_image ? "opacity-0" : "opacity-100"}`}
+  >
+    {user?.first_name?.charAt(0)}
+    {user?.last_name?.charAt(0)}
+  </div>
+</div>
+```
+
+### 3. Verificación en `src/pages/Perfil.tsx`
+
+Cuando el usuario guarda su foto nueva, debemos asegurarnos de actualizar el contexto global. Revisar la función `handleUpdateProfile`:
+
+```tsx
+const updatedUser = await updateProfile(formData);
+
+// IMPORTANTE: Esto actualiza el Navbar al instante
+login(updatedUser);
+
+setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+setIsEditing(false);
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 58: Simplificar y arreglar la visualización de fotos de perfil
+
+## Contexto
+
+El backend está devolviendo las imágenes correctamente con status 200 (verificado en Network). Sin embargo, en la tabla de Admin y en el Navbar se siguen mostrando las iniciales en lugar de las fotos. Esto se debe a una lógica compleja de `onError` en el código anterior y a que React no está detectando los cambios en el contexto.
+
+## Objetivo
+
+Simplificar la renderización de la imagen en `AdminUsuarios.tsx` y `DashboardLayout.tsx`.
+
+## Lo que debés hacer
+
+### 1. Limpiar la tabla en `src/pages/AdminUsuarios.tsx`
+
+Buscar la celda donde se renderiza el usuario (dentro del `<tbody>`) y dejarla exactamente así (eliminando la lógica del `onError` y el `hidden`):
+
+```tsx
+<td className="py-3 px-4">
+  <div className="flex items-center gap-3">
+    {u.profile_image ? (
+      <img
+        src={`http://localhost:3000${u.profile_image}`}
+        alt="Perfil"
+        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm">
+        {u.first_name?.charAt(0)}
+        {u.last_name?.charAt(0)}
+      </div>
+    )}
+    <div>
+      <span className="font-medium text-gray-800 block">
+        {u.first_name} {u.last_name}
+      </span>
+      <span className="text-xs text-gray-400">@{u.username}</span>
+    </div>
+  </div>
+</td>
+```
+
+### 2. Limpiar el Navbar en `src/layouts/DashboardLayout.tsx`
+
+Buscar el botón del perfil de usuario en la barra superior y dejar la imagen así:
+
+```tsx
+<div className="w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm overflow-hidden">
+  {user?.profile_image ? (
+    <img
+      src={`http://localhost:3000${user.profile_image}`}
+      alt="Perfil"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <>
+      {user?.first_name?.charAt(0)}
+      {user?.last_name?.charAt(0)}
+    </>
+  )}
+</div>
+```
+
+### 3. Forzar la recarga del componente al guardar foto (en `Perfil.tsx`)
+
+Cuando el usuario sube una foto, el backend la guarda, pero React puede tardar en actualizar la vista. Vamos a añadir `window.location.reload()` después de actualizar el perfil para asegurarnos de que todo se refresque:
+
+En `src/pages/Perfil.tsx`, dentro de `handleUpdateProfile`, justo después de `login(updatedUser);`, agregar:
+
+```tsx
+const updatedUser = await updateProfile(formData);
+login(updatedUser);
+setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+setIsEditing(false);
+
+// RECARGA FORZADA PARA ACTUALIZAR IMÁGENES
+setTimeout(() => {
+  window.location.reload();
+}, 500);
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 60 (Backend): Incluir el campo profile_image en el listado de usuarios
+
+## Contexto
+
+En el frontend, la tabla de administración de usuarios sigue mostrando las iniciales (AH, DH, etc.) en lugar de la foto de perfil, a pesar de que el Navbar sí la muestra. Esto ocurre porque el endpoint `GET /api/usuarios` no está devolviendo el campo `profile_image` en el JSON de respuesta.
+
+## Objetivo
+
+Modificar el controlador de usuarios en el backend para asegurar que `profile_image` se envíe en la lista.
+
+## Lo que debés hacer
+
+### 1. Revisar `src/modules/usuarios/Usuario.model.ts`
+
+Asegurarse de que el campo `profile_image` esté definido y **no** tenga `hidden: true` en sus opciones de Sequelize.
+
+```typescript
+  profile_image: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+```
+
+### 2. Modificar `src/modules/usuarios/usuarios.controller.ts`
+
+En la función `getUsuarios`, revisar cómo se están obteniendo los datos. Si están usando `attributes: { exclude: ['password'] }`, asegurarse de que `profile_image` NO esté excluido.
+
+```typescript
+export const getUsuarios = async (req: Request, res: Response) => {
+  try {
+    const usuarios = await Usuario.findAll({
+      // Excluimos solo la contraseña, el resto de campos (incluyendo profile_image) pasan
+      attributes: { exclude: ['password'] },
+      include: [{ model: Rol, as: 'role' }],
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: { items: usuarios, total: usuarios.length, page: 1, limit: usuarios.length }
+    });
+  } catch (error) {
+    // ...
+```
+
+### 3. Verificación
+
+- Reiniciar el servidor backend.
+- Hacer un `GET` a `http://localhost:3000/api/usuarios` (con Postman o el navegador) y confirmar que en el JSON aparece el campo `"profile_image": "/uploads/avatars/..."`.

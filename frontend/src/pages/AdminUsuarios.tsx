@@ -49,7 +49,6 @@ export const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
-  const [imageCacheBuster, setImageCacheBuster] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -221,7 +220,6 @@ export const AdminUsuarios = () => {
     try {
       const data = await getUsuarios();
       setUsuarios(data);
-      setImageCacheBuster(Date.now());
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Error al cargar usuarios',
@@ -428,10 +426,7 @@ export const AdminUsuarios = () => {
               <tbody>
                 {usuariosFiltrados.map((usuario, index) => {
                   const isNearBottom = index >= usuariosFiltrados.length - 2;
-                  const profileImageUrl = getProfileImageUrl(
-                    usuario.profile_image,
-                    imageCacheBuster,
-                  );
+                  const profileImageUrl = getProfileImageUrl(usuario.profile_image);
 
                   return (
                     <tr
@@ -443,7 +438,7 @@ export const AdminUsuarios = () => {
                           {profileImageUrl ? (
                             <img
                               src={profileImageUrl}
-                              alt={`Foto de ${usuario.first_name} ${usuario.last_name}`}
+                              alt="Perfil"
                               className="h-10 w-10 rounded-full border border-gray-200 object-cover"
                             />
                           ) : (
