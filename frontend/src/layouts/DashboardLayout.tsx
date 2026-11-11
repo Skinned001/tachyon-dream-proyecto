@@ -1,7 +1,8 @@
 import { ChevronDown, LogOut, User } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getProfileImageUrl } from '../utils/profileImage';
 import { Sidebar } from './Sidebar';
 
 type DashboardLayoutProps = {
@@ -17,6 +18,14 @@ export function DashboardLayout({
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileImageUrl = useMemo(
+    () =>
+      getProfileImageUrl(
+        user?.profile_image,
+        user?.profile_image ? Date.now() : undefined,
+      ),
+    [user?.profile_image],
+  );
 
   const getTitle = () => {
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
@@ -61,10 +70,18 @@ export function DashboardLayout({
               aria-expanded={isProfileMenuOpen}
               className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-gray-50"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#bce8d8] text-[11px] font-bold text-[#07584f]">
-                {user?.first_name?.charAt(0) ?? 'U'}
-                {user?.last_name?.charAt(0) ?? ''}
-              </span>
+              {profileImageUrl ? (
+                <img
+                  src={profileImageUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-full border border-[#cfe4dc] object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#bce8d8] text-[11px] font-bold text-[#07584f]">
+                  {user?.first_name?.charAt(0) ?? 'U'}
+                  {user?.last_name?.charAt(0) ?? ''}
+                </span>
+              )}
               <span className="hidden text-left sm:block">
                 <span className="block text-[11px] font-semibold text-[#244f47]">
                   {user

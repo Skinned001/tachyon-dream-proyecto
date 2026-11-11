@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Camera, Edit3, UserRound } from 'lucide-react';
 import { changePassword, updateProfile } from '../api/auth.api';
 import { Button } from '../components/ui/Button';
@@ -6,26 +6,18 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { InputPassword } from '../components/ui/InputPassword';
 import { useAuth } from '../context/AuthContext';
+import { getProfileImageUrl } from '../utils/profileImage';
 
 type Message = {
   type: 'success' | 'error';
   text: string;
 };
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 const allowedAvatarTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
-const resolveImageUrl = (image: string): string => {
-  try {
-    return new URL(image, apiBaseUrl).toString();
-  } catch {
-    return image;
-  }
-};
-
 export const Perfil = () => {
-  const { user, login } = useAuth();
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     first_name: '',
@@ -125,7 +117,7 @@ export const Perfil = () => {
     setIsUpdatingProfile(true);
     try {
       const updatedUser = await updateProfile(formData);
-      login(updatedUser);
+      updateUser(updatedUser);
       setAvatarFile(null);
       setIsEditing(false);
       setProfileMessage({
@@ -183,9 +175,14 @@ export const Perfil = () => {
     }
   };
 
-  const imageUrl = user?.profile_image
-    ? resolveImageUrl(user.profile_image)
-    : null;
+  const imageUrl = useMemo(
+    () =>
+      getProfileImageUrl(
+        user?.profile_image,
+        user?.profile_image ? Date.now() : undefined,
+      ),
+    [user?.profile_image],
+  );
   const previewUrl = avatarPreview || imageUrl;
   const initials = `${user?.first_name?.charAt(0) ?? ''}${user?.last_name?.charAt(0) ?? ''}`;
 

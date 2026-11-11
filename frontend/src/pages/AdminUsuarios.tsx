@@ -11,6 +11,7 @@ import {
   Loader2,
   MoreVertical,
   Plus,
+  Search,
   UserCheck,
 } from 'lucide-react';
 import {
@@ -25,6 +26,7 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useForm } from '../hooks/useForm';
+import { getProfileImageUrl } from '../utils/profileImage';
 import type {
   CreateUserRequest,
   UpdateUserRequest,
@@ -45,6 +47,7 @@ const isUserRole = (value: string): value is UserRole =>
 
 export const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -92,6 +95,20 @@ export const AdminUsuarios = () => {
     setIsCopied(false);
     setCopyError('');
   };
+
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    if (!normalizedSearchTerm) return true;
+
+    return [
+      usuario.first_name,
+      usuario.last_name,
+      usuario.email,
+      usuario.username,
+    ].some((value) =>
+      (value ?? '').toLocaleLowerCase().includes(normalizedSearchTerm),
+    );
+  });
 
   const openCreateModal = () => {
     setEditingUserId(null);
@@ -315,7 +332,7 @@ export const AdminUsuarios = () => {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="font-editorial text-[32px] leading-tight tracking-[-.03em] text-[#173d3b]">
             Gestión de Usuarios
@@ -324,15 +341,28 @@ export const AdminUsuarios = () => {
             Administra las cuentas del sistema
           </p>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          className="flex shrink-0 items-center gap-2"
-          onClick={openCreateModal}
-        >
-          <Plus className="h-4 w-4" />
-          Nuevo Usuario
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Buscar usuario..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              aria-label="Buscar usuarios"
+              className="rounded-md border border-gray-300 py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="primary"
+            className="flex shrink-0 items-center gap-2"
+            onClick={openCreateModal}
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Usuario
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -371,20 +401,40 @@ export const AdminUsuarios = () => {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((usuario, index) => {
-                  const isNearBottom = index >= usuarios.length - 2;
+                {usuariosFiltrados.map((usuario, index) => {
+                  const isNearBottom = index >= usuariosFiltrados.length - 2;
+                  const profileImageUrl = getProfileImageUrl(
+                    usuario.profile_image,
+                  );
 
                   return (
                     <tr
                       key={usuario.id}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-4 py-3 font-medium text-gray-800">
-                        {usuario.first_name} {usuario.last_name}
-                        <br />
-                        <span className="text-xs font-normal text-gray-400">
-                          @{usuario.username}
-                        </span>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {profileImageUrl ? (
+                            <img
+                              src={profileImageUrl}
+                              alt={`Foto de ${usuario.first_name} ${usuario.last_name}`}
+                              className="h-10 w-10 rounded-full border border-gray-200 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-500">
+                              {usuario.first_name?.charAt(0)}
+                              {usuario.last_name?.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <span className="block font-medium text-gray-800">
+                              {usuario.first_name} {usuario.last_name}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              @{usuario.username}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col items-start gap-1.5">
@@ -493,6 +543,16 @@ export const AdminUsuarios = () => {
                     </tr>
                   );
                 })}
+                {usuarios.length > 0 && usuariosFiltrados.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-8 text-center text-sm text-gray-500"
+                    >
+                      No se encontraron usuarios.
+                    </td>
+                  </tr>
+                )}
                 {usuarios.length === 0 && (
                   <tr>
                     <td
