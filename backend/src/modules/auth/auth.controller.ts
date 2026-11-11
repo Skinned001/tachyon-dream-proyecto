@@ -56,7 +56,6 @@ export class AuthController {
 
     try {
       await this.authService.register(parsedBody.data);
-      console.info('[EMAIL] Hay una nueva cuenta invitada pendiente de aprobación.');
       res.status(201).json({
         success: true,
         data: {

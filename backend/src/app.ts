@@ -5,6 +5,7 @@ import path from "node:path";
 import articulosRoutes from "./modules/articulos/articulo.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
+import notificacionesRoutes from "./modules/notificaciones/notificaciones.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -37,6 +38,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/articulos", articulosRoutes);
 app.use("/api/biblioteca", bibliotecaRoutes);
+app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/usuarios", usuariosRoutes);
 
 app.use(errorMiddleware);

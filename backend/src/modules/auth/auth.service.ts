@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import { signToken, type AuthTokenPayload } from '../../config/jwt.js';
 import { sequelize } from '../../config/database.js';
+import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
 import {
@@ -88,7 +89,7 @@ export class AuthService {
         throw new Error('No se encontró el rol STAFF para registrar al usuario.');
       }
 
-      await Usuario.create(
+      const user = await Usuario.create(
         {
           username: input.username,
           email: input.email,
@@ -105,6 +106,31 @@ export class AuthService {
         },
         { transaction },
       );
+
+      const adminRole = await Rol.findOne({
+        where: { name: 'ADMIN' },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!adminRole) {
+        throw new Error('No se encontró el rol ADMIN para notificar el registro.');
+      }
+      const administrators = await Usuario.findAll({
+        where: { roleId: adminRole.id, active: true },
+        attributes: ['id'],
+        transaction,
+      });
+      if (administrators.length > 0) {
+        await Notificacion.bulkCreate(
+          administrators.map((admin) => ({
+            userId: admin.id,
+            title: 'Solicitud de registro pendiente',
+            message: `${user.first_name} ${user.last_name} (${user.username}) solicitó habilitar su cuenta.`,
+            read: false,
+          })),
+          { transaction },
+        );
+      }
     });
   }
 

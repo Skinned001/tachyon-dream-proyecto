@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bell,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -14,8 +15,9 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { getNotificaciones } from "../api/notificaciones.api";
 
 type SidebarProps = {
   onSignOut: () => void;
@@ -30,6 +32,31 @@ export function Sidebar({
 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const fetchUnread = async () => {
+      try {
+        const notifications = await getNotificaciones();
+        if (isCurrent) {
+          setHasUnread(notifications.some((notification) => !notification.read));
+        }
+      } catch (error: unknown) {
+        console.error('Error al cargar el indicador de notificaciones:', error);
+      }
+    };
+
+    const refreshUnread = () => void fetchUnread();
+    refreshUnread();
+    window.addEventListener('notifications-updated', refreshUnread);
+
+    return () => {
+      isCurrent = false;
+      window.removeEventListener('notifications-updated', refreshUnread);
+    };
+  }, []);
+
   const links = [
     { to: "/dashboard", label: "Inicio", icon: Activity, end: true },
     { to: "/articulos", label: "Mis Artículos", icon: FileText },
@@ -89,6 +116,30 @@ export function Sidebar({
                 <span className={collapsed ? "md:hidden" : ""}>{label}</span>
               </NavLink>
             ))}
+            <NavLink
+              to="/notificaciones"
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
+                    : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
+                }`
+              }
+            >
+              <span className="relative">
+                <Bell size={18} strokeWidth={1.8} />
+                {hasUnread && (
+                  <span
+                    aria-label="Notificaciones no leídas"
+                    className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#e7f4ee] bg-red-500"
+                  />
+                )}
+              </span>
+              <span className={collapsed ? "md:hidden" : ""}>
+                Notificaciones
+              </span>
+            </NavLink>
             {user?.role === "ADMIN" && (
               <NavLink
                 to="/admin/usuarios"

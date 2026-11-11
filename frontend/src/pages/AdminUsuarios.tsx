@@ -259,7 +259,7 @@ export const AdminUsuarios = () => {
   }, [openMenuId]);
 
   const handleSuspend = async (id: number) => {
-    if (!window.confirm('¿Suspender esta cuenta?')) {
+    if (!window.confirm('¿Deshabilitar esta cuenta?')) {
       setOpenMenuId(null);
       return;
     }
@@ -275,7 +275,7 @@ export const AdminUsuarios = () => {
       );
     } catch (err: unknown) {
       alert(
-        err instanceof Error ? err.message : 'Error al suspender usuario',
+        err instanceof Error ? err.message : 'Error al deshabilitar usuario',
       );
     } finally {
       setBusyUserId(null);
@@ -482,7 +482,7 @@ export const AdminUsuarios = () => {
                               : 'bg-red-100 text-red-700'
                           }`}
                         >
-                          {usuario.active ? 'Activo' : 'Suspendido'}
+                          {usuario.active ? 'Habilitada' : 'Deshabilitada'}
                         </span>
                       </td>
                       <td className="relative px-4 py-3 text-right">
@@ -544,7 +544,7 @@ export const AdminUsuarios = () => {
                                   className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                 >
                                   <Ban className="h-4 w-4" />
-                                  Suspender cuenta
+                                  Deshabilitar cuenta
                                 </button>
                               ) : (
                                 <button
@@ -554,7 +554,7 @@ export const AdminUsuarios = () => {
                                   className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-green-700 hover:bg-green-50"
                                 >
                                   <UserCheck className="h-4 w-4" />
-                                  Reactivar
+                                  Habilitar cuenta
                                 </button>
                               )}
                             </div>
@@ -689,6 +689,7 @@ export const AdminUsuarios = () => {
               name="dni"
               value={formulario.dni ?? ''}
               onChange={handleChange}
+              required
             />
 
             <Input

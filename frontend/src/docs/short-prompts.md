@@ -6541,12 +6541,10 @@ export const register = async (req: Request, res: Response) => {
     const { username, email, password, first_name, last_name, dni } = req.body;
 
     if (!username || !email || !password || !first_name || !last_name || !dni) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Todos los campos, incluyendo el DNI, son obligatorios",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Todos los campos, incluyendo el DNI, son obligatorios",
+      });
     }
 
     const existeUsuario = await Usuario.findOne({ where: { email } });
@@ -6613,5 +6611,359 @@ export const updateUsuario = async (req: Request, res: Response) => {
 ```
 
 ### 4. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 64 (Frontend): Añadir DNI, pantalla de espera y renombrar estados
+
+## Contexto
+
+1. El formulario de registro debe pedir el DNI.
+2. Al registrarse, no debe loguearse automáticamente, sino mostrar un mensaje de "Esperando aprobación".
+3. En la tabla de Admin, los estados deben decir "Habilitada" y "Deshabilitada".
+
+## Lo que debés hacer
+
+### 1. Modificar el Login para mostrar error si está inactivo
+
+En `src/pages/Login.tsx`, el backend ya debería devolver un error si la cuenta está inactiva. Asegurarse de que ese mensaje se muestre en el div rojo de errores.
+
+### 2. Modificar `src/pages/Registro.tsx`
+
+- Agregar `dni: ''` al `useForm`.
+- Agregar el input del DNI en el formulario (debajo de nombre y apellido).
+- Agregar el estado `const [isSuccess, setIsSuccess] = useState(false);`.
+- En `handleSubmit`, QUITAR el `login(userData)` y la redirección. En su lugar, setear `setIsSuccess(true)`.
+- Si `isSuccess` es true, mostrar un cartel en lugar del formulario:
+
+```tsx
+        {isSuccess ? (
+          <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
+            <div className="mx-auto w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 className="text-xl font-bold text-green-800 mb-2">¡Registro Exitoso!</h2>
+            <p className="text-green-700">
+              Tu cuenta ha sido creada. Un Administrador debe habilitar tu cuenta antes de que puedas ingresar. Te enviaremos un correo cuando esté lista.
+            </p>
+            <Button onClick={() => navigate('/login')} className="mt-6 w-full" variant="primary">
+              Volver al Login
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} ...>
+            {/* ... inputs ... */}
+          </form>
+        )}
+```
+
+### 3. Modificar los textos de estado en `src/pages/AdminUsuarios.tsx`
+
+Buscar donde se renderiza el estado del usuario en la tabla (las etiquetas verde/roja) y cambiarlas:
+
+```tsx
+<td className="py-3 px-4">
+  <span
+    className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+  >
+    {u.active ? "Habilitada" : "Deshabilitada"}
+  </span>
+</td>
+```
+
+_(Hacer lo mismo en el menú de 3 puntos si dice "Suspender", cambiarlo a "Deshabilitar")._
+
+### 4. Agregar DNI al Modal de Creación (Admin)
+
+Para que el Admin también pueda crear usuarios con DNI, agregar el campo `dni` al `useForm` del modal en `AdminUsuarios.tsx` y agregar el `<Input label="DNI" name="dni" ... />`.
+
+### 5. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 65 (Backend): Implementar sistema de notificaciones
+
+## Contexto
+
+Necesitamos un sistema de notificaciones. Cuando el admin activa/desactiva a un usuario, se debe crear una notificación en la base de datos y "enviar un correo" (simulado). El frontend consultará estas notificaciones.
+
+## Objetivo
+
+1. Crear el modelo de Notificación.
+2. Crear los endpoints para listar y marcar como leídas.
+3. Disparar la notificación al cambiar el estado de un usuario.
+
+## Lo que debés hacer
+
+### 1. Crear el modelo `src/modules/notificaciones/Notificacion.model.ts`
+
+```typescript
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../../config/database";
+
+export class Notificacion extends Model {}
+Notificacion.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false }, // El admin que recibe la notif
+    title: { type: DataTypes.STRING, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: false },
+    read: { type: DataTypes.BOOLEAN, defaultValue: false },
+  },
+  { sequelize, tableName: "notifications" },
+);
+```
+
+### 2. Crear controlador y rutas
+
+`src/modules/notificaciones/notificaciones.controller.ts`:
+
+```typescript
+import { Request, Response } from "express";
+import { Notificacion } from "./Notificacion.model";
+
+export const getNotificaciones = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const notificaciones = await Notificacion.findAll({
+    where: { userId },
+    order: [["createdAt", "DESC"]],
+  });
+  res.status(200).json({ success: true, data: notificaciones });
+};
+
+export const markAsRead = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  await Notificacion.update({ read: true }, { where: { id } });
+  res.status(200).json({ success: true, data: {} });
+};
+```
+
+`src/modules/notificaciones/notificaciones.routes.ts`:
+
+```typescript
+import { Router } from "express";
+import { getNotificaciones, markAsRead } from "./notificaciones.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+
+const router = Router();
+router.use(authMiddleware);
+router.get("/", getNotificaciones);
+router.put("/:id/read", markAsRead);
+export default router;
+```
+
+_(No olvides montar la ruta en `app.ts`: `app.use('/api/notificaciones', notificacionesRoutes)`)_.
+
+### 3. Disparar la notificación al Admin al registrarse un usuario
+
+En `auth.controller.ts`, en la función `register`, después de crear el usuario, buscar a todos los usuarios con rol `ADMIN` y crearles una notificación:
+
+```typescript
+import { Notificacion } from "../notificaciones/Notificacion.model";
+
+// ... después de crear el nuevoUsuario:
+const admins = await Usuario.findAll({ where: { role: "ADMIN" } });
+for (const admin of admins) {
+  await Notificacion.create({
+    userId: admin.id,
+    title: "Nueva solicitud de cuenta",
+    message: `El usuario ${nuevoUsuario.first_name} ${nuevoUsuario.last_name} (DNI: ${dni}) solicita activación.`,
+  });
+}
+```
+
+### 4. Notificar y simular email al cambiar estado en `usuarios.controller.ts`
+
+En `updateUsuario`, si el estado cambia:
+
+```typescript
+if (isActivating) {
+  // 1. Simulamos el envío de correo
+  console.log(
+    `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido HABILITADA. Ya puedes iniciar sesión.`,
+  );
+
+  // 2. Notificamos al usuario en su panel (si lo tuviera)
+  await Notificacion.create({
+    userId: usuario.id,
+    title: "Cuenta Habilitada",
+    message:
+      "Un administrador ha habilitado tu cuenta. Ya puedes ingresar al portal.",
+  });
+}
+```
+
+### 5. Verificación
+
+- Correr `npm run build` y reiniciar el backend.
+
+# Tarea 68 (Frontend): Página de Notificaciones y punto rojo en el Sidebar
+
+## Contexto
+
+En lugar de una campanita en el Navbar, vamos a crear un apartado llamado "Notificaciones" en el menú lateral (Sidebar). Este apartado mostrará un punto rojo si hay notificaciones no leídas. También necesitamos crear la página para leerlas.
+
+## Objetivo
+
+1. Crear la página `src/pages/Notificaciones.tsx`.
+2. Agregar el ítem en el menú del `DashboardLayout.tsx` con la lógica del punto rojo.
+3. Agregar la ruta en `AppRoutes.tsx`.
+
+## Lo que debés hacer
+
+### 1. Crear `src/pages/Notificaciones.tsx`
+
+Esta página listará las notificaciones y permitirá marcarlas como leídas al hacer clic.
+
+```tsx
+// src/pages/Notificaciones.tsx
+import { useEffect, useState } from "react";
+import {
+  getNotificaciones,
+  markAsRead,
+  type Notificacion,
+} from "../api/notificaciones.api";
+import { Card } from "../components/ui/Card";
+import { Loader2, Bell, CheckCircle } from "lucide-react";
+
+export const Notificaciones = () => {
+  const [notifs, setNotifs] = useState<Notificacion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchNotifs = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getNotificaciones();
+      setNotifs(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+  }, []);
+
+  const handleRead = async (id: number) => {
+    const notif = notifs.find((n) => n.id === id);
+    if (notif && !notif.read) {
+      await markAsRead(id);
+      setNotifs(notifs.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Notificaciones</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Mensajes y avisos del sistema
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : notifs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+            <Bell className="w-12 h-12 mb-3 text-gray-300" />
+            <p>No tienes notificaciones por el momento.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {notifs.map((n) => (
+              <div
+                key={n.id}
+                onClick={() => handleRead(n.id)}
+                className={`p-4 border-b border-gray-100 flex gap-4 cursor-pointer transition-colors hover:bg-gray-50 ${!n.read ? "bg-blue-50/30" : ""}`}
+              >
+                <div
+                  className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!n.read ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500"}`}
+                >
+                  {!n.read ? (
+                    <Bell className="w-4 h-4" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <h4
+                    className={`text-sm ${!n.read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}
+                  >
+                    {n.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 2. Agregar la ruta en `src/routes/AppRoutes.tsx`
+
+Importar `Notificaciones` y agregarla dentro de las rutas privadas:
+
+```tsx
+import { Notificaciones } from "../pages/Notificaciones";
+// ... dentro de <Route element={<PrivateRoutes />}>
+<Route path="notificaciones" element={<Notificaciones />} />;
+```
+
+### 3. Modificar el Sidebar en `src/layouts/DashboardLayout.tsx`
+
+- Importar `Bell` y la función `getNotificaciones`.
+- Agregar un estado para las notificaciones no leídas:
+
+```tsx
+const [unreadCount, setUnreadCount] = useState(0);
+
+useEffect(() => {
+  const fetchUnread = async () => {
+    try {
+      const data = await getNotificaciones();
+      setUnreadCount(data.filter((n) => !n.read).length);
+    } catch (error) {
+      /* silencioso */
+    }
+  };
+  fetchUnread();
+}, []);
+```
+
+- Dentro del `<nav>`, agregar el enlace a Notificaciones (solo visible para ADMIN, o para todos si querés que los usuarios también reciban mensajes):
+
+```tsx
+{
+  /* En el menú lateral, después de Biblioteca o Dashboard */
+}
+<Link
+  to="/notificaciones"
+  className="relative flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+>
+  <Bell className="w-5 h-5" />
+  Notificaciones
+  {/* PUNTO ROJO */}
+  {unreadCount > 0 && (
+    <span className="absolute top-2 left-6 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+  )}
+</Link>;
+```
+
+### 4. Limpieza
+
+- En el `DashboardLayout.tsx`, borrar el botón de la campanita en la barra superior que habíamos puesto en la tarea anterior (si el agente llegó a crearla). El menú superior solo debe tener el perfil del usuario.
+
+### 5. Verificación
 
 - Correr `npm run build`.

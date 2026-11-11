@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
+import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { isRoleName, type RoleName } from '../auth/auth.dto.js';
 import { Rol } from './Rol.model.js';
 import { Usuario } from './Usuario.model.js';
@@ -186,7 +187,7 @@ export class UsuariosService {
     id: number,
     input: UpdateUsuarioData,
     requesterId: number,
-  ): Promise<{ user: UsuarioDTO; activated: boolean }> {
+  ): Promise<UsuarioDTO> {
     return sequelize.transaction(async (transaction) => {
       const usuario = await Usuario.findByPk(id, { transaction });
       if (!usuario) {
@@ -263,6 +264,18 @@ export class UsuariosService {
 
       await usuario.save({ transaction });
 
+      if (activated) {
+        await Notificacion.create(
+          {
+            userId: usuario.id,
+            title: 'Cuenta habilitada',
+            message: 'Tu cuenta fue habilitada. Ya puedes iniciar sesión.',
+            read: false,
+          },
+          { transaction },
+        );
+      }
+
       if (!roleName) {
         const role = await Rol.findByPk(usuario.roleId, { transaction });
         if (!role) {
@@ -271,7 +284,7 @@ export class UsuariosService {
         roleName = role.name;
       }
 
-      return { user: toUsuarioDTO(usuario, roleName), activated };
+      return toUsuarioDTO(usuario, roleName);
     });
   }
 

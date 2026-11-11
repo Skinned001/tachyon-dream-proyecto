@@ -13,7 +13,9 @@ export class Notificacion extends Model<
 > {
   declare id: CreationOptional<number>;
   declare userId: number;
+  declare title: CreationOptional<string>;
   declare message: string;
+  declare read: CreationOptional<boolean>;
 }
 
 export const initializeNotificacionModel = (sequelize: Sequelize): void => {
@@ -21,7 +23,9 @@ export const initializeNotificacionModel = (sequelize: Sequelize): void => {
     {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       userId: { type: DataTypes.INTEGER, allowNull: false },
+      title: { type: DataTypes.STRING, allowNull: false, defaultValue: 'Notificación' },
       message: { type: DataTypes.TEXT, allowNull: false },
+      read: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     },
     { sequelize, tableName: 'notificaciones', timestamps: false },
   );
