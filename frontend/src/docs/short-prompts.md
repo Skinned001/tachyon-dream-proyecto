@@ -5945,11 +5945,13 @@ Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
 # Tarea 53 (Frontend): Arreglar actualización de foto, buscador de usuarios y foto en tabla
 
 ## Contexto
+
 1. La foto de perfil se guarda en el backend, pero al actualizarla no se refleja en la barra superior (Navbar) ni en la vista de perfil por culpa de la caché y el estado global.
 2. El Admin necesita un buscador en la tabla de usuarios.
 3. El Admin debe ver las fotos en la tabla.
 
 ## Objetivo
+
 1. Modificar `AuthContext` para que guarde el usuario con la nueva foto.
 2. En `Perfil.tsx`, forzar la recarga de la imagen y actualizar el contexto global al guardar.
 3. En `AdminUsuarios.tsx`, agregar input de búsqueda y renderizar la foto.
@@ -5957,7 +5959,9 @@ Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
 ## Lo que debés hacer
 
 ### 1. Actualizar `src/context/AuthContext.tsx`
+
 Verificar que exista una función `updateUser` para actualizar los datos del contexto (ya la creamos en tareas anteriores, pero asegurate de que esté exportada):
+
 ```tsx
 // Ya deberías tener esto en el AuthContext
 const login = (userData: User) => {
@@ -5967,76 +5971,91 @@ const login = (userData: User) => {
 ```
 
 ### 2. Arreglar la imagen en `src/pages/Perfil.tsx`
+
 El problema de la caché se soluciona agregando un parámetro de tiempo a la URL (`?t=123456`).
 
 Cambiar la constante `imageUrl`:
+
 ```tsx
-  // Añadimos un timestamp para evitar que el navegador use la foto vieja de la caché
-  const timestamp = new Date().getTime();
-  const imageUrl = user?.profile_image 
-    ? `http://localhost:3000${user.profile_image}?t=${timestamp}` 
-    : null;
+// Añadimos un timestamp para evitar que el navegador use la foto vieja de la caché
+const timestamp = new Date().getTime();
+const imageUrl = user?.profile_image
+  ? `http://localhost:3000${user.profile_image}?t=${timestamp}`
+  : null;
 ```
+
 Asegurate de que al guardar, llames a `login(updatedUser)` y se cierre el modo edición.
 
 ### 3. Actualizar `src/pages/AdminUsuarios.tsx` (Buscador y Fotos)
+
 Agregar el ícono `Search` a los imports de `lucide-react`.
 Agregar un estado para la búsqueda:
+
 ```tsx
-const [searchTerm, setSearchTerm] = useState('');
+const [searchTerm, setSearchTerm] = useState("");
 
 // Lógica para filtrar:
-const usuariosFiltrados = usuarios.filter(u => 
-  u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  u.username.toLowerCase().includes(searchTerm.toLowerCase())
+const usuariosFiltrados = usuarios.filter(
+  (u) =>
+    u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username.toLowerCase().includes(searchTerm.toLowerCase()),
 );
 ```
 
 En la interfaz, agregar el buscador justo debajo del botón "Nuevo Usuario" o al lado:
+
 ```tsx
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
-        </div>
-        <div className="flex gap-4">
-          {/* BUSCADOR */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Buscar usuario..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <Button onClick={openCreateModal} variant="primary" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Nuevo Usuario
-          </Button>
-        </div>
-      </div>
+<div className="flex justify-between items-center mb-6">
+  <div>
+    <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
+  </div>
+  <div className="flex gap-4">
+    {/* BUSCADOR */}
+    <div className="relative">
+      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <input
+        type="text"
+        placeholder="Buscar usuario..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+    <Button
+      onClick={openCreateModal}
+      variant="primary"
+      className="flex items-center gap-2"
+    >
+      <Plus className="w-4 h-4" /> Nuevo Usuario
+    </Button>
+  </div>
+</div>
 ```
 
 En el `map` de la tabla, usar `usuariosFiltrados` en lugar de `usuarios`.
 Y en la celda del nombre, agregar la foto:
+
 ```tsx
 <td className="py-3 px-4">
   <div className="flex items-center gap-3">
     {u.profile_image ? (
-      <img 
-        src={`http://localhost:3000${u.profile_image}`} 
-        alt="Perfil" 
+      <img
+        src={`http://localhost:3000${u.profile_image}`}
+        alt="Perfil"
         className="w-10 h-10 rounded-full object-cover border border-gray-200"
       />
     ) : (
       <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm">
-        {u.first_name?.charAt(0)}{u.last_name?.charAt(0)}
+        {u.first_name?.charAt(0)}
+        {u.last_name?.charAt(0)}
       </div>
     )}
     <div>
-      <span className="font-medium text-gray-800 block">{u.first_name} {u.last_name}</span>
+      <span className="font-medium text-gray-800 block">
+        {u.first_name} {u.last_name}
+      </span>
       <span className="text-xs text-gray-400">@{u.username}</span>
     </div>
   </div>
@@ -6044,7 +6063,142 @@ Y en la celda del nombre, agregar la foto:
 ```
 
 ### 4. Verificación
+
 - Correr `npm run build`.
 
 ## Respuesta esperada
+
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 54: Filtro por rol y arreglo de caché de imágenes en tabla de Admin
+
+## Contexto
+
+1. La imagen de perfil en la tabla de admin no se actualiza (problema de caché del navegador).
+2. Necesitamos un filtro para buscar usuarios por su rol principal (STAFF, COMITE, etc.).
+
+## Objetivo
+
+1. Agregar el estado y la lógica del filtro por rol.
+2. Agregar un `<select>` para el filtro en la interfaz.
+3. Agregar un timestamp a las URLs de las imágenes para forzar su actualización.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/AdminUsuarios.tsx`
+
+**A. Nuevos estados:**
+Agregar el estado para el filtro de rol (cerca de `searchTerm`):
+
+```tsx
+const [roleFilter, setRoleFilter] = useState<string>("TODOS");
+```
+
+**B. Lógica de filtrado combinada:**
+Reemplazar la lógica de `usuariosFiltrados` para que aplique tanto el texto como el rol:
+
+```tsx
+const usuariosFiltrados = usuarios.filter((u) => {
+  const matchesSearch =
+    u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const matchesRole = roleFilter === "TODOS" || u.role === roleFilter;
+
+  return matchesSearch && matchesRole;
+});
+```
+
+**C. Interfaz del buscador y filtro:**
+En la parte superior, donde pusimos el buscador, agregar el `<select>` al lado:
+
+```tsx
+        <div className="flex gap-4">
+          {/* FILTRO POR ROL */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="TODOS">Todos los roles</option>
+            <option value="STAFF">Staff</option>
+            <option value="COMITE">Comité</option>
+            <option value="DDI">DDI</option>
+            <option value="EDITOR">Editor</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+
+          {/* BUSCADOR */}
+          <div className="relative">
+             {/* ... input de búsqueda ... */}
+```
+
+**D. Arreglar la caché de la imagen en la tabla:**
+En la celda de la tabla donde renderizamos la foto (`<img src={...} />`), agregar un timestamp:
+
+```tsx
+    {u.profile_image ? (
+      <img
+        src={`http://localhost:3000${u.profile_image}?t=${new Date().getTime()}`}
+        alt="Perfil"
+        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      />
+    ) : (
+      // ... iniciales
+```
+
+### 2. Arreglar la caché en el Navbar (`src/layouts/DashboardLayout.tsx`)
+
+Ir al componente del Navbar y hacer lo mismo con la imagen del usuario:
+
+```tsx
+{user?.profile_image ? (
+  <img
+    src={`http://localhost:3000${user.profile_image}?t=${new Date().getTime()}`}
+    alt="Perfil"
+    className="w-8 h-8 rounded-full object-cover border border-gray-200"
+  />
+) : (
+  // ... iniciales
+)}
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 56 (Backend): Exponer la carpeta uploads para que el frontend vea las imágenes
+
+## Contexto
+
+Las imágenes se están guardando correctamente en el servidor, pero el frontend recibe un error 404 (No encontrado) al intentar mostrarlas. Esto pasa porque Express no está sirviendo la carpeta `uploads` de forma pública.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/app.ts` (o `server.ts`)
+
+Importar el módulo `path` y agregar el middleware `express.static`:
+
+```typescript
+import express from "express";
+import path from "path";
+
+const app = express();
+
+// ... otros middlewares (cors, json, etc.)
+
+// Servir la carpeta uploads de forma pública
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// (Ajusta la ruta si tu carpeta uploads está en la raíz del backend, usa: path.join(process.cwd(), 'uploads'))
+```
+
+### 2. Verificación
+
+- Reiniciar el servidor backend.
+- Abrir en el navegador: `http://localhost:3000/uploads/avatars/` (si hay alguna imagen ahí, debería descargarla o mostrarla, no dar error).

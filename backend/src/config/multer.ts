@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import multer from 'multer';
+import { uploadsDirectory } from './uploads.js';
 
 const profileImageExtensions: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -11,7 +12,7 @@ const profileImageExtensions: Record<string, string> = {
 
 const profileImageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const directory = path.resolve(process.cwd(), 'uploads', 'avatars');
+    const directory = path.join(uploadsDirectory, 'avatars');
     try {
       fs.mkdirSync(directory, { recursive: true });
       cb(null, directory);

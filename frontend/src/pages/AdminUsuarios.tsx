@@ -48,6 +48,8 @@ const isUserRole = (value: string): value is UserRole =>
 export const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
+  const [imageCacheBuster, setImageCacheBuster] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -98,16 +100,20 @@ export const AdminUsuarios = () => {
 
   const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
   const usuariosFiltrados = usuarios.filter((usuario) => {
-    if (!normalizedSearchTerm) return true;
+    const matchesSearch =
+      !normalizedSearchTerm ||
+      [
+        usuario.first_name,
+        usuario.last_name,
+        usuario.email,
+        usuario.username,
+      ].some((value) =>
+        (value ?? '').toLocaleLowerCase().includes(normalizedSearchTerm),
+      );
+    const matchesRole =
+      roleFilter === 'TODOS' || usuario.role === roleFilter;
 
-    return [
-      usuario.first_name,
-      usuario.last_name,
-      usuario.email,
-      usuario.username,
-    ].some((value) =>
-      (value ?? '').toLocaleLowerCase().includes(normalizedSearchTerm),
-    );
+    return matchesSearch && matchesRole;
   });
 
   const openCreateModal = () => {
@@ -215,6 +221,7 @@ export const AdminUsuarios = () => {
     try {
       const data = await getUsuarios();
       setUsuarios(data);
+      setImageCacheBuster(Date.now());
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Error al cargar usuarios',
@@ -342,6 +349,24 @@ export const AdminUsuarios = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <label>
+            <span className="sr-only">Filtrar por rol</span>
+            <select
+              value={roleFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                setRoleFilter(isUserRole(value) ? value : 'TODOS');
+              }}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="TODOS">Todos los roles</option>
+              <option value="STAFF">Staff</option>
+              <option value="COMITE">Comité</option>
+              <option value="DDI">DDI</option>
+              <option value="EDITOR">Editor</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </label>
           <label className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -405,6 +430,7 @@ export const AdminUsuarios = () => {
                   const isNearBottom = index >= usuariosFiltrados.length - 2;
                   const profileImageUrl = getProfileImageUrl(
                     usuario.profile_image,
+                    imageCacheBuster,
                   );
 
                   return (

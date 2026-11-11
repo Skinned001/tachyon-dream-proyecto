@@ -6,6 +6,7 @@ import articulosRoutes from "./modules/articulos/articulo.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
+import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 dotenv.config();
@@ -22,11 +23,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   '/uploads/profiles',
-  express.static(path.resolve(process.cwd(), 'uploads', 'profiles')),
+  express.static(path.join(uploadsDirectory, 'profiles')),
 );
 app.use(
   '/uploads/avatars',
-  express.static(path.resolve(process.cwd(), 'uploads', 'avatars')),
+  express.static(path.join(uploadsDirectory, 'avatars')),
 );
 
 app.get("/health", (_req, res) => {
