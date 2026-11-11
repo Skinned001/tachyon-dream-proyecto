@@ -6,6 +6,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  profile_image?: string | null;
   role: UserRole;
   is_author: boolean;
   is_guest?: boolean;

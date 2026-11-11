@@ -13,6 +13,7 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
+  profile_image: string | null;
   role: RoleName;
   is_author: boolean;
   specialtyId: number | null;

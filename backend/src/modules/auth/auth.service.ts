@@ -1,9 +1,17 @@
 import bcrypt from 'bcryptjs';
+import { Op } from 'sequelize';
 import { signToken, type AuthTokenPayload } from '../../config/jwt.js';
 import { sequelize } from '../../config/database.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
 import { isRoleName, type AuthUser, type LoginResponse } from './auth.dto.js';
+
+export interface UpdateProfileData {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image?: string | null;
+}
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 10;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000;
@@ -37,6 +45,7 @@ const toAuthUser = (
     email: user.email,
     first_name: user.first_name,
     last_name: user.last_name,
+    profile_image: user.profile_image,
     role: roleName,
     is_author: user.is_author,
     specialtyId: user.specialtyId,
@@ -129,6 +138,33 @@ export class AuthService {
     }
 
     return toAuthUser(user, role.name);
+  }
+
+  async updateProfile(id: number, input: UpdateProfileData): Promise<AuthUser> {
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      throw new AuthError(404, 'Usuario no encontrado');
+    }
+
+    if (input.username !== undefined && input.username !== user.username) {
+      const duplicate = await Usuario.findOne({
+        where: {
+          username: input.username,
+          id: { [Op.ne]: id },
+        },
+      });
+      if (duplicate) {
+        throw new AuthError(409, 'El nombre de usuario ya está registrado');
+      }
+      user.username = input.username;
+    }
+
+    if (input.first_name !== undefined) user.first_name = input.first_name;
+    if (input.last_name !== undefined) user.last_name = input.last_name;
+    if (input.profile_image !== undefined) user.profile_image = input.profile_image;
+
+    await user.save();
+    return this.getCurrentUser(id);
   }
 
   async changePassword(

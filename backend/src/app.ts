@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import path from "node:path";
 import articulosRoutes from "./modules/articulos/articulo.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
@@ -19,6 +20,10 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  '/uploads/profiles',
+  express.static(path.resolve(process.cwd(), 'uploads', 'profiles')),
+);
 
 app.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });

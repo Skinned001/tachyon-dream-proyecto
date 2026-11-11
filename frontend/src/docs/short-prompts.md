@@ -5112,3 +5112,76 @@ import { Perfil } from "../pages/Perfil";
 ## Respuesta esperada
 
 Confirmame que los archivos fueron creados y si `npm run build` pasó.
+
+# Tarea 49 (Backend): Crear endpoint para que el usuario edite su propio perfil
+
+## Contexto
+
+Los usuarios necesitan poder editar sus datos básicos (nombre, apellido, nombre de usuario) y subir una foto de perfil.
+
+## Objetivo
+
+Crear el controlador y la ruta `PUT /api/auth/profile`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/usuarios/Usuario.model.ts` (o el modelo correspondiente)
+
+Si no existe, agregar el campo para la foto:
+
+```typescript
+  profile_image: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null
+  },
+```
+
+### 2. Modificar `src/modules/auth/auth.controller.ts`
+
+Agregar la función `updateProfile`. (Asumimos que ya tienes un middleware `authMiddleware` que pone al usuario en `req.user`).
+
+```typescript
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id; // El ID viene del token
+    const { first_name, last_name, username, profile_image } = req.body;
+
+    const usuario = await Usuario.findByPk(userId);
+    if (!usuario)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+
+    // Actualizar solo los campos enviados
+    if (first_name) usuario.first_name = first_name;
+    if (last_name) usuario.last_name = last_name;
+    if (username) usuario.username = username;
+    if (profile_image !== undefined) usuario.profile_image = profile_image;
+
+    await usuario.save();
+
+    return res.status(200).json({ success: true, data: usuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar perfil" });
+  }
+};
+```
+
+### 3. Modificar `src/modules/auth/auth.routes.ts`
+
+Importar `updateProfile` y agregar la ruta protegida:
+
+```typescript
+router.put("/profile", authMiddleware, updateProfile);
+```
+
+### 4. Verificación
+
+- Correr `npm run build` en el backend.
+
+## Respuesta esperada
+
+Confirmame que el modelo y el controlador fueron actualizados y si compila.
