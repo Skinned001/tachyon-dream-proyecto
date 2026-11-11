@@ -5511,3 +5511,79 @@ export const Perfil = () => {
 ## Respuesta esperada
 
 Confirmame que los archivos fueron creados y si `npm run build` pasó. Si hay algún error en Firefox, pasame el mensaje exacto de la consola.
+
+# Tarea 51 (Backend): Recibir imagen de perfil con Multer
+
+## Contexto
+
+El frontend enviará la foto de perfil como un archivo (`multipart/form-data`) en lugar de una URL de texto. Necesitamos configurar el backend para guardar esa imagen.
+
+## Objetivo
+
+Modificar `updateProfile` para manejar la subida de archivos.
+
+## Lo que debés hacer
+
+### 1. Configurar Multer en `src/modules/auth/auth.routes.ts`
+
+Importar `multer` y crear una instancia para guardar imágenes en `uploads/avatars/` (creá esa carpeta si no existe).
+
+```typescript
+import multer from "multer";
+import path from "path";
+
+// Configuración básica de Multer para avatares
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/avatars/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+const upload = multer({ storage });
+
+// En la ruta:
+router.put("/profile", authMiddleware, upload.single("avatar"), updateProfile);
+```
+
+### 2. Modificar `updateProfile` en `src/modules/auth/auth.controller.ts`
+
+Ahora la imagen no viene en `req.body`, sino en `req.file`.
+
+```typescript
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { first_name, last_name, username } = req.body;
+
+    const usuario = await Usuario.findByPk(userId);
+    if (!usuario)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+
+    if (first_name) usuario.first_name = first_name;
+    if (last_name) usuario.last_name = last_name;
+    if (username) usuario.username = username;
+
+    // Si se subió un archivo, guardamos la ruta
+    if (req.file) {
+      // Asumiendo que el servidor sirve la carpeta uploads públicamente
+      usuario.profile_image = `/uploads/avatars/${req.file.filename}`;
+    }
+
+    await usuario.save();
+    return res.status(200).json({ success: true, data: usuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar perfil" });
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.

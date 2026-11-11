@@ -24,6 +24,10 @@ app.use(
   '/uploads/profiles',
   express.static(path.resolve(process.cwd(), 'uploads', 'profiles')),
 );
+app.use(
+  '/uploads/avatars',
+  express.static(path.resolve(process.cwd(), 'uploads', 'avatars')),
+);
 
 app.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });

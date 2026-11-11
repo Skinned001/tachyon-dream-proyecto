@@ -14,7 +14,7 @@ router.post('/change-password', authenticateJWT, authController.changePassword);
 router.put(
   '/profile',
   authenticateJWT,
-  uploadProfileImage.single('profile_image'),
+  uploadProfileImage.single('avatar'),
   authController.updateProfile,
 );
 

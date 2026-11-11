@@ -11,7 +11,7 @@ const profileImageExtensions: Record<string, string> = {
 
 const profileImageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const directory = path.resolve(process.cwd(), 'uploads', 'profiles');
+    const directory = path.resolve(process.cwd(), 'uploads', 'avatars');
     try {
       fs.mkdirSync(directory, { recursive: true });
       cb(null, directory);

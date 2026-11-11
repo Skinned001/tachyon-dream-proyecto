@@ -122,7 +122,7 @@ export class AuthController {
     const requestBody = {
       ...req.body,
       ...(req.file
-        ? { profile_image: `/uploads/profiles/${req.file.filename}` }
+        ? { profile_image: `/uploads/avatars/${req.file.filename}` }
         : {}),
     };
     const parsedBody = updateProfileSchema.safeParse(requestBody);
