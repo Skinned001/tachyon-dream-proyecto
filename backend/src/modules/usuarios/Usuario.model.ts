@@ -39,7 +39,7 @@ export const initializeUsuarioModel = (sequelize: Sequelize): void => {
       first_name: { type: DataTypes.STRING, allowNull: false },
       last_name: { type: DataTypes.STRING, allowNull: false },
       profile_image: { type: DataTypes.STRING, allowNull: true, defaultValue: null },
-      dni: { type: DataTypes.STRING, allowNull: false },
+      dni: { type: DataTypes.STRING, allowNull: false, unique: true },
       is_author: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       is_guest: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       active: { type: DataTypes.BOOLEAN, allowNull: false },

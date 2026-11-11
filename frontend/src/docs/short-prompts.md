@@ -6419,3 +6419,199 @@ export const getUsuarios = async (req: Request, res: Response) => {
 
 - Reiniciar el servidor backend.
 - Hacer un `GET` a `http://localhost:3000/api/usuarios` (con Postman o el navegador) y confirmar que en el JSON aparece el campo `"profile_image": "/uploads/avatars/..."`.
+
+# Tarea 61 (Backend): Crear endpoint público para el autorregistro de invitados
+
+## Contexto
+
+Necesitamos permitir que los usuarios (invitados) se registren a sí mismos para participar en convocatorias. Al registrarse, deben obtener el rol `STAFF` y el atributo `is_guest: true`.
+
+## Objetivo
+
+Crear el controlador y la ruta `POST /api/auth/register`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/auth/auth.controller.ts`
+
+Agregar la función `register`. Asumimos que ya tienen la lógica de encriptación con `bcrypt` y el modelo `Usuario`.
+
+```typescript
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password, first_name, last_name } = req.body;
+
+    // Validaciones básicas
+    if (!username || !email || !password || !first_name || !last_name) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Todos los campos son obligatorios" });
+    }
+
+    // Verificar si el correo ya existe
+    const existeUsuario = await Usuario.findOne({ where: { email } });
+    if (existeUsuario) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El correo ya está registrado" });
+    }
+
+    // Encriptar contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crear el usuario (Forzamos rol STAFF e is_guest true)
+    // NOTA: Ajusta el roleId según cómo manejen la tabla de roles.
+    // Si usan un ENUM, solo pasa role: 'STAFF'.
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      password: hashedPassword,
+      first_name,
+      last_name,
+      role: "STAFF", // o roleId: ID_DEL_ROL_STAFF
+      is_guest: true,
+      must_change_password: false, // El eligió su contraseña
+      active: true,
+    });
+
+    // Opcional: Generar token y cookie para que inicie sesión automáticamente
+    // ... (código para setear cookie si lo tienen en el login)
+
+    return res.status(201).json({
+      success: true,
+      data: { usuario: nuevoUsuario, mensaje: "Registro exitoso" },
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al registrar usuario" });
+  }
+};
+```
+
+### 2. Modificar `src/modules/auth/auth.routes.ts`
+
+Importar `register` y agregar la ruta (debe ser pública, sin `authMiddleware`):
+
+```typescript
+import {
+  login,
+  logout,
+  verify,
+  changePassword,
+  register,
+} from "./auth.controller";
+
+// ... rutas existentes
+router.post("/register", register);
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.
+
+# Tarea 63 (Backend): Registro con DNI, cuenta inactiva y notificación al Admin
+
+## Contexto
+
+Vamos a modificar el registro público. Ahora el DNI será obligatorio. Cuando un usuario se registre, su cuenta se creará inactiva (`active: false`) y se deberá notificar al Administrador para que la habilite. Cuando el Admin la active, se le enviará un correo al usuario.
+
+## Lo que debés hacer
+
+### 1. Modificar el modelo `src/modules/usuarios/Usuario.model.ts`
+
+Asegurarse de que el campo `dni` sea obligatorio (`allowNull: false`) y único.
+
+```typescript
+  dni: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+```
+
+### 2. Modificar `register` en `src/modules/auth/auth.controller.ts`
+
+Actualizar la función para recibir el DNI, crear el usuario inactivo y simular el aviso al admin.
+
+```typescript
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password, first_name, last_name, dni } = req.body;
+
+    if (!username || !email || !password || !first_name || !last_name || !dni) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Todos los campos, incluyendo el DNI, son obligatorios",
+        });
+    }
+
+    const existeUsuario = await Usuario.findOne({ where: { email } });
+    if (existeUsuario) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El correo ya está registrado" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      password: hashedPassword,
+      first_name,
+      last_name,
+      dni,
+      role: "STAFF",
+      is_guest: true,
+      must_change_password: false,
+      active: false, // 👈 LA CUENTA NACE DESHABILITADA
+    });
+
+    // NOTIFICAR AL ADMIN (Aquí usarían su servicio de correos, ej. Nodemailer)
+    // Ejemplo conceptual:
+    console.log(
+      `[EMAIL] Notificar al Admin: El usuario ${username} con DNI ${dni} solicita activación.`,
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        mensaje:
+          "Registro exitoso. Tu cuenta está pendiente de aprobación por un Administrador.",
+        usuario: nuevoUsuario,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al registrar usuario" });
+  }
+};
+```
+
+### 3. Modificar el controlador de actualización de usuarios
+
+En `usuarios.controller.ts`, cuando el Admin cambia `active` a `true`, enviar el correo.
+
+```typescript
+export const updateUsuario = async (req: Request, res: Response) => {
+  // ... código de búsqueda del usuario
+  const isActivating = req.body.active === true && usuario.active === false;
+
+  // ... código que actualiza los datos
+
+  if (isActivating) {
+    // NOTIFICAR AL USUARIO (Nodemailer)
+    console.log(`[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido ACTIVADA. Ya puedes iniciar sesión.`);
+  }
+  // ...
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.

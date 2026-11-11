@@ -116,12 +116,17 @@ export class UsuariosController {
     }
 
     try {
-      const usuario = await this.usuariosService.update(
+      const { user, activated } = await this.usuariosService.update(
         id,
         parsedBody.data,
         req.user.id,
       );
-      res.status(200).json({ success: true, data: usuario });
+      if (activated) {
+        console.info(
+          `[EMAIL] La cuenta del usuario ${user.id} fue activada; debe notificarse al titular.`,
+        );
+      }
+      res.status(200).json({ success: true, data: user });
     } catch (error: unknown) {
       next(error);
     }

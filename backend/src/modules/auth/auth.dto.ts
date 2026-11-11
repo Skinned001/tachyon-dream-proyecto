@@ -7,6 +7,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  dni: string;
+}
+
 export interface AuthUser {
   id: number;
   username: string;
@@ -39,6 +48,15 @@ export interface ApiResponse<T = unknown> {
 export const loginRequestSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
+});
+
+export const registerRequestSchema = z.object({
+  username: z.string().trim().min(1).max(255),
+  email: z.string().trim().email().transform((email) => email.toLowerCase()),
+  password: z.string().min(8).max(72),
+  first_name: z.string().trim().min(1).max(255),
+  last_name: z.string().trim().min(1).max(255),
+  dni: z.string().trim().min(1).max(255),
 });
 
 export const changePasswordRequestSchema = z.object({

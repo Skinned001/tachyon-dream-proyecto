@@ -186,12 +186,13 @@ export class UsuariosService {
     id: number,
     input: UpdateUsuarioData,
     requesterId: number,
-  ): Promise<UsuarioDTO> {
+  ): Promise<{ user: UsuarioDTO; activated: boolean }> {
     return sequelize.transaction(async (transaction) => {
       const usuario = await Usuario.findByPk(id, { transaction });
       if (!usuario) {
         throw new UsuariosError(404, 'Usuario no encontrado');
       }
+      const activated = input.active === true && !usuario.active;
 
       if (usuario.id === requesterId && input.active === false) {
         throw new UsuariosError(400, 'No puede suspender su propia cuenta');
@@ -270,7 +271,7 @@ export class UsuariosService {
         roleName = role.name;
       }
 
-      return toUsuarioDTO(usuario, roleName);
+      return { user: toUsuarioDTO(usuario, roleName), activated };
     });
   }
 

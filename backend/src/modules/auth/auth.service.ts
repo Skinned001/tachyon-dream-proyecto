@@ -4,7 +4,12 @@ import { signToken, type AuthTokenPayload } from '../../config/jwt.js';
 import { sequelize } from '../../config/database.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
-import { isRoleName, type AuthUser, type LoginResponse } from './auth.dto.js';
+import {
+  isRoleName,
+  type AuthUser,
+  type LoginResponse,
+  type RegisterRequest,
+} from './auth.dto.js';
 
 export interface UpdateProfileData {
   first_name?: string;
@@ -54,6 +59,55 @@ const toAuthUser = (
 };
 
 export class AuthService {
+  async register(input: RegisterRequest): Promise<void> {
+    await sequelize.transaction(async (transaction) => {
+      const duplicate = await Usuario.findOne({
+        where: {
+          [Op.or]: [
+            { username: input.username },
+            { email: input.email },
+            { dni: input.dni },
+          ],
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (duplicate) {
+        throw new AuthError(
+          409,
+          'El nombre de usuario, correo o DNI ya está registrado',
+        );
+      }
+
+      const staffRole = await Rol.findOne({
+        where: { name: 'STAFF' },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!staffRole) {
+        throw new Error('No se encontró el rol STAFF para registrar al usuario.');
+      }
+
+      await Usuario.create(
+        {
+          username: input.username,
+          email: input.email,
+          password: await bcrypt.hash(input.password, 10),
+          first_name: input.first_name,
+          last_name: input.last_name,
+          dni: input.dni,
+          is_author: false,
+          is_guest: true,
+          active: false,
+          roleId: staffRole.id,
+          specialtyId: null,
+          must_change_password: false,
+        },
+        { transaction },
+      );
+    });
+  }
+
   async login(email: string, password: string): Promise<LoginResponse> {
     const result = await sequelize.transaction<LoginResult>(async (transaction) => {
       const user = await Usuario.findOne({

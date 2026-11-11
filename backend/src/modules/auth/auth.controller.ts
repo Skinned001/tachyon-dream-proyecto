@@ -6,6 +6,7 @@ import type { AuthUser, ApiResponse, LoginResponse } from './auth.dto.js';
 import {
   changePasswordRequestSchema,
   loginRequestSchema,
+  registerRequestSchema,
 } from './auth.dto.js';
 import { AuthService, type UpdateProfileData } from './auth.service.js';
 
@@ -38,6 +39,35 @@ const removeUploadedProfileImage = async (
 
 export class AuthController {
   constructor(private readonly authService = new AuthService()) {}
+
+  register = async (
+    req: Request<ParamsDictionary, ApiResponse<{ message: string }>, unknown>,
+    res: Response<ApiResponse<{ message: string }>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const parsedBody = registerRequestSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Todos los campos son obligatorios y deben tener un formato válido',
+      });
+      return;
+    }
+
+    try {
+      await this.authService.register(parsedBody.data);
+      console.info('[EMAIL] Hay una nueva cuenta invitada pendiente de aprobación.');
+      res.status(201).json({
+        success: true,
+        data: {
+          message:
+            'Registro exitoso. Tu cuenta está pendiente de aprobación por un Administrador.',
+        },
+      });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
 
   login = async (
     req: Request<ParamsDictionary, ApiResponse<LoginResponse>, unknown>,
