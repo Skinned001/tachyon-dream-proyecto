@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Camera, UserRound } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ArrowLeft, Camera, Edit3, UserRound } from 'lucide-react';
 import { changePassword, updateProfile } from '../api/auth.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -13,6 +13,8 @@ type Message = {
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+const allowedAvatarTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 const resolveImageUrl = (image: string): string => {
   try {
@@ -24,47 +26,87 @@ const resolveImageUrl = (image: string): string => {
 
 export const Perfil = () => {
   const { user, login } = useAuth();
-  const [profileData, setProfileData] = useState({
-    first_name: user?.first_name ?? '',
-    last_name: user?.last_name ?? '',
-    username: user?.username ?? '',
-    profile_image: user?.profile_image ?? '',
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    first_name: '',
+    last_name: '',
+    username: '',
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<Message | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [passwordData, setPasswordData] = useState({
     current: '',
-    next: '',
+    new: '',
     confirm: '',
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<Message | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    setProfileData({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      username: user.username,
-      profile_image: user.profile_image ?? '',
+    if (!avatarFile) {
+      setAvatarPreview(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [avatarFile]);
+
+  const startEditing = () => {
+    setEditData({
+      first_name: user?.first_name ?? '',
+      last_name: user?.last_name ?? '',
+      username: user?.username ?? '',
     });
-  }, [user]);
+    setAvatarFile(null);
+    setProfileMessage(null);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    if (isUpdatingProfile) return;
+    setAvatarFile(null);
+    setProfileMessage(null);
+    setIsEditing(false);
+  };
+
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+
+    if (!allowedAvatarTypes.includes(file.type)) {
+      setProfileMessage({
+        type: 'error',
+        text: 'La imagen debe ser JPG, PNG o WebP.',
+      });
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+      setProfileMessage({
+        type: 'error',
+        text: 'La imagen no puede superar los 5 MB.',
+      });
+      return;
+    }
+
+    setProfileMessage(null);
+    setAvatarFile(file);
+  };
 
   const handleUpdateProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setProfileMessage(null);
 
-    const updatedProfile = {
-      first_name: profileData.first_name.trim(),
-      last_name: profileData.last_name.trim(),
-      username: profileData.username.trim(),
-      profile_image: profileData.profile_image.trim() || null,
-    };
-    if (
-      !updatedProfile.first_name ||
-      !updatedProfile.last_name ||
-      !updatedProfile.username
-    ) {
+    const firstName = editData.first_name.trim();
+    const lastName = editData.last_name.trim();
+    const username = editData.username.trim();
+    if (!firstName || !lastName || !username) {
       setProfileMessage({
         type: 'error',
         text: 'Nombre, apellido y nombre de usuario son obligatorios.',
@@ -72,10 +114,20 @@ export const Perfil = () => {
       return;
     }
 
+    const formData = new FormData();
+    formData.append('first_name', firstName);
+    formData.append('last_name', lastName);
+    formData.append('username', username);
+    if (avatarFile) {
+      formData.append('avatar', avatarFile);
+    }
+
     setIsUpdatingProfile(true);
     try {
-      const updatedUser = await updateProfile(updatedProfile);
+      const updatedUser = await updateProfile(formData);
       login(updatedUser);
+      setAvatarFile(null);
+      setIsEditing(false);
       setProfileMessage({
         type: 'success',
         text: 'Perfil actualizado correctamente.',
@@ -95,14 +147,14 @@ export const Perfil = () => {
     event.preventDefault();
     setPasswordMessage(null);
 
-    if (passwordData.next !== passwordData.confirm) {
+    if (passwordData.new !== passwordData.confirm) {
       setPasswordMessage({
         type: 'error',
         text: 'Las contraseñas nuevas no coinciden.',
       });
       return;
     }
-    if (passwordData.next.length < 6) {
+    if (passwordData.new.length < 6) {
       setPasswordMessage({
         type: 'error',
         text: 'La nueva contraseña debe tener al menos 6 caracteres.',
@@ -112,8 +164,8 @@ export const Perfil = () => {
 
     setIsChangingPassword(true);
     try {
-      await changePassword(passwordData.current, passwordData.next);
-      setPasswordData({ current: '', next: '', confirm: '' });
+      await changePassword(passwordData.current, passwordData.new);
+      setPasswordData({ current: '', new: '', confirm: '' });
       setPasswordMessage({
         type: 'success',
         text: 'Contraseña actualizada correctamente.',
@@ -131,9 +183,11 @@ export const Perfil = () => {
     }
   };
 
-  const profileImageSrc = profileData.profile_image.trim()
-    ? resolveImageUrl(profileData.profile_image.trim())
-    : '';
+  const imageUrl = user?.profile_image
+    ? resolveImageUrl(user.profile_image)
+    : null;
+  const previewUrl = avatarPreview || imageUrl;
+  const initials = `${user?.first_name?.charAt(0) ?? ''}${user?.last_name?.charAt(0) ?? ''}`;
 
   return (
     <div className="space-y-6">
@@ -145,57 +199,89 @@ export const Perfil = () => {
           Mi Perfil
         </h2>
         <p className="mt-1 text-[13px] text-[#526e68]">
-          Administra tus datos personales y la seguridad de tu cuenta.
+          Consulta tus datos y administra la seguridad de tu cuenta.
         </p>
       </header>
 
-      <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
-        <Card title="Mis Datos Personales" className="h-full">
+      {profileMessage && !isEditing && (
+        <p
+          className={`rounded-md p-3 text-sm ${
+            profileMessage.type === 'error'
+              ? 'bg-red-50 text-red-600'
+              : 'bg-green-50 text-green-700'
+          }`}
+          role={profileMessage.type === 'error' ? 'alert' : 'status'}
+        >
+          {profileMessage.text}
+        </p>
+      )}
+
+      {isEditing ? (
+        <Card title="Editar Mis Datos">
           <form
             onSubmit={handleUpdateProfile}
             className="flex flex-col gap-4"
           >
-            <div className="mb-2 flex flex-col items-center gap-3">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100">
-                {profileImageSrc ? (
+            <button
+              type="button"
+              onClick={cancelEditing}
+              disabled={isUpdatingProfile}
+              className="flex items-center gap-1 self-start text-sm text-gray-500 hover:text-gray-800 disabled:opacity-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver a la vista de perfil
+            </button>
+
+            <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+                {previewUrl ? (
                   <img
-                    src={profileImageSrc}
-                    alt={`Foto de perfil de ${profileData.first_name}`}
+                    src={previewUrl}
+                    alt="Vista previa de la foto de perfil"
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <UserRound className="h-12 w-12 text-gray-400" />
+                  <UserRound className="h-8 w-8 text-gray-400" />
                 )}
               </div>
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Camera className="h-4 w-4" />
-                Foto mediante URL
+              <div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={isUpdatingProfile}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUpdatingProfile}
+                  className="gap-2"
+                >
+                  <Camera className="h-4 w-4" />
+                  Cambiar foto
+                </Button>
+                <p className="mt-1 text-xs text-gray-500">
+                  JPG, PNG o WebP. Máximo 5 MB.
+                </p>
+                {avatarFile && (
+                  <p className="mt-1 max-w-xs truncate text-xs text-gray-600">
+                    {avatarFile.name}
+                  </p>
+                )}
               </div>
             </div>
-
-            <Input
-              label="URL de imagen de perfil"
-              type="url"
-              name="profile_image"
-              placeholder="https://ejemplo.com/foto.jpg"
-              value={profileData.profile_image}
-              onChange={(event) =>
-                setProfileData((current) => ({
-                  ...current,
-                  profile_image: event.target.value,
-                }))
-              }
-              disabled={isUpdatingProfile}
-            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 label="Nombre"
                 name="first_name"
                 autoComplete="given-name"
-                value={profileData.first_name}
+                value={editData.first_name}
                 onChange={(event) =>
-                  setProfileData((current) => ({
+                  setEditData((current) => ({
                     ...current,
                     first_name: event.target.value,
                   }))
@@ -207,9 +293,9 @@ export const Perfil = () => {
                 label="Apellido"
                 name="last_name"
                 autoComplete="family-name"
-                value={profileData.last_name}
+                value={editData.last_name}
                 onChange={(event) =>
-                  setProfileData((current) => ({
+                  setEditData((current) => ({
                     ...current,
                     last_name: event.target.value,
                   }))
@@ -218,14 +304,13 @@ export const Perfil = () => {
                 required
               />
             </div>
-
             <Input
               label="Nombre de usuario"
               name="username"
               autoComplete="username"
-              value={profileData.username}
+              value={editData.username}
               onChange={(event) =>
-                setProfileData((current) => ({
+                setEditData((current) => ({
                   ...current,
                   username: event.target.value,
                 }))
@@ -253,25 +338,85 @@ export const Perfil = () => {
               </p>
             )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isUpdatingProfile}
-            >
-              Guardar cambios
-            </Button>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={cancelEditing}
+                disabled={isUpdatingProfile}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isUpdatingProfile}
+              >
+                Guardar cambios
+              </Button>
+            </div>
           </form>
         </Card>
+      ) : (
+        <Card>
+          <div className="flex flex-col items-center py-6">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Foto de perfil"
+                className="mb-4 h-32 w-32 rounded-full border-4 border-[#d7f2e6] object-cover"
+              />
+            ) : (
+              <div className="mb-4 flex h-32 w-32 items-center justify-center rounded-full bg-[#087d70] text-3xl font-bold text-white">
+                {initials || <UserRound className="h-12 w-12" />}
+              </div>
+            )}
+            <h3 className="text-2xl font-bold text-gray-800">
+              {user ? `${user.first_name} ${user.last_name}`.trim() : 'Usuario'}
+            </h3>
+            <p className="mb-2 text-gray-500">@{user?.username}</p>
+            {user?.role && (
+              <span className="mb-6 rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
+                Rol: {user.role}
+              </span>
+            )}
 
-        <Card title="Seguridad" className="h-full">
-          <form
-            onSubmit={handleChangePassword}
-            className="flex flex-col gap-4"
-          >
-            <p className="mb-2 text-sm text-gray-500">
-              Si tienes una contraseña temporal, cámbiala aquí.
-            </p>
+            <dl className="w-full max-w-md space-y-3 border-t border-gray-100 pt-4 text-sm text-gray-600">
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-gray-500">Correo</dt>
+                <dd className="break-all text-right">{user?.email ?? 'No disponible'}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-gray-500">Estado</dt>
+                <dd className={user?.active ? 'font-medium text-green-600' : 'font-medium text-red-600'}>
+                  {user?.active ? 'Activo' : 'Suspendido'}
+                </dd>
+              </div>
+            </dl>
 
+            <Button
+              type="button"
+              onClick={startEditing}
+              variant="primary"
+              className="mt-6 flex items-center gap-2"
+            >
+              <Edit3 className="h-4 w-4" />
+              Editar Perfil
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <Card title="Seguridad">
+        <form
+          onSubmit={handleChangePassword}
+          className="flex flex-col gap-4"
+        >
+          <p className="mb-2 text-sm text-gray-500">
+            Cambia tu contraseña regularmente para mantener tu cuenta segura.
+          </p>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <InputPassword
               label="Contraseña actual"
               name="current"
@@ -288,13 +433,13 @@ export const Perfil = () => {
             />
             <InputPassword
               label="Nueva contraseña"
-              name="next"
+              name="new"
               autoComplete="new-password"
-              value={passwordData.next}
+              value={passwordData.new}
               onChange={(event) =>
                 setPasswordData((current) => ({
                   ...current,
-                  next: event.target.value,
+                  new: event.target.value,
                 }))
               }
               disabled={isChangingPassword}
@@ -302,7 +447,7 @@ export const Perfil = () => {
               required
             />
             <InputPassword
-              label="Confirmar nueva contraseña"
+              label="Confirmar contraseña"
               name="confirm"
               autoComplete="new-password"
               value={passwordData.confirm}
@@ -316,30 +461,31 @@ export const Perfil = () => {
               minLength={6}
               required
             />
+          </div>
 
-            {passwordMessage && (
-              <p
-                className={`rounded-md p-3 text-sm ${
-                  passwordMessage.type === 'error'
-                    ? 'bg-red-50 text-red-600'
-                    : 'bg-green-50 text-green-700'
-                }`}
-                role={passwordMessage.type === 'error' ? 'alert' : 'status'}
-              >
-                {passwordMessage.text}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isChangingPassword}
+          {passwordMessage && (
+            <p
+              className={`rounded-md p-3 text-sm ${
+                passwordMessage.type === 'error'
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-green-50 text-green-700'
+              }`}
+              role={passwordMessage.type === 'error' ? 'alert' : 'status'}
             >
-              Actualizar contraseña
-            </Button>
-          </form>
-        </Card>
-      </div>
+              {passwordMessage.text}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isChangingPassword}
+            className="self-start"
+          >
+            Actualizar contraseña
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 };

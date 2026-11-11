@@ -5587,3 +5587,357 @@ export const updateProfile = async (req: Request, res: Response) => {
 ### 3. Verificación
 
 - Correr `npm run build` en el backend.
+
+# Tarea 52 (Frontend): Rediseñar Perfil con modo lectura, edición y subida de imagen
+
+## Contexto
+
+Vamos a rediseñar la pantalla de Perfil. Ahora tendrá dos estados:
+
+1. **Vista (Lectura):** Muestra la foto, datos y un botón "Editar Perfil".
+2. **Modo Edición:** Muestra los inputs, un selector de archivo para la foto y un botón de "Guardar".
+
+## Objetivo
+
+1. Cambiar el texto del menú de navegación a "Ver Perfil".
+2. Sobrescribir `src/pages/Perfil.tsx` con la lógica de alternancia (Ver/Editar) y subida de archivos.
+
+## Lo que debés hacer
+
+### 1. Actualizar el menú en `src/layouts/DashboardLayout.tsx`
+
+Buscar el enlace que dice "Editar Perfil" y cambiarlo por "Ver Perfil".
+
+### 2. Actualizar `src/api/auth.api.ts`
+
+La función `updateProfile` ahora debe enviar un `FormData` para soportar la imagen:
+
+```typescript
+export const updateProfile = async (formData: FormData): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    "/auth/profile",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  if (!data.success || !data.data)
+    throw new Error(data.error || "Error al actualizar perfil");
+  return data.data;
+};
+```
+
+### 3. Sobrescribir `src/pages/Perfil.tsx`
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword, updateProfile } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { InputPassword } from "../components/ui/InputPassword";
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Camera, Edit3, ArrowLeft } from "lucide-react";
+
+export const Perfil = () => {
+  const { user, login } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Datos para edición
+  const [editData, setEditData] = useState({
+    first_name: "",
+    last_name: "",
+    username: "",
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Contraseña
+  const [passData, setPassData] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState({ type: "", text: "" });
+
+  const startEditing = () => {
+    setEditData({
+      first_name: user?.first_name || "",
+      last_name: user?.last_name || "",
+      username: user?.username || "",
+    });
+    setAvatarFile(null);
+    setProfileMsg({ type: "", text: "" });
+    setIsEditing(true);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileMsg({ type: "", text: "" });
+
+    const formData = new FormData();
+    formData.append("first_name", editData.first_name);
+    formData.append("last_name", editData.last_name);
+    formData.append("username", editData.username);
+    if (avatarFile) {
+      formData.append("avatar", avatarFile); // 'avatar' debe coincidir con el multer del backend
+    }
+
+    try {
+      const updatedUser = await updateProfile(formData);
+      login(updatedUser);
+      setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+      setIsEditing(false); // Volver a la vista de lectura
+    } catch (err: any) {
+      setProfileMsg({ type: "error", text: err.message });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passData.new !== passData.confirm)
+      return setPassMsg({
+        type: "error",
+        text: "Las contraseñas no coinciden.",
+      });
+    setIsChangingPass(true);
+    try {
+      await changePassword(passData.current, passData.new);
+      setPassMsg({ type: "success", text: "Contraseña actualizada." });
+      setPassData({ current: "", new: "", confirm: "" });
+    } catch (err: any) {
+      setPassMsg({ type: "error", text: err.message });
+    } finally {
+      setIsChangingPass(false);
+    }
+  };
+
+  const getInitials = () =>
+    `${user?.first_name?.charAt(0) || ""}${user?.last_name?.charAt(0) || ""}`;
+
+  // URL de la imagen (asumiendo que el backend la sirve en el puerto 3000)
+  const imageUrl = user?.profile_image
+    ? `http://localhost:3000${user.profile_image}`
+    : null;
+
+  return (
+    <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      {/* --- VISTA DE LECTURA --- */}
+      {!isEditing ? (
+        <>
+          <Card>
+            <div className="flex flex-col items-center py-6">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt="Perfil"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-institucional-100 mb-4"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-institucional-600 text-white flex items-center justify-center text-3xl font-bold mb-4">
+                  {getInitials()}
+                </div>
+              )}
+              <h2 className="text-2xl font-bold text-gray-800">
+                {user?.first_name} {user?.last_name}
+              </h2>
+              <p className="text-gray-500 mb-2">@{user?.username}</p>
+
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-semibold rounded-full mb-6">
+                Rol: {user?.role}
+              </span>
+
+              <div className="w-full max-w-md space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-500">Correo:</span>
+                  <span>{user?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-500">Estado:</span>
+                  <span className="text-green-600 font-medium">Activo</span>
+                </div>
+              </div>
+
+              <Button
+                onClick={startEditing}
+                variant="primary"
+                className="mt-6 flex items-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" /> Editar Perfil
+              </Button>
+            </div>
+          </Card>
+        </>
+      ) : (
+        /* --- MODO EDICIÓN --- */
+        <Card title="Editar Mis Datos">
+          <form onSubmit={handleUpdateProfile} className="flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 self-start"
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a la vista de perfil
+            </button>
+
+            {/* Foto de Perfil */}
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {imageUrl || avatarFile ? (
+                <img
+                  src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl!}
+                  alt="Preview"
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                  <UserIcon className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) =>
+                    setAvatarFile(e.target.files ? e.target.files[0] : null)
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="w-4 h-4 mr-2" /> Cambiar Foto
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG o PNG de máx. 2MB.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Nombre"
+                value={editData.first_name}
+                onChange={(e) =>
+                  setEditData({ ...editData, first_name: e.target.value })
+                }
+                required
+              />
+              <Input
+                label="Apellido"
+                value={editData.last_name}
+                onChange={(e) =>
+                  setEditData({ ...editData, last_name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <Input
+              label="Nombre de Usuario"
+              value={editData.username}
+              onChange={(e) =>
+                setEditData({ ...editData, username: e.target.value })
+              }
+              required
+            />
+            <Input
+              label="Correo Electrónico (No editable)"
+              value={user?.email || ""}
+              disabled
+              className="bg-gray-50 text-gray-500"
+            />
+
+            {profileMsg.text && (
+              <div
+                className={`p-2 text-sm rounded ${profileMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+              >
+                {profileMsg.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isUpdatingProfile}
+            >
+              Guardar Cambios
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {/* --- CAMBIO DE CONTRASEÑA (Siempre visible abajo) --- */}
+      <Card title="Seguridad">
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+          <p className="text-sm text-gray-500 mb-2">
+            Cambia tu contraseña regularmente para mantener tu cuenta segura.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InputPassword
+              label="Contraseña Actual"
+              value={passData.current}
+              onChange={(e) =>
+                setPassData({ ...passData, current: e.target.value })
+              }
+              required
+            />
+            <InputPassword
+              label="Nueva Contraseña"
+              value={passData.new}
+              onChange={(e) =>
+                setPassData({ ...passData, new: e.target.value })
+              }
+              required
+            />
+            <InputPassword
+              label="Confirmar Contraseña"
+              value={passData.confirm}
+              onChange={(e) =>
+                setPassData({ ...passData, confirm: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          {passMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${passMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {passMsg.text}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isChangingPass}
+            className="self-start"
+          >
+            Actualizar Contraseña
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+};
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.

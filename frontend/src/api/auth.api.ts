@@ -52,15 +52,11 @@ export const changePassword = async (
   }
 };
 
-export const updateProfile = async (profile: {
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  profile_image?: string | null;
-}): Promise<User> => {
+export const updateProfile = async (formData: FormData): Promise<User> => {
   const { data } = await axiosClient.put<ApiResponse<User>>(
     '/auth/profile',
-    profile,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al actualizar perfil');
