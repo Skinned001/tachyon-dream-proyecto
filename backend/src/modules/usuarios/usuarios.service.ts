@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
+import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { isRoleName, type RoleName } from '../auth/auth.dto.js';
 import { Rol } from './Rol.model.js';
 import { Usuario } from './Usuario.model.js';
@@ -13,9 +14,11 @@ export interface UsuarioDTO {
   email: string;
   first_name: string;
   last_name: string;
+  profile_image: string | null;
   dni: string;
   role: RoleName;
   is_author: boolean;
+  is_guest: boolean;
   specialtyId: number | null;
   must_change_password: boolean;
   active: boolean;
@@ -29,6 +32,7 @@ export interface CreateUsuarioData {
   dni: string;
   role: RoleName;
   is_author: boolean;
+  is_guest: boolean;
   specialtyId?: number | null;
 }
 
@@ -40,6 +44,7 @@ export interface UpdateUsuarioData {
   dni?: string;
   role?: RoleName;
   is_author?: boolean;
+  is_guest?: boolean;
   specialtyId?: number | null;
   active?: boolean;
 }
@@ -68,9 +73,11 @@ const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
     email: usuario.email,
     first_name: usuario.first_name,
     last_name: usuario.last_name,
+    profile_image: usuario.profile_image,
     dni: usuario.dni,
     role: roleName,
     is_author: usuario.is_author,
+    is_guest: usuario.is_guest,
     specialtyId: usuario.specialtyId,
     must_change_password: usuario.must_change_password,
     active: usuario.active,
@@ -149,6 +156,7 @@ export class UsuariosService {
           last_name: input.last_name,
           dni: input.dni,
           is_author: input.is_author,
+          is_guest: input.is_guest,
           password,
           roleId: role.id,
           specialtyId,
@@ -185,6 +193,8 @@ export class UsuariosService {
       if (!usuario) {
         throw new UsuariosError(404, 'Usuario no encontrado');
       }
+      const activated = input.active === true && !usuario.active;
+      const deactivated = input.active === false && usuario.active;
 
       if (usuario.id === requesterId && input.active === false) {
         throw new UsuariosError(400, 'No puede suspender su propia cuenta');
@@ -247,12 +257,42 @@ export class UsuariosService {
       if (input.last_name !== undefined) usuario.last_name = input.last_name;
       if (input.dni !== undefined) usuario.dni = input.dni;
       if (input.is_author !== undefined) usuario.is_author = input.is_author;
+      if (input.is_guest !== undefined) usuario.is_guest = input.is_guest;
       if (input.specialtyId !== undefined) {
         usuario.specialtyId = input.specialtyId;
       }
       if (input.active !== undefined) usuario.active = input.active;
 
       await usuario.save({ transaction });
+
+      if (activated) {
+        await Notificacion.create(
+          {
+            userId: usuario.id,
+            title: 'Cuenta habilitada',
+            message: 'Tu cuenta fue habilitada. Ya puedes iniciar sesión.',
+            read: false,
+          },
+          { transaction },
+        );
+        console.info(
+          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido HABILITADA. Ya puedes iniciar sesión.`,
+        );
+      } else if (deactivated) {
+        await Notificacion.create(
+          {
+            userId: usuario.id,
+            title: 'Cuenta deshabilitada',
+            message:
+              'Un administrador deshabilitó tu cuenta. Contacta al equipo administrador si necesitas más información.',
+            read: false,
+          },
+          { transaction },
+        );
+        console.info(
+          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido DESHABILITADA.`,
+        );
+      }
 
       if (!roleName) {
         const role = await Rol.findByPk(usuario.roleId, { transaction });

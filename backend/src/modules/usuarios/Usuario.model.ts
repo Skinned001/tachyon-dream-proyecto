@@ -16,8 +16,10 @@ export class Usuario extends Model<InferAttributes<Usuario>, InferCreationAttrib
   declare password: string;
   declare first_name: string;
   declare last_name: string;
+  declare profile_image: CreationOptional<string | null>;
   declare dni: string;
   declare is_author: CreationOptional<boolean>;
+  declare is_guest: CreationOptional<boolean>;
   declare active: boolean;
   declare roleId: number;
   declare specialtyId: number | null;
@@ -36,8 +38,10 @@ export const initializeUsuarioModel = (sequelize: Sequelize): void => {
       password: { type: DataTypes.STRING, allowNull: false },
       first_name: { type: DataTypes.STRING, allowNull: false },
       last_name: { type: DataTypes.STRING, allowNull: false },
-      dni: { type: DataTypes.STRING, allowNull: false },
+      profile_image: { type: DataTypes.STRING, allowNull: true, defaultValue: null },
+      dni: { type: DataTypes.STRING, allowNull: false, unique: true },
       is_author: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+      is_guest: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       active: { type: DataTypes.BOOLEAN, allowNull: false },
       roleId: { type: DataTypes.INTEGER, allowNull: false },
       specialtyId: { type: DataTypes.INTEGER, allowNull: true },

@@ -151,7 +151,7 @@ export const MisArticulos = () => {
                     <div className="mt-3 flex items-center gap-3">
                       <p className="text-[10px] text-[#58786f]">Enviado: {articulo.createdAt ? new Date(articulo.createdAt).toLocaleDateString("es-AR") : "Fecha desconocida"}</p>
                       {articulo.fileUrl && (
-                         <a href={`http://localhost:3000${articulo.fileUrl}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-semibold text-[#087366] hover:underline">
+                         <a href={articulo.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-semibold text-[#087366] hover:underline">
                            <FileText size={12} /> Ver PDF
                          </a>
                       )}

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Transaction, WhereOptions } from 'sequelize';
+import { Op, type Includeable, type Transaction, type WhereOptions } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { Articulo, type ArticleState } from './Articulo.model.js';
 import { ArticuloVersion } from './ArticuloVersion.model.js';
@@ -11,6 +11,7 @@ import type {
   ArticleDTO,
   AuthenticatedArticleUser,
   CreateArticleDraftRequest,
+  PublishedArticleDTO,
 } from './articulo.dto.js';
 
 const INITIAL_ARTICLE_STATE: ArticleState = 'EN_REVISION';
@@ -79,6 +80,64 @@ const toArticleDTO = (article: Articulo): ArticleDTO => {
   return dto;
 };
 
+const toPublishedArticleDTO = (article: Articulo): PublishedArticleDTO => {
+  const latestVersion = article.versions?.[0];
+  const dto: PublishedArticleDTO = {
+    id: article.id,
+    title: article.title,
+    createdAt: article.createdAt.toISOString(),
+    pdfAvailable: Boolean(latestVersion?.pdf_path),
+  };
+
+  if (article.summary) {
+    dto.summary = article.summary;
+  }
+  if (article.keywords) {
+    dto.keywords = article.keywords;
+  }
+  if (article.coauthors) {
+    dto.coauthors = article.coauthors;
+  }
+  if (article.specialty) {
+    dto.specialty = { id: article.specialty.id, name: article.specialty.name };
+  }
+
+  return dto;
+};
+
+const publishedArticleIncludes: Includeable[] = [
+  {
+    model: Especialidad,
+    as: 'specialty',
+    attributes: ['id', 'name'],
+  },
+  {
+    model: ArticuloVersion,
+    as: 'versions',
+    attributes: ['version_number', 'pdf_path'],
+    where: { pdf_path: { [Op.ne]: null } },
+    separate: true,
+    order: [['version_number', 'DESC']],
+  },
+];
+
+const getPublicArticlePdfPath = (storedPath: string): string => {
+  const articleDirectory = path.resolve(process.cwd(), 'uploads', 'articles');
+  const resolvedPath = path.resolve(process.cwd(), storedPath);
+  const relativePath = path.relative(articleDirectory, resolvedPath);
+
+  if (
+    relativePath === '' ||
+    relativePath === '..' ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error('La ruta del PDF del artículo está fuera del directorio permitido.');
+  }
+
+  return resolvedPath;
+};
+
 const findArticleOrThrow = async (
   id: number,
   transaction?: Transaction,
@@ -106,6 +165,55 @@ const cleanupUploadedFile = (filePath: string): void => {
 };
 
 export class ArticuloService {
+  async listarArticulosPublicados(): Promise<PublishedArticleDTO[]> {
+    const articles = await Articulo.findAll({
+      where: { state: 'PUBLICADO' },
+      include: publishedArticleIncludes,
+      order: [['createdAt', 'DESC']],
+    });
+
+    return articles.map((article) => {
+      const dto = toPublishedArticleDTO(article);
+      const pdfPath = article.versions?.[0]?.pdf_path;
+      if (pdfPath) {
+        dto.pdfAvailable = fs.existsSync(getPublicArticlePdfPath(pdfPath));
+      }
+      return dto;
+    });
+  }
+
+  async obtenerPdfPublicado(id: number): Promise<string> {
+    const article = await Articulo.findOne({
+      where: { id, state: 'PUBLICADO' },
+      include: [
+        {
+          model: ArticuloVersion,
+          as: 'versions',
+          attributes: ['version_number', 'pdf_path'],
+          where: { pdf_path: { [Op.ne]: null } },
+          separate: true,
+          order: [['version_number', 'DESC']],
+        },
+      ],
+    });
+
+    if (!article) {
+      throw new ArticuloError(404, 'Artículo publicado no encontrado');
+    }
+
+    const pdfPath = article.versions?.[0]?.pdf_path;
+    if (!pdfPath) {
+      throw new ArticuloError(404, 'El artículo publicado no tiene un PDF disponible');
+    }
+
+    const resolvedPath = getPublicArticlePdfPath(pdfPath);
+    if (!fs.existsSync(resolvedPath)) {
+      throw new ArticuloError(404, 'El PDF de la publicación no está disponible');
+    }
+
+    return resolvedPath;
+  }
+
   async crearArticulo(
     data: CreateArticleDraftRequest,
     file: Express.Multer.File,

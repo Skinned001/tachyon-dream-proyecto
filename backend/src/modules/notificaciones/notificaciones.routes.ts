@@ -1,6 +1,12 @@
 import { Router } from 'express';
+import { authenticateJWT } from '../../middlewares/auth.middleware.js';
+import { NotificacionesController } from './notificaciones.controller.js';
 
 const router = Router();
-router.get('/', (_req, res) => res.json({ success: true, data: [] }));
+const controller = new NotificacionesController();
+
+router.use(authenticateJWT);
+router.get('/', controller.list);
+router.patch('/:id/read', controller.markAsRead);
 
 export default router;

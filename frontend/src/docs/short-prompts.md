@@ -4631,3 +4631,2339 @@ _(Nota: Usamos el estado `createdPassword` que ya tenías para la creación. Al 
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 44 (Frontend): Mostrar la nueva contraseña en un modal con botón de copiar
+
+## Contexto
+
+El backend ahora devuelve `tempPassword` al reiniciar la contraseña. Queremos mostrar esa contraseña en un modal (igual que cuando creamos un usuario) en lugar de un `alert`.
+
+## Objetivo
+
+1. Actualizar `src/api/usuarios.api.ts`.
+2. Modificar `src/pages/AdminUsuarios.tsx` para reutilizar la pantalla de éxito.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/usuarios.api.ts`
+
+Modificar la función `resetPassword` para que retorne la contraseña:
+
+```typescript
+export const resetPassword = async (id: number): Promise<string> => {
+  const { data } = await axiosClient.post<
+    ApiResponse<{ tempPassword: string }>
+  >(`/usuarios/${id}/reset-password`);
+  if (!data.success || !data.data) {
+    throw new Error(data.error || "Error al reiniciar contraseña");
+  }
+  return data.data.tempPassword;
+};
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+En la función `handleResetPassword`:
+
+```tsx
+const handleResetPassword = async (id: number) => {
+  if (window.confirm("¿Generar nueva contraseña temporal para este usuario?")) {
+    try {
+      const newPassword = await resetPassword(id);
+
+      // En lugar de un alert, abrimos el modal de éxito
+      setCreatedPassword(newPassword);
+      setIsModalOpen(true);
+      setEditingUserId(null); // Aseguramos que no estamos editando
+    } catch (err) {
+      alert("Error al reiniciar contraseña");
+    }
+  }
+  setOpenMenuId(null);
+};
+```
+
+_(Nota: Usamos el estado `createdPassword` que ya tenías para la creación. Al setearlo, el Modal automáticamente mostrará la vista de la contraseña con el botón de copiar en lugar del formulario)._
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 45 (Frontend): Menú desplegable de Perfil de Usuario
+
+## Contexto
+
+En la barra superior (`DashboardLayout.tsx`), al lado del nombre del usuario hay un triángulo (chevron). Queremos que al hacer clic se abra un menú desplegable con opciones para ir al Perfil (cambiar contraseña, foto, etc.) y Cerrar Sesión.
+
+## Objetivo
+
+Modificar `src/layouts/DashboardLayout.tsx` para agregar el menú desplegable.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/layouts/DashboardLayout.tsx`
+
+Agregar un estado para abrir/cerrar el menú:
+
+```tsx
+const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+```
+
+Reemplazar la sección del `<header>` donde se muestra el usuario por esta estructura:
+
+```tsx
+// Asegurate de importar los íconos: ChevronDown, User, LogOut
+import { ChevronDown, User, LogOut } from "lucide-react";
+
+// ... dentro del header:
+<div className="flex items-center gap-4 relative">
+  <button
+    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+    className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-md transition-colors"
+  >
+    {/* Avatar (círculo con iniciales o imagen) */}
+    <div className="w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm">
+      {user?.first_name?.charAt(0)}
+      {user?.last_name?.charAt(0)}
+    </div>
+    <div className="text-left hidden md:block">
+      <p className="text-sm font-medium text-gray-800">
+        {user?.first_name} {user?.last_name}
+      </p>
+      <p className="text-xs text-gray-500">{user?.role}</p>
+    </div>
+    <ChevronDown className="w-4 h-4 text-gray-400" />
+  </button>
+
+  {/* MENÚ DESPLEGABLE DE PERFIL */}
+  {isProfileMenuOpen && (
+    <div className="absolute top-12 right-0 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+      <Link
+        to="/perfil"
+        onClick={() => setIsProfileMenuOpen(false)}
+        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+      >
+        <User className="w-4 h-4 text-blue-500" /> Editar Perfil
+      </Link>
+      <div className="border-t border-gray-100 my-1"></div>
+      <button
+        onClick={handleLogout}
+        className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+      >
+        <LogOut className="w-4 h-4" /> Cerrar Sesión
+      </button>
+    </div>
+  )}
+</div>;
+```
+
+### 2. Limpieza
+
+- Quitar el botón de "Cerrar Sesión" que estaba suelto a la derecha (ya que ahora está dentro del menú desplegable).
+- Crear un archivo placeholder `src/pages/Perfil.tsx` para que la ruta `/perfil` no rompa la app:
+
+```tsx
+export const Perfil = () => (
+  <div className="p-8">
+    <h1>Mi Perfil</h1>
+  </div>
+);
+```
+
+- Agregar la ruta en `src/routes/AppRoutes.tsx`: `<Route path="perfil" element={<Perfil />} />`.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 46 (Backend): Agregar atributo is_guest para usuarios autoregistrados
+
+## Contexto
+
+Los usuarios ahora pueden registrarse a sí mismos para participar en convocatorias (Invitados). No queremos crear un nuevo Rol para esto, sino un atributo booleano `is_guest` que indique que la cuenta fue creada por el propio usuario y no por un administrador.
+
+## Objetivo
+
+1. Agregar `is_guest` al modelo de Usuario.
+2. Asegurar que los controladores de creación y edición acepten este campo.
+
+## Lo que debés hacer
+
+### 1. Modificar el modelo de Usuario (ej. `src/modules/usuarios/Usuario.model.ts`)
+
+Agregar el campo booleano en la definición del modelo Sequelize:
+
+```typescript
+  is_guest: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
+```
+
+### 2. Actualizar controladores (`usuarios.controller.ts`)
+
+Asegurarse de que `createUsuario` y `updateUsuario` guarden/actualicen el campo `is_guest` si viene en el `req.body` (por si el admin quiere quitarle la condición de invitado a alguien).
+
+### 3. Verificación
+
+- Si usan `sequelize.sync({ alter: true })`, reiniciar el backend para que se cree la columna en la base de datos.
+
+## Respuesta esperada
+
+Confirmame que el modelo fue actualizado y si compila.
+
+# Tarea 47 (Frontend): Etiquetas apiladas en la tabla y soporte para Invitado
+
+## Contexto
+
+Vamos a mejorar el diseño de la tabla de usuarios para que las etiquetas (Rol, Autor, Invitado) se apilen verticalmente como en el diseño de referencia. Además, agregaremos el campo `is_guest` a los tipos y a la lógica visual.
+
+## Objetivo
+
+1. Actualizar los tipos en `src/types/user.types.ts`.
+2. Modificar la columna "Rol / Autor" en `src/pages/AdminUsuarios.tsx` para usar un flex vertical.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar `is_guest` a `User`, `CreateUserRequest` y `UpdateUserRequest`:
+
+```typescript
+// En la interfaz User y Create/Update:
+is_guest?: boolean;
+```
+
+### 2. Actualizar `src/pages/AdminUsuarios.tsx`
+
+En la tabla (dentro del `<tbody>`), reemplazar la celda de "Rol / Autor" por esta estructura:
+
+```tsx
+<td className="py-3 px-4">
+  <div className="flex flex-col gap-1.5 items-start">
+    {/* Etiqueta del Rol Principal */}
+    <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-200">
+      {u.role}
+    </span>
+
+    {/* Etiquetas secundarias (Permisos) */}
+    {u.is_author && (
+      <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-200">
+        AUTOR
+      </span>
+    )}
+
+    {u.is_guest && (
+      <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+        INVITADO
+      </span>
+    )}
+  </div>
+</td>
+```
+
+### 3. Actualizar el Formulario del Modal (Opcional pero recomendado)
+
+En la sección "Permisos Especiales" del modal, agregar un checkbox para el estado de invitado, por si el Admin decide ascender a un invitado a un usuario regular:
+
+```tsx
+<div className="flex items-start gap-2 mt-3">
+  <input
+    type="checkbox"
+    id="is_guest"
+    name="is_guest"
+    checked={formulario.is_guest || false}
+    onChange={(e) =>
+      setFormulario({ ...formulario, is_guest: e.target.checked })
+    }
+    className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+  />
+  <div>
+    <label
+      htmlFor="is_guest"
+      className="text-sm font-medium text-gray-700 cursor-pointer"
+    >
+      Usuario Invitado (Autoregistrado)
+    </label>
+    <p className="text-xs text-gray-500">
+      Indica que el usuario se registró por su cuenta para una convocatoria.
+    </p>
+  </div>
+</div>
+```
+
+_(No olvides agregar `is_guest: false` al estado inicial del `useForm`)._
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 48: Crear pantalla de Perfil y conectar cambio de contraseña
+
+## Contexto
+
+El usuario logueado necesita una pantalla en `/perfil` para ver sus datos y, lo más importante, cambiar la contraseña temporal que le asignó el administrador. El backend ya tiene el endpoint `POST /api/auth/change-password`.
+
+## Objetivo
+
+1. Actualizar `src/api/auth.api.ts` con la función `changePassword`.
+2. Crear la pantalla `src/pages/Perfil.tsx` con un formulario de cambio de contraseña.
+3. Conectar el botón "Editar Perfil" del menú desplegable para que navegue a esta pantalla.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/auth.api.ts`
+
+Agregar esta función al final del archivo:
+
+```typescript
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    "/auth/change-password",
+    {
+      currentPassword,
+      newPassword,
+    },
+  );
+  if (!data.success) {
+    throw new Error(data.error || "Error al cambiar la contraseña");
+  }
+};
+```
+
+### 2. Crear `src/pages/Perfil.tsx`
+
+Crear la pantalla con los datos del usuario (solo lectura) y un formulario seguro para cambiar la contraseña.
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Key } from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const Perfil = () => {
+  const { user } = useAuth();
+  const [isChanging, setIsChanging] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const { formulario, handleChange, resetForm } = useForm({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (formulario.newPassword !== formulario.confirmPassword) {
+      setError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+    if (formulario.newPassword.length < 6) {
+      setError("La nueva contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setIsChanging(true);
+    try {
+      await changePassword(formulario.currentPassword, formulario.newPassword);
+      setSuccess("Contraseña actualizada correctamente.");
+      resetForm();
+    } catch (err: any) {
+      setError(err.message || "Error al cambiar la contraseña");
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6">
+      {/* Tarjeta de Datos del Usuario */}
+      <div className="flex-1">
+        <Card title="Mis Datos">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-24 h-24 bg-institucional-100 text-institucional-700 rounded-full flex items-center justify-center mb-4">
+              <UserIcon className="w-12 h-12" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">
+              {user?.first_name} {user?.last_name}
+            </h2>
+            <p className="text-gray-500 text-sm">@{user?.username}</p>
+            <span className="mt-2 px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
+              Rol: {user?.role}
+            </span>
+          </div>
+
+          <div className="space-y-3 text-sm text-gray-600">
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-medium text-gray-500">Correo:</span>
+              <span>{user?.email}</span>
+            </div>
+            <div className="flex justify-between border-b pb-2">
+              <span className="font-medium text-gray-500">
+                Especialidad ID:
+              </span>
+              <span>{user?.specialtyId || "No asignada"}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tarjeta de Cambio de Contraseña */}
+      <div className="flex-1">
+        <Card title="Seguridad">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 mb-2 text-gray-700">
+              <Key className="w-5 h-5 text-blue-500" />
+              <p className="text-sm">Cambia tu contraseña regularmente.</p>
+            </div>
+
+            <Input
+              label="Contraseña Actual"
+              type="password"
+              name="currentPassword"
+              value={formulario.currentPassword}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Nueva Contraseña"
+              type="password"
+              name="newPassword"
+              value={formulario.newPassword}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="Confirmar Nueva Contraseña"
+              type="password"
+              name="confirmPassword"
+              value={formulario.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 text-sm text-green-600 bg-green-50 rounded-md">
+                {success}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isChanging}
+              className="mt-2"
+            >
+              Actualizar Contraseña
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar `src/routes/AppRoutes.tsx`
+
+Asegurate de importar y agregar la ruta de perfil dentro de las rutas privadas:
+
+```tsx
+import { Perfil } from "../pages/Perfil";
+
+// Dentro de <Route element={<PrivateRoutes />}> y <Route path="/" element={<DashboardLayout />}>
+<Route path="perfil" element={<Perfil />} />;
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados y si `npm run build` pasó.
+
+# Tarea 49 (Backend): Crear endpoint para que el usuario edite su propio perfil
+
+## Contexto
+
+Los usuarios necesitan poder editar sus datos básicos (nombre, apellido, nombre de usuario) y subir una foto de perfil.
+
+## Objetivo
+
+Crear el controlador y la ruta `PUT /api/auth/profile`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/usuarios/Usuario.model.ts` (o el modelo correspondiente)
+
+Si no existe, agregar el campo para la foto:
+
+```typescript
+  profile_image: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null
+  },
+```
+
+### 2. Modificar `src/modules/auth/auth.controller.ts`
+
+Agregar la función `updateProfile`. (Asumimos que ya tienes un middleware `authMiddleware` que pone al usuario en `req.user`).
+
+```typescript
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id; // El ID viene del token
+    const { first_name, last_name, username, profile_image } = req.body;
+
+    const usuario = await Usuario.findByPk(userId);
+    if (!usuario)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+
+    // Actualizar solo los campos enviados
+    if (first_name) usuario.first_name = first_name;
+    if (last_name) usuario.last_name = last_name;
+    if (username) usuario.username = username;
+    if (profile_image !== undefined) usuario.profile_image = profile_image;
+
+    await usuario.save();
+
+    return res.status(200).json({ success: true, data: usuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar perfil" });
+  }
+};
+```
+
+### 3. Modificar `src/modules/auth/auth.routes.ts`
+
+Importar `updateProfile` y agregar la ruta protegida:
+
+```typescript
+router.put("/profile", authMiddleware, updateProfile);
+```
+
+### 4. Verificación
+
+- Correr `npm run build` en el backend.
+
+## Respuesta esperada
+
+Confirmame que el modelo y el controlador fueron actualizados y si compila.
+
+# Tarea 50 (Frontend): Interfaz completa de Perfil con edición, foto y ver contraseña
+
+## Contexto
+
+Vamos a rediseñar `src/pages/Perfil.tsx` para que sea una pantalla completa. Necesitamos:
+
+1. Un botón de "ojito" (mostrar/ocultar) en los campos de contraseña.
+2. Un formulario para editar Nombre, Apellido y Usuario.
+3. Un campo para subir una URL de imagen de perfil.
+4. (El error de Firefox suele ser por variables de entorno mal configuradas, pero al reescribir el componente nos aseguramos de que no sea un error del código de React).
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/types/user.types.ts`
+
+Agregar el campo de imagen al tipo User:
+
+```typescript
+  profile_image?: string | null;
+```
+
+### 2. Actualizar `src/api/auth.api.ts`
+
+Agregar la función para guardar los datos del perfil:
+
+```typescript
+export const updateProfile = async (data: {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image?: string;
+}): Promise<User> => {
+  const { data: resData } = await axiosClient.put<ApiResponse<User>>(
+    "/auth/profile",
+    data,
+  );
+  if (!resData.success || !resData.data)
+    throw new Error(resData.error || "Error al actualizar perfil");
+  return resData.data;
+};
+```
+
+### 3. Crear un componente InputPassword en `src/components/ui/InputPassword.tsx`
+
+Para reutilizar el "ojito" (esto arregla el problema de UX):
+
+```tsx
+import { useState, forwardRef, type InputHTMLAttributes } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+interface InputPasswordProps extends InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  error?: string;
+}
+
+export const InputPassword = forwardRef<HTMLInputElement, InputPasswordProps>(
+  ({ label, error, className = "", id, ...props }, ref) => {
+    const [show, setShow] = useState(false);
+    const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <div className="relative">
+          <input
+            id={inputId}
+            ref={ref}
+            type={show ? "text" : "password"}
+            className={`w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${className}`}
+            {...props}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {show ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {error && <span className="text-sm text-red-500">{error}</span>}
+      </div>
+    );
+  },
+);
+InputPassword.displayName = "InputPassword";
+```
+
+### 4. Sobrescribir `src/pages/Perfil.tsx`
+
+Aquí unimos todo. Usamos un estado local para manejar los cambios y actualizar el contexto:
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword, updateProfile } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { InputPassword } from "../components/ui/InputPassword"; // El nuevo
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Camera } from "lucide-react";
+
+export const Perfil = () => {
+  const { user, login } = useAuth(); // 'login' actualiza el contexto global
+
+  // Estados para los datos del perfil
+  const [profileData, setProfileData] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    username: user?.username || "",
+    profile_image: user?.profile_image || "",
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
+
+  // Estados para la contraseña
+  const [passData, setPassData] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState({ type: "", text: "" });
+
+  // Sincronizar si el usuario cambia
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        username: user.username || "",
+        profile_image: user.profile_image || "",
+      });
+    }
+  }, [user]);
+
+  // --- Lógica de Perfil ---
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileMsg({ type: "", text: "" });
+
+    try {
+      const updatedUser = await updateProfile(profileData);
+      login(updatedUser); // Actualizamos el contexto global con los nuevos datos
+      setProfileMsg({
+        type: "success",
+        text: "Perfil actualizado correctamente.",
+      });
+    } catch (err: any) {
+      setProfileMsg({ type: "error", text: err.message });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  // --- Lógica de Contraseña ---
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passData.new !== passData.confirm) {
+      return setPassMsg({
+        type: "error",
+        text: "Las contraseñas nuevas no coinciden.",
+      });
+    }
+
+    setIsChangingPass(true);
+    setPassMsg({ type: "", text: "" });
+
+    try {
+      await changePassword(passData.current, passData.new);
+      setPassMsg({ type: "success", text: "Contraseña actualizada." });
+      setPassData({ current: "", new: "", confirm: "" }); // Limpiar
+    } catch (err: any) {
+      setPassMsg({ type: "error", text: err.message });
+    } finally {
+      setIsChangingPass(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* COLUMNA 1: Mis Datos */}
+      <Card title="Mis Datos Personales">
+        <form onSubmit={handleUpdateProfile} className="flex flex-col gap-4">
+          {/* Foto de Perfil */}
+          <div className="flex flex-col items-center gap-3 mb-2">
+            <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-200 overflow-hidden relative group">
+              {profileData.profile_image ? (
+                <img
+                  src={profileData.profile_image}
+                  alt="Perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <UserIcon className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              )}
+            </div>
+            <div className="w-full">
+              <Input
+                label="URL de Imagen de Perfil"
+                name="profile_image"
+                placeholder="https://ejemplo.com/foto.jpg"
+                value={profileData.profile_image}
+                onChange={(e) =>
+                  setProfileData({
+                    ...profileData,
+                    profile_image: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nombre"
+              value={profileData.first_name}
+              onChange={(e) =>
+                setProfileData({ ...profileData, first_name: e.target.value })
+              }
+              required
+            />
+            <Input
+              label="Apellido"
+              value={profileData.last_name}
+              onChange={(e) =>
+                setProfileData({ ...profileData, last_name: e.target.value })
+              }
+              required
+            />
+          </div>
+          <Input
+            label="Nombre de Usuario"
+            value={profileData.username}
+            onChange={(e) =>
+              setProfileData({ ...profileData, username: e.target.value })
+            }
+            required
+          />
+          <Input
+            label="Correo Electrónico (No editable)"
+            value={user?.email || ""}
+            disabled
+            className="bg-gray-50 text-gray-500"
+          />
+
+          {profileMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${profileMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {profileMsg.text}
+            </div>
+          )}
+
+          <Button type="submit" variant="primary" isLoading={isUpdatingProfile}>
+            Guardar Cambios
+          </Button>
+        </form>
+      </Card>
+
+      {/* COLUMNA 2: Seguridad (Contraseña) */}
+      <Card title="Seguridad">
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+          <p className="text-sm text-gray-500 mb-2">
+            Si tienes una contraseña genérica, cámbiala aquí.
+          </p>
+
+          <InputPassword
+            label="Contraseña Actual"
+            value={passData.current}
+            onChange={(e) =>
+              setPassData({ ...passData, current: e.target.value })
+            }
+            required
+          />
+          <InputPassword
+            label="Nueva Contraseña"
+            value={passData.new}
+            onChange={(e) => setPassData({ ...passData, new: e.target.value })}
+            required
+          />
+          <InputPassword
+            label="Confirmar Nueva Contraseña"
+            value={passData.confirm}
+            onChange={(e) =>
+              setPassData({ ...passData, confirm: e.target.value })
+            }
+            required
+          />
+
+          {passMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${passMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {passMsg.text}
+            </div>
+          )}
+
+          <Button type="submit" variant="primary" isLoading={isChangingPass}>
+            Actualizar Contraseña
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+};
+```
+
+### 5. Verificación
+
+- Correr `npm run build`.
+- Probar en Chrome y en Firefox.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron creados y si `npm run build` pasó. Si hay algún error en Firefox, pasame el mensaje exacto de la consola.
+
+# Tarea 51 (Backend): Recibir imagen de perfil con Multer
+
+## Contexto
+
+El frontend enviará la foto de perfil como un archivo (`multipart/form-data`) en lugar de una URL de texto. Necesitamos configurar el backend para guardar esa imagen.
+
+## Objetivo
+
+Modificar `updateProfile` para manejar la subida de archivos.
+
+## Lo que debés hacer
+
+### 1. Configurar Multer en `src/modules/auth/auth.routes.ts`
+
+Importar `multer` y crear una instancia para guardar imágenes en `uploads/avatars/` (creá esa carpeta si no existe).
+
+```typescript
+import multer from "multer";
+import path from "path";
+
+// Configuración básica de Multer para avatares
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/avatars/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+const upload = multer({ storage });
+
+// En la ruta:
+router.put("/profile", authMiddleware, upload.single("avatar"), updateProfile);
+```
+
+### 2. Modificar `updateProfile` en `src/modules/auth/auth.controller.ts`
+
+Ahora la imagen no viene en `req.body`, sino en `req.file`.
+
+```typescript
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { first_name, last_name, username } = req.body;
+
+    const usuario = await Usuario.findByPk(userId);
+    if (!usuario)
+      return res
+        .status(404)
+        .json({ success: false, error: "Usuario no encontrado" });
+
+    if (first_name) usuario.first_name = first_name;
+    if (last_name) usuario.last_name = last_name;
+    if (username) usuario.username = username;
+
+    // Si se subió un archivo, guardamos la ruta
+    if (req.file) {
+      // Asumiendo que el servidor sirve la carpeta uploads públicamente
+      usuario.profile_image = `/uploads/avatars/${req.file.filename}`;
+    }
+
+    await usuario.save();
+    return res.status(200).json({ success: true, data: usuario });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar perfil" });
+  }
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.
+
+# Tarea 52 (Frontend): Rediseñar Perfil con modo lectura, edición y subida de imagen
+
+## Contexto
+
+Vamos a rediseñar la pantalla de Perfil. Ahora tendrá dos estados:
+
+1. **Vista (Lectura):** Muestra la foto, datos y un botón "Editar Perfil".
+2. **Modo Edición:** Muestra los inputs, un selector de archivo para la foto y un botón de "Guardar".
+
+## Objetivo
+
+1. Cambiar el texto del menú de navegación a "Ver Perfil".
+2. Sobrescribir `src/pages/Perfil.tsx` con la lógica de alternancia (Ver/Editar) y subida de archivos.
+
+## Lo que debés hacer
+
+### 1. Actualizar el menú en `src/layouts/DashboardLayout.tsx`
+
+Buscar el enlace que dice "Editar Perfil" y cambiarlo por "Ver Perfil".
+
+### 2. Actualizar `src/api/auth.api.ts`
+
+La función `updateProfile` ahora debe enviar un `FormData` para soportar la imagen:
+
+```typescript
+export const updateProfile = async (formData: FormData): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    "/auth/profile",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  if (!data.success || !data.data)
+    throw new Error(data.error || "Error al actualizar perfil");
+  return data.data;
+};
+```
+
+### 3. Sobrescribir `src/pages/Perfil.tsx`
+
+```tsx
+// src/pages/Perfil.tsx
+import { useState, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
+import { changePassword, updateProfile } from "../api/auth.api";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { InputPassword } from "../components/ui/InputPassword";
+import { Button } from "../components/ui/Button";
+import { User as UserIcon, Camera, Edit3, ArrowLeft } from "lucide-react";
+
+export const Perfil = () => {
+  const { user, login } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Datos para edición
+  const [editData, setEditData] = useState({
+    first_name: "",
+    last_name: "",
+    username: "",
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Contraseña
+  const [passData, setPassData] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState({ type: "", text: "" });
+
+  const startEditing = () => {
+    setEditData({
+      first_name: user?.first_name || "",
+      last_name: user?.last_name || "",
+      username: user?.username || "",
+    });
+    setAvatarFile(null);
+    setProfileMsg({ type: "", text: "" });
+    setIsEditing(true);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileMsg({ type: "", text: "" });
+
+    const formData = new FormData();
+    formData.append("first_name", editData.first_name);
+    formData.append("last_name", editData.last_name);
+    formData.append("username", editData.username);
+    if (avatarFile) {
+      formData.append("avatar", avatarFile); // 'avatar' debe coincidir con el multer del backend
+    }
+
+    try {
+      const updatedUser = await updateProfile(formData);
+      login(updatedUser);
+      setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+      setIsEditing(false); // Volver a la vista de lectura
+    } catch (err: any) {
+      setProfileMsg({ type: "error", text: err.message });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passData.new !== passData.confirm)
+      return setPassMsg({
+        type: "error",
+        text: "Las contraseñas no coinciden.",
+      });
+    setIsChangingPass(true);
+    try {
+      await changePassword(passData.current, passData.new);
+      setPassMsg({ type: "success", text: "Contraseña actualizada." });
+      setPassData({ current: "", new: "", confirm: "" });
+    } catch (err: any) {
+      setPassMsg({ type: "error", text: err.message });
+    } finally {
+      setIsChangingPass(false);
+    }
+  };
+
+  const getInitials = () =>
+    `${user?.first_name?.charAt(0) || ""}${user?.last_name?.charAt(0) || ""}`;
+
+  // URL de la imagen (asumiendo que el backend la sirve en el puerto 3000)
+  const imageUrl = user?.profile_image
+    ? `http://localhost:3000${user.profile_image}`
+    : null;
+
+  return (
+    <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      {/* --- VISTA DE LECTURA --- */}
+      {!isEditing ? (
+        <>
+          <Card>
+            <div className="flex flex-col items-center py-6">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt="Perfil"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-institucional-100 mb-4"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-institucional-600 text-white flex items-center justify-center text-3xl font-bold mb-4">
+                  {getInitials()}
+                </div>
+              )}
+              <h2 className="text-2xl font-bold text-gray-800">
+                {user?.first_name} {user?.last_name}
+              </h2>
+              <p className="text-gray-500 mb-2">@{user?.username}</p>
+
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-semibold rounded-full mb-6">
+                Rol: {user?.role}
+              </span>
+
+              <div className="w-full max-w-md space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-500">Correo:</span>
+                  <span>{user?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-500">Estado:</span>
+                  <span className="text-green-600 font-medium">Activo</span>
+                </div>
+              </div>
+
+              <Button
+                onClick={startEditing}
+                variant="primary"
+                className="mt-6 flex items-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" /> Editar Perfil
+              </Button>
+            </div>
+          </Card>
+        </>
+      ) : (
+        /* --- MODO EDICIÓN --- */
+        <Card title="Editar Mis Datos">
+          <form onSubmit={handleUpdateProfile} className="flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 self-start"
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a la vista de perfil
+            </button>
+
+            {/* Foto de Perfil */}
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {imageUrl || avatarFile ? (
+                <img
+                  src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl!}
+                  alt="Preview"
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                  <UserIcon className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) =>
+                    setAvatarFile(e.target.files ? e.target.files[0] : null)
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="w-4 h-4 mr-2" /> Cambiar Foto
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG o PNG de máx. 2MB.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Nombre"
+                value={editData.first_name}
+                onChange={(e) =>
+                  setEditData({ ...editData, first_name: e.target.value })
+                }
+                required
+              />
+              <Input
+                label="Apellido"
+                value={editData.last_name}
+                onChange={(e) =>
+                  setEditData({ ...editData, last_name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <Input
+              label="Nombre de Usuario"
+              value={editData.username}
+              onChange={(e) =>
+                setEditData({ ...editData, username: e.target.value })
+              }
+              required
+            />
+            <Input
+              label="Correo Electrónico (No editable)"
+              value={user?.email || ""}
+              disabled
+              className="bg-gray-50 text-gray-500"
+            />
+
+            {profileMsg.text && (
+              <div
+                className={`p-2 text-sm rounded ${profileMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+              >
+                {profileMsg.text}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isUpdatingProfile}
+            >
+              Guardar Cambios
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {/* --- CAMBIO DE CONTRASEÑA (Siempre visible abajo) --- */}
+      <Card title="Seguridad">
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+          <p className="text-sm text-gray-500 mb-2">
+            Cambia tu contraseña regularmente para mantener tu cuenta segura.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InputPassword
+              label="Contraseña Actual"
+              value={passData.current}
+              onChange={(e) =>
+                setPassData({ ...passData, current: e.target.value })
+              }
+              required
+            />
+            <InputPassword
+              label="Nueva Contraseña"
+              value={passData.new}
+              onChange={(e) =>
+                setPassData({ ...passData, new: e.target.value })
+              }
+              required
+            />
+            <InputPassword
+              label="Confirmar Contraseña"
+              value={passData.confirm}
+              onChange={(e) =>
+                setPassData({ ...passData, confirm: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          {passMsg.text && (
+            <div
+              className={`p-2 text-sm rounded ${passMsg.type === "error" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
+            >
+              {passMsg.text}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isChangingPass}
+            className="self-start"
+          >
+            Actualizar Contraseña
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+};
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 53 (Frontend): Arreglar actualización de foto, buscador de usuarios y foto en tabla
+
+## Contexto
+
+1. La foto de perfil se guarda en el backend, pero al actualizarla no se refleja en la barra superior (Navbar) ni en la vista de perfil por culpa de la caché y el estado global.
+2. El Admin necesita un buscador en la tabla de usuarios.
+3. El Admin debe ver las fotos en la tabla.
+
+## Objetivo
+
+1. Modificar `AuthContext` para que guarde el usuario con la nueva foto.
+2. En `Perfil.tsx`, forzar la recarga de la imagen y actualizar el contexto global al guardar.
+3. En `AdminUsuarios.tsx`, agregar input de búsqueda y renderizar la foto.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/context/AuthContext.tsx`
+
+Verificar que exista una función `updateUser` para actualizar los datos del contexto (ya la creamos en tareas anteriores, pero asegurate de que esté exportada):
+
+```tsx
+// Ya deberías tener esto en el AuthContext
+const login = (userData: User) => {
+  setUser(userData);
+  setIsAuthenticated(true);
+};
+```
+
+### 2. Arreglar la imagen en `src/pages/Perfil.tsx`
+
+El problema de la caché se soluciona agregando un parámetro de tiempo a la URL (`?t=123456`).
+
+Cambiar la constante `imageUrl`:
+
+```tsx
+// Añadimos un timestamp para evitar que el navegador use la foto vieja de la caché
+const timestamp = new Date().getTime();
+const imageUrl = user?.profile_image
+  ? `http://localhost:3000${user.profile_image}?t=${timestamp}`
+  : null;
+```
+
+Asegurate de que al guardar, llames a `login(updatedUser)` y se cierre el modo edición.
+
+### 3. Actualizar `src/pages/AdminUsuarios.tsx` (Buscador y Fotos)
+
+Agregar el ícono `Search` a los imports de `lucide-react`.
+Agregar un estado para la búsqueda:
+
+```tsx
+const [searchTerm, setSearchTerm] = useState("");
+
+// Lógica para filtrar:
+const usuariosFiltrados = usuarios.filter(
+  (u) =>
+    u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username.toLowerCase().includes(searchTerm.toLowerCase()),
+);
+```
+
+En la interfaz, agregar el buscador justo debajo del botón "Nuevo Usuario" o al lado:
+
+```tsx
+<div className="flex justify-between items-center mb-6">
+  <div>
+    <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
+  </div>
+  <div className="flex gap-4">
+    {/* BUSCADOR */}
+    <div className="relative">
+      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <input
+        type="text"
+        placeholder="Buscar usuario..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+    <Button
+      onClick={openCreateModal}
+      variant="primary"
+      className="flex items-center gap-2"
+    >
+      <Plus className="w-4 h-4" /> Nuevo Usuario
+    </Button>
+  </div>
+</div>
+```
+
+En el `map` de la tabla, usar `usuariosFiltrados` en lugar de `usuarios`.
+Y en la celda del nombre, agregar la foto:
+
+```tsx
+<td className="py-3 px-4">
+  <div className="flex items-center gap-3">
+    {u.profile_image ? (
+      <img
+        src={`http://localhost:3000${u.profile_image}`}
+        alt="Perfil"
+        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm">
+        {u.first_name?.charAt(0)}
+        {u.last_name?.charAt(0)}
+      </div>
+    )}
+    <div>
+      <span className="font-medium text-gray-800 block">
+        {u.first_name} {u.last_name}
+      </span>
+      <span className="text-xs text-gray-400">@{u.username}</span>
+    </div>
+  </div>
+</td>
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 54: Filtro por rol y arreglo de caché de imágenes en tabla de Admin
+
+## Contexto
+
+1. La imagen de perfil en la tabla de admin no se actualiza (problema de caché del navegador).
+2. Necesitamos un filtro para buscar usuarios por su rol principal (STAFF, COMITE, etc.).
+
+## Objetivo
+
+1. Agregar el estado y la lógica del filtro por rol.
+2. Agregar un `<select>` para el filtro en la interfaz.
+3. Agregar un timestamp a las URLs de las imágenes para forzar su actualización.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/AdminUsuarios.tsx`
+
+**A. Nuevos estados:**
+Agregar el estado para el filtro de rol (cerca de `searchTerm`):
+
+```tsx
+const [roleFilter, setRoleFilter] = useState<string>("TODOS");
+```
+
+**B. Lógica de filtrado combinada:**
+Reemplazar la lógica de `usuariosFiltrados` para que aplique tanto el texto como el rol:
+
+```tsx
+const usuariosFiltrados = usuarios.filter((u) => {
+  const matchesSearch =
+    u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const matchesRole = roleFilter === "TODOS" || u.role === roleFilter;
+
+  return matchesSearch && matchesRole;
+});
+```
+
+**C. Interfaz del buscador y filtro:**
+En la parte superior, donde pusimos el buscador, agregar el `<select>` al lado:
+
+```tsx
+        <div className="flex gap-4">
+          {/* FILTRO POR ROL */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="TODOS">Todos los roles</option>
+            <option value="STAFF">Staff</option>
+            <option value="COMITE">Comité</option>
+            <option value="DDI">DDI</option>
+            <option value="EDITOR">Editor</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+
+          {/* BUSCADOR */}
+          <div className="relative">
+             {/* ... input de búsqueda ... */}
+```
+
+**D. Arreglar la caché de la imagen en la tabla:**
+En la celda de la tabla donde renderizamos la foto (`<img src={...} />`), agregar un timestamp:
+
+```tsx
+    {u.profile_image ? (
+      <img
+        src={`http://localhost:3000${u.profile_image}?t=${new Date().getTime()}`}
+        alt="Perfil"
+        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      />
+    ) : (
+      // ... iniciales
+```
+
+### 2. Arreglar la caché en el Navbar (`src/layouts/DashboardLayout.tsx`)
+
+Ir al componente del Navbar y hacer lo mismo con la imagen del usuario:
+
+```tsx
+{user?.profile_image ? (
+  <img
+    src={`http://localhost:3000${user.profile_image}?t=${new Date().getTime()}`}
+    alt="Perfil"
+    className="w-8 h-8 rounded-full object-cover border border-gray-200"
+  />
+) : (
+  // ... iniciales
+)}
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 56 (Backend): Exponer la carpeta uploads para que el frontend vea las imágenes
+
+## Contexto
+
+Las imágenes se están guardando correctamente en el servidor, pero el frontend recibe un error 404 (No encontrado) al intentar mostrarlas. Esto pasa porque Express no está sirviendo la carpeta `uploads` de forma pública.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/app.ts` (o `server.ts`)
+
+Importar el módulo `path` y agregar el middleware `express.static`:
+
+```typescript
+import express from "express";
+import path from "path";
+
+const app = express();
+
+// ... otros middlewares (cors, json, etc.)
+
+// Servir la carpeta uploads de forma pública
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// (Ajusta la ruta si tu carpeta uploads está en la raíz del backend, usa: path.join(process.cwd(), 'uploads'))
+```
+
+### 2. Verificación
+
+- Reiniciar el servidor backend.
+- Abrir en el navegador: `http://localhost:3000/uploads/avatars/` (si hay alguna imagen ahí, debería descargarla o mostrarla, no dar error).
+
+# Tarea 57 (Frontend): Forzar actualización de imágenes de perfil
+
+## Contexto
+
+El problema de las imágenes es doble: el navegador cachea las fotos viejas y el componente `Navbar` no se vuelve a renderizar cuando cambia el usuario en el contexto.
+
+## Lo que debés hacer
+
+### 1. Arreglar la vista del Admin (`src/pages/AdminUsuarios.tsx`)
+
+Si el backend ya sirve las imágenes, para evitar la caché, vamos a usar el `id` del usuario y un número aleatorio.
+En la celda de la tabla, cambiar el `src` de la imagen:
+
+```tsx
+{
+  u.profile_image ? (
+    <img
+      src={`http://localhost:3000${u.profile_image}?v=${u.id}`}
+      alt="Perfil"
+      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      onError={(e) => {
+        // Si la imagen falla, ocultarla y mostrar las iniciales
+        e.currentTarget.style.display = "none";
+        e.currentTarget.nextElementSibling?.classList.remove("hidden");
+      }}
+    />
+  ) : null;
+}
+
+{
+  /* El div de las iniciales. Si hay imagen, se oculta. */
+}
+<div
+  className={`w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm ${u.profile_image ? "hidden" : ""}`}
+>
+  {u.first_name?.charAt(0)}
+  {u.last_name?.charAt(0)}
+</div>;
+```
+
+### 2. Arreglar el Navbar (`src/layouts/DashboardLayout.tsx`)
+
+Hacer lo mismo con la foto en la barra superior:
+
+```tsx
+<div className="relative w-8 h-8">
+  {user?.profile_image ? (
+    <img
+      src={`http://localhost:3000${user.profile_image}?v=${new Date().getTime()}`}
+      alt="Perfil"
+      className="w-8 h-8 rounded-full object-cover border border-gray-200 absolute inset-0"
+    />
+  ) : null}
+  <div
+    className={`w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm absolute inset-0 ${user?.profile_image ? "opacity-0" : "opacity-100"}`}
+  >
+    {user?.first_name?.charAt(0)}
+    {user?.last_name?.charAt(0)}
+  </div>
+</div>
+```
+
+### 3. Verificación en `src/pages/Perfil.tsx`
+
+Cuando el usuario guarda su foto nueva, debemos asegurarnos de actualizar el contexto global. Revisar la función `handleUpdateProfile`:
+
+```tsx
+const updatedUser = await updateProfile(formData);
+
+// IMPORTANTE: Esto actualiza el Navbar al instante
+login(updatedUser);
+
+setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+setIsEditing(false);
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 58: Simplificar y arreglar la visualización de fotos de perfil
+
+## Contexto
+
+El backend está devolviendo las imágenes correctamente con status 200 (verificado en Network). Sin embargo, en la tabla de Admin y en el Navbar se siguen mostrando las iniciales en lugar de las fotos. Esto se debe a una lógica compleja de `onError` en el código anterior y a que React no está detectando los cambios en el contexto.
+
+## Objetivo
+
+Simplificar la renderización de la imagen en `AdminUsuarios.tsx` y `DashboardLayout.tsx`.
+
+## Lo que debés hacer
+
+### 1. Limpiar la tabla en `src/pages/AdminUsuarios.tsx`
+
+Buscar la celda donde se renderiza el usuario (dentro del `<tbody>`) y dejarla exactamente así (eliminando la lógica del `onError` y el `hidden`):
+
+```tsx
+<td className="py-3 px-4">
+  <div className="flex items-center gap-3">
+    {u.profile_image ? (
+      <img
+        src={`http://localhost:3000${u.profile_image}`}
+        alt="Perfil"
+        className="w-10 h-10 rounded-full object-cover border border-gray-200"
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm">
+        {u.first_name?.charAt(0)}
+        {u.last_name?.charAt(0)}
+      </div>
+    )}
+    <div>
+      <span className="font-medium text-gray-800 block">
+        {u.first_name} {u.last_name}
+      </span>
+      <span className="text-xs text-gray-400">@{u.username}</span>
+    </div>
+  </div>
+</td>
+```
+
+### 2. Limpiar el Navbar en `src/layouts/DashboardLayout.tsx`
+
+Buscar el botón del perfil de usuario en la barra superior y dejar la imagen así:
+
+```tsx
+<div className="w-8 h-8 rounded-full bg-institucional-600 text-white flex items-center justify-center font-bold text-sm overflow-hidden">
+  {user?.profile_image ? (
+    <img
+      src={`http://localhost:3000${user.profile_image}`}
+      alt="Perfil"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <>
+      {user?.first_name?.charAt(0)}
+      {user?.last_name?.charAt(0)}
+    </>
+  )}
+</div>
+```
+
+### 3. Forzar la recarga del componente al guardar foto (en `Perfil.tsx`)
+
+Cuando el usuario sube una foto, el backend la guarda, pero React puede tardar en actualizar la vista. Vamos a añadir `window.location.reload()` después de actualizar el perfil para asegurarnos de que todo se refresque:
+
+En `src/pages/Perfil.tsx`, dentro de `handleUpdateProfile`, justo después de `login(updatedUser);`, agregar:
+
+```tsx
+const updatedUser = await updateProfile(formData);
+login(updatedUser);
+setProfileMsg({ type: "success", text: "Perfil actualizado con éxito." });
+setIsEditing(false);
+
+// RECARGA FORZADA PARA ACTUALIZAR IMÁGENES
+setTimeout(() => {
+  window.location.reload();
+}, 500);
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 60 (Backend): Incluir el campo profile_image en el listado de usuarios
+
+## Contexto
+
+En el frontend, la tabla de administración de usuarios sigue mostrando las iniciales (AH, DH, etc.) en lugar de la foto de perfil, a pesar de que el Navbar sí la muestra. Esto ocurre porque el endpoint `GET /api/usuarios` no está devolviendo el campo `profile_image` en el JSON de respuesta.
+
+## Objetivo
+
+Modificar el controlador de usuarios en el backend para asegurar que `profile_image` se envíe en la lista.
+
+## Lo que debés hacer
+
+### 1. Revisar `src/modules/usuarios/Usuario.model.ts`
+
+Asegurarse de que el campo `profile_image` esté definido y **no** tenga `hidden: true` en sus opciones de Sequelize.
+
+```typescript
+  profile_image: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+```
+
+### 2. Modificar `src/modules/usuarios/usuarios.controller.ts`
+
+En la función `getUsuarios`, revisar cómo se están obteniendo los datos. Si están usando `attributes: { exclude: ['password'] }`, asegurarse de que `profile_image` NO esté excluido.
+
+```typescript
+export const getUsuarios = async (req: Request, res: Response) => {
+  try {
+    const usuarios = await Usuario.findAll({
+      // Excluimos solo la contraseña, el resto de campos (incluyendo profile_image) pasan
+      attributes: { exclude: ['password'] },
+      include: [{ model: Rol, as: 'role' }],
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: { items: usuarios, total: usuarios.length, page: 1, limit: usuarios.length }
+    });
+  } catch (error) {
+    // ...
+```
+
+### 3. Verificación
+
+- Reiniciar el servidor backend.
+- Hacer un `GET` a `http://localhost:3000/api/usuarios` (con Postman o el navegador) y confirmar que en el JSON aparece el campo `"profile_image": "/uploads/avatars/..."`.
+
+# Tarea 61 (Backend): Crear endpoint público para el autorregistro de invitados
+
+## Contexto
+
+Necesitamos permitir que los usuarios (invitados) se registren a sí mismos para participar en convocatorias. Al registrarse, deben obtener el rol `STAFF` y el atributo `is_guest: true`.
+
+## Objetivo
+
+Crear el controlador y la ruta `POST /api/auth/register`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/auth/auth.controller.ts`
+
+Agregar la función `register`. Asumimos que ya tienen la lógica de encriptación con `bcrypt` y el modelo `Usuario`.
+
+```typescript
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password, first_name, last_name } = req.body;
+
+    // Validaciones básicas
+    if (!username || !email || !password || !first_name || !last_name) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Todos los campos son obligatorios" });
+    }
+
+    // Verificar si el correo ya existe
+    const existeUsuario = await Usuario.findOne({ where: { email } });
+    if (existeUsuario) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El correo ya está registrado" });
+    }
+
+    // Encriptar contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crear el usuario (Forzamos rol STAFF e is_guest true)
+    // NOTA: Ajusta el roleId según cómo manejen la tabla de roles.
+    // Si usan un ENUM, solo pasa role: 'STAFF'.
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      password: hashedPassword,
+      first_name,
+      last_name,
+      role: "STAFF", // o roleId: ID_DEL_ROL_STAFF
+      is_guest: true,
+      must_change_password: false, // El eligió su contraseña
+      active: true,
+    });
+
+    // Opcional: Generar token y cookie para que inicie sesión automáticamente
+    // ... (código para setear cookie si lo tienen en el login)
+
+    return res.status(201).json({
+      success: true,
+      data: { usuario: nuevoUsuario, mensaje: "Registro exitoso" },
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al registrar usuario" });
+  }
+};
+```
+
+### 2. Modificar `src/modules/auth/auth.routes.ts`
+
+Importar `register` y agregar la ruta (debe ser pública, sin `authMiddleware`):
+
+```typescript
+import {
+  login,
+  logout,
+  verify,
+  changePassword,
+  register,
+} from "./auth.controller";
+
+// ... rutas existentes
+router.post("/register", register);
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.
+
+# Tarea 63 (Backend): Registro con DNI, cuenta inactiva y notificación al Admin
+
+## Contexto
+
+Vamos a modificar el registro público. Ahora el DNI será obligatorio. Cuando un usuario se registre, su cuenta se creará inactiva (`active: false`) y se deberá notificar al Administrador para que la habilite. Cuando el Admin la active, se le enviará un correo al usuario.
+
+## Lo que debés hacer
+
+### 1. Modificar el modelo `src/modules/usuarios/Usuario.model.ts`
+
+Asegurarse de que el campo `dni` sea obligatorio (`allowNull: false`) y único.
+
+```typescript
+  dni: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+```
+
+### 2. Modificar `register` en `src/modules/auth/auth.controller.ts`
+
+Actualizar la función para recibir el DNI, crear el usuario inactivo y simular el aviso al admin.
+
+```typescript
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password, first_name, last_name, dni } = req.body;
+
+    if (!username || !email || !password || !first_name || !last_name || !dni) {
+      return res.status(400).json({
+        success: false,
+        error: "Todos los campos, incluyendo el DNI, son obligatorios",
+      });
+    }
+
+    const existeUsuario = await Usuario.findOne({ where: { email } });
+    if (existeUsuario) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El correo ya está registrado" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const nuevoUsuario = await Usuario.create({
+      username,
+      email,
+      password: hashedPassword,
+      first_name,
+      last_name,
+      dni,
+      role: "STAFF",
+      is_guest: true,
+      must_change_password: false,
+      active: false, // 👈 LA CUENTA NACE DESHABILITADA
+    });
+
+    // NOTIFICAR AL ADMIN (Aquí usarían su servicio de correos, ej. Nodemailer)
+    // Ejemplo conceptual:
+    console.log(
+      `[EMAIL] Notificar al Admin: El usuario ${username} con DNI ${dni} solicita activación.`,
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        mensaje:
+          "Registro exitoso. Tu cuenta está pendiente de aprobación por un Administrador.",
+        usuario: nuevoUsuario,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al registrar usuario" });
+  }
+};
+```
+
+### 3. Modificar el controlador de actualización de usuarios
+
+En `usuarios.controller.ts`, cuando el Admin cambia `active` a `true`, enviar el correo.
+
+```typescript
+export const updateUsuario = async (req: Request, res: Response) => {
+  // ... código de búsqueda del usuario
+  const isActivating = req.body.active === true && usuario.active === false;
+
+  // ... código que actualiza los datos
+
+  if (isActivating) {
+    // NOTIFICAR AL USUARIO (Nodemailer)
+    console.log(`[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido ACTIVADA. Ya puedes iniciar sesión.`);
+  }
+  // ...
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 64 (Frontend): Añadir DNI, pantalla de espera y renombrar estados
+
+## Contexto
+
+1. El formulario de registro debe pedir el DNI.
+2. Al registrarse, no debe loguearse automáticamente, sino mostrar un mensaje de "Esperando aprobación".
+3. En la tabla de Admin, los estados deben decir "Habilitada" y "Deshabilitada".
+
+## Lo que debés hacer
+
+### 1. Modificar el Login para mostrar error si está inactivo
+
+En `src/pages/Login.tsx`, el backend ya debería devolver un error si la cuenta está inactiva. Asegurarse de que ese mensaje se muestre en el div rojo de errores.
+
+### 2. Modificar `src/pages/Registro.tsx`
+
+- Agregar `dni: ''` al `useForm`.
+- Agregar el input del DNI en el formulario (debajo de nombre y apellido).
+- Agregar el estado `const [isSuccess, setIsSuccess] = useState(false);`.
+- En `handleSubmit`, QUITAR el `login(userData)` y la redirección. En su lugar, setear `setIsSuccess(true)`.
+- Si `isSuccess` es true, mostrar un cartel en lugar del formulario:
+
+```tsx
+        {isSuccess ? (
+          <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
+            <div className="mx-auto w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 className="text-xl font-bold text-green-800 mb-2">¡Registro Exitoso!</h2>
+            <p className="text-green-700">
+              Tu cuenta ha sido creada. Un Administrador debe habilitar tu cuenta antes de que puedas ingresar. Te enviaremos un correo cuando esté lista.
+            </p>
+            <Button onClick={() => navigate('/login')} className="mt-6 w-full" variant="primary">
+              Volver al Login
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} ...>
+            {/* ... inputs ... */}
+          </form>
+        )}
+```
+
+### 3. Modificar los textos de estado en `src/pages/AdminUsuarios.tsx`
+
+Buscar donde se renderiza el estado del usuario en la tabla (las etiquetas verde/roja) y cambiarlas:
+
+```tsx
+<td className="py-3 px-4">
+  <span
+    className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+  >
+    {u.active ? "Habilitada" : "Deshabilitada"}
+  </span>
+</td>
+```
+
+_(Hacer lo mismo en el menú de 3 puntos si dice "Suspender", cambiarlo a "Deshabilitar")._
+
+### 4. Agregar DNI al Modal de Creación (Admin)
+
+Para que el Admin también pueda crear usuarios con DNI, agregar el campo `dni` al `useForm` del modal en `AdminUsuarios.tsx` y agregar el `<Input label="DNI" name="dni" ... />`.
+
+### 5. Verificación
+
+- Correr `npm run build`.
+
+# Tarea 65 (Backend): Implementar sistema de notificaciones
+
+## Contexto
+
+Necesitamos un sistema de notificaciones. Cuando el admin activa/desactiva a un usuario, se debe crear una notificación en la base de datos y "enviar un correo" (simulado). El frontend consultará estas notificaciones.
+
+## Objetivo
+
+1. Crear el modelo de Notificación.
+2. Crear los endpoints para listar y marcar como leídas.
+3. Disparar la notificación al cambiar el estado de un usuario.
+
+## Lo que debés hacer
+
+### 1. Crear el modelo `src/modules/notificaciones/Notificacion.model.ts`
+
+```typescript
+import { DataTypes, Model } from "sequelize";
+import sequelize from "../../config/database";
+
+export class Notificacion extends Model {}
+Notificacion.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false }, // El admin que recibe la notif
+    title: { type: DataTypes.STRING, allowNull: false },
+    message: { type: DataTypes.TEXT, allowNull: false },
+    read: { type: DataTypes.BOOLEAN, defaultValue: false },
+  },
+  { sequelize, tableName: "notifications" },
+);
+```
+
+### 2. Crear controlador y rutas
+
+`src/modules/notificaciones/notificaciones.controller.ts`:
+
+```typescript
+import { Request, Response } from "express";
+import { Notificacion } from "./Notificacion.model";
+
+export const getNotificaciones = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const notificaciones = await Notificacion.findAll({
+    where: { userId },
+    order: [["createdAt", "DESC"]],
+  });
+  res.status(200).json({ success: true, data: notificaciones });
+};
+
+export const markAsRead = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  await Notificacion.update({ read: true }, { where: { id } });
+  res.status(200).json({ success: true, data: {} });
+};
+```
+
+`src/modules/notificaciones/notificaciones.routes.ts`:
+
+```typescript
+import { Router } from "express";
+import { getNotificaciones, markAsRead } from "./notificaciones.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+
+const router = Router();
+router.use(authMiddleware);
+router.get("/", getNotificaciones);
+router.put("/:id/read", markAsRead);
+export default router;
+```
+
+_(No olvides montar la ruta en `app.ts`: `app.use('/api/notificaciones', notificacionesRoutes)`)_.
+
+### 3. Disparar la notificación al Admin al registrarse un usuario
+
+En `auth.controller.ts`, en la función `register`, después de crear el usuario, buscar a todos los usuarios con rol `ADMIN` y crearles una notificación:
+
+```typescript
+import { Notificacion } from "../notificaciones/Notificacion.model";
+
+// ... después de crear el nuevoUsuario:
+const admins = await Usuario.findAll({ where: { role: "ADMIN" } });
+for (const admin of admins) {
+  await Notificacion.create({
+    userId: admin.id,
+    title: "Nueva solicitud de cuenta",
+    message: `El usuario ${nuevoUsuario.first_name} ${nuevoUsuario.last_name} (DNI: ${dni}) solicita activación.`,
+  });
+}
+```
+
+### 4. Notificar y simular email al cambiar estado en `usuarios.controller.ts`
+
+En `updateUsuario`, si el estado cambia:
+
+```typescript
+if (isActivating) {
+  // 1. Simulamos el envío de correo
+  console.log(
+    `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido HABILITADA. Ya puedes iniciar sesión.`,
+  );
+
+  // 2. Notificamos al usuario en su panel (si lo tuviera)
+  await Notificacion.create({
+    userId: usuario.id,
+    title: "Cuenta Habilitada",
+    message:
+      "Un administrador ha habilitado tu cuenta. Ya puedes ingresar al portal.",
+  });
+}
+```
+
+### 5. Verificación
+
+- Correr `npm run build` y reiniciar el backend.
+
+# Tarea 68 (Frontend): Página de Notificaciones y punto rojo en el Sidebar
+
+## Contexto
+
+En lugar de una campanita en el Navbar, vamos a crear un apartado llamado "Notificaciones" en el menú lateral (Sidebar). Este apartado mostrará un punto rojo si hay notificaciones no leídas. También necesitamos crear la página para leerlas.
+
+## Objetivo
+
+1. Crear la página `src/pages/Notificaciones.tsx`.
+2. Agregar el ítem en el menú del `DashboardLayout.tsx` con la lógica del punto rojo.
+3. Agregar la ruta en `AppRoutes.tsx`.
+
+## Lo que debés hacer
+
+### 1. Crear `src/pages/Notificaciones.tsx`
+
+Esta página listará las notificaciones y permitirá marcarlas como leídas al hacer clic.
+
+```tsx
+// src/pages/Notificaciones.tsx
+import { useEffect, useState } from "react";
+import {
+  getNotificaciones,
+  markAsRead,
+  type Notificacion,
+} from "../api/notificaciones.api";
+import { Card } from "../components/ui/Card";
+import { Loader2, Bell, CheckCircle } from "lucide-react";
+
+export const Notificaciones = () => {
+  const [notifs, setNotifs] = useState<Notificacion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchNotifs = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getNotificaciones();
+      setNotifs(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+  }, []);
+
+  const handleRead = async (id: number) => {
+    const notif = notifs.find((n) => n.id === id);
+    if (notif && !notif.read) {
+      await markAsRead(id);
+      setNotifs(notifs.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Notificaciones</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Mensajes y avisos del sistema
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : notifs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+            <Bell className="w-12 h-12 mb-3 text-gray-300" />
+            <p>No tienes notificaciones por el momento.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {notifs.map((n) => (
+              <div
+                key={n.id}
+                onClick={() => handleRead(n.id)}
+                className={`p-4 border-b border-gray-100 flex gap-4 cursor-pointer transition-colors hover:bg-gray-50 ${!n.read ? "bg-blue-50/30" : ""}`}
+              >
+                <div
+                  className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!n.read ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500"}`}
+                >
+                  {!n.read ? (
+                    <Bell className="w-4 h-4" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <h4
+                    className={`text-sm ${!n.read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}
+                  >
+                    {n.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 2. Agregar la ruta en `src/routes/AppRoutes.tsx`
+
+Importar `Notificaciones` y agregarla dentro de las rutas privadas:
+
+```tsx
+import { Notificaciones } from "../pages/Notificaciones";
+// ... dentro de <Route element={<PrivateRoutes />}>
+<Route path="notificaciones" element={<Notificaciones />} />;
+```
+
+### 3. Modificar el Sidebar en `src/layouts/DashboardLayout.tsx`
+
+- Importar `Bell` y la función `getNotificaciones`.
+- Agregar un estado para las notificaciones no leídas:
+
+```tsx
+const [unreadCount, setUnreadCount] = useState(0);
+
+useEffect(() => {
+  const fetchUnread = async () => {
+    try {
+      const data = await getNotificaciones();
+      setUnreadCount(data.filter((n) => !n.read).length);
+    } catch (error) {
+      /* silencioso */
+    }
+  };
+  fetchUnread();
+}, []);
+```
+
+- Dentro del `<nav>`, agregar el enlace a Notificaciones (solo visible para ADMIN, o para todos si querés que los usuarios también reciban mensajes):
+
+```tsx
+{
+  /* En el menú lateral, después de Biblioteca o Dashboard */
+}
+<Link
+  to="/notificaciones"
+  className="relative flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 hover:text-institucional-700 transition-colors"
+>
+  <Bell className="w-5 h-5" />
+  Notificaciones
+  {/* PUNTO ROJO */}
+  {unreadCount > 0 && (
+    <span className="absolute top-2 left-6 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+  )}
+</Link>;
+```
+
+### 4. Limpieza
+
+- En el `DashboardLayout.tsx`, borrar el botón de la campanita en la barra superior que habíamos puesto en la tarea anterior (si el agente llegó a crearla). El menú superior solo debe tener el perfil del usuario.
+
+### 5. Verificación
+
+- Correr `npm run build`.

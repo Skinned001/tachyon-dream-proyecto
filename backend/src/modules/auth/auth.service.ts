@@ -1,9 +1,23 @@
 import bcrypt from 'bcryptjs';
+import { Op } from 'sequelize';
 import { signToken, type AuthTokenPayload } from '../../config/jwt.js';
 import { sequelize } from '../../config/database.js';
+import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
-import { isRoleName, type AuthUser, type LoginResponse } from './auth.dto.js';
+import {
+  isRoleName,
+  type AuthUser,
+  type LoginResponse,
+  type RegisterRequest,
+} from './auth.dto.js';
+
+export interface UpdateProfileData {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image?: string | null;
+}
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 10;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000;
@@ -37,6 +51,7 @@ const toAuthUser = (
     email: user.email,
     first_name: user.first_name,
     last_name: user.last_name,
+    profile_image: user.profile_image,
     role: roleName,
     is_author: user.is_author,
     specialtyId: user.specialtyId,
@@ -45,6 +60,80 @@ const toAuthUser = (
 };
 
 export class AuthService {
+  async register(input: RegisterRequest): Promise<void> {
+    await sequelize.transaction(async (transaction) => {
+      const duplicate = await Usuario.findOne({
+        where: {
+          [Op.or]: [
+            { username: input.username },
+            { email: input.email },
+            { dni: input.dni },
+          ],
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (duplicate) {
+        throw new AuthError(
+          409,
+          'El nombre de usuario, correo o DNI ya está registrado',
+        );
+      }
+
+      const staffRole = await Rol.findOne({
+        where: { name: 'STAFF' },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!staffRole) {
+        throw new Error('No se encontró el rol STAFF para registrar al usuario.');
+      }
+
+      const user = await Usuario.create(
+        {
+          username: input.username,
+          email: input.email,
+          password: await bcrypt.hash(input.password, 10),
+          first_name: input.first_name,
+          last_name: input.last_name,
+          dni: input.dni,
+          is_author: false,
+          is_guest: true,
+          active: false,
+          roleId: staffRole.id,
+          specialtyId: null,
+          must_change_password: false,
+        },
+        { transaction },
+      );
+
+      const adminRole = await Rol.findOne({
+        where: { name: 'ADMIN' },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!adminRole) {
+        throw new Error('No se encontró el rol ADMIN para notificar el registro.');
+      }
+      const administrators = await Usuario.findAll({
+        where: { roleId: adminRole.id, active: true },
+        attributes: ['id'],
+        transaction,
+      });
+      if (administrators.length > 0) {
+        await Notificacion.bulkCreate(
+          administrators.map((admin) => ({
+            userId: admin.id,
+            title: 'Solicitud de registro pendiente',
+            message: `${user.first_name} ${user.last_name} (${user.username}) solicitó habilitar su cuenta.`,
+            read: false,
+          })),
+          { transaction },
+        );
+      }
+    });
+  }
+
   async login(email: string, password: string): Promise<LoginResponse> {
     const result = await sequelize.transaction<LoginResult>(async (transaction) => {
       const user = await Usuario.findOne({
@@ -129,6 +218,33 @@ export class AuthService {
     }
 
     return toAuthUser(user, role.name);
+  }
+
+  async updateProfile(id: number, input: UpdateProfileData): Promise<AuthUser> {
+    const user = await Usuario.findByPk(id);
+    if (!user) {
+      throw new AuthError(404, 'Usuario no encontrado');
+    }
+
+    if (input.username !== undefined && input.username !== user.username) {
+      const duplicate = await Usuario.findOne({
+        where: {
+          username: input.username,
+          id: { [Op.ne]: id },
+        },
+      });
+      if (duplicate) {
+        throw new AuthError(409, 'El nombre de usuario ya está registrado');
+      }
+      user.username = input.username;
+    }
+
+    if (input.first_name !== undefined) user.first_name = input.first_name;
+    if (input.last_name !== undefined) user.last_name = input.last_name;
+    if (input.profile_image !== undefined) user.profile_image = input.profile_image;
+
+    await user.save();
+    return this.getCurrentUser(id);
   }
 
   async changePassword(

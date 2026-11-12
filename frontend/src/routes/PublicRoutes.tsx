@@ -6,17 +6,18 @@ export function PublicRoutes() {
 
   if (isLoading) {
     return (
-      <div role="status" className="flex min-h-[100dvh] items-center justify-center text-sm text-[#52766d]">
+      <div
+        role="status"
+        className="flex min-h-[100dvh] items-center justify-center text-sm text-[#52766d]"
+      >
         Verificando sesión...
       </div>
     );
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  return (
-    <Outlet />
-  );
+  return <Outlet />;
 }

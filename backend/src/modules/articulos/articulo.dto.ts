@@ -56,6 +56,17 @@ export interface ArticleDTO {
   createdAt: string;
 }
 
+export interface PublishedArticleDTO {
+  id: number;
+  title: string;
+  summary?: string;
+  keywords?: string[];
+  coauthors?: string[];
+  specialty?: { id: number; name: string };
+  createdAt: string;
+  pdfAvailable: boolean;
+}
+
 export interface AuthenticatedArticleUser {
   id: number;
   role: RoleName;

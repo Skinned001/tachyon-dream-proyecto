@@ -11,6 +11,7 @@ import {
   Loader2,
   MoreVertical,
   Plus,
+  Search,
   UserCheck,
 } from 'lucide-react';
 import {
@@ -25,6 +26,7 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useForm } from '../hooks/useForm';
+import { getProfileImageUrl } from '../utils/profileImage';
 import type {
   CreateUserRequest,
   UpdateUserRequest,
@@ -45,6 +47,8 @@ const isUserRole = (value: string): value is UserRole =>
 
 export const AdminUsuarios = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -68,6 +72,7 @@ export const AdminUsuarios = () => {
     last_name: string;
     role: UserRole;
     is_author: boolean;
+    is_guest: boolean;
     dni?: string;
     specialtyId?: number | null;
   }>({
@@ -77,6 +82,7 @@ export const AdminUsuarios = () => {
     last_name: '',
     role: 'STAFF',
     is_author: false,
+    is_guest: false,
     dni: '',
     specialtyId: null,
   });
@@ -90,6 +96,24 @@ export const AdminUsuarios = () => {
     setIsCopied(false);
     setCopyError('');
   };
+
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    const matchesSearch =
+      !normalizedSearchTerm ||
+      [
+        usuario.first_name,
+        usuario.last_name,
+        usuario.email,
+        usuario.username,
+      ].some((value) =>
+        (value ?? '').toLocaleLowerCase().includes(normalizedSearchTerm),
+      );
+    const matchesRole =
+      roleFilter === 'TODOS' || usuario.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
 
   const openCreateModal = () => {
     setEditingUserId(null);
@@ -106,6 +130,7 @@ export const AdminUsuarios = () => {
       last_name: user.last_name,
       role: user.role,
       is_author: user.is_author,
+      is_guest: user.is_guest ?? false,
       dni: user.dni ?? '',
       specialtyId: user.specialtyId ?? null,
     });
@@ -234,7 +259,7 @@ export const AdminUsuarios = () => {
   }, [openMenuId]);
 
   const handleSuspend = async (id: number) => {
-    if (!window.confirm('¿Suspender esta cuenta?')) {
+    if (!window.confirm('¿Deshabilitar esta cuenta?')) {
       setOpenMenuId(null);
       return;
     }
@@ -250,7 +275,7 @@ export const AdminUsuarios = () => {
       );
     } catch (err: unknown) {
       alert(
-        err instanceof Error ? err.message : 'Error al suspender usuario',
+        err instanceof Error ? err.message : 'Error al deshabilitar usuario',
       );
     } finally {
       setBusyUserId(null);
@@ -282,7 +307,7 @@ export const AdminUsuarios = () => {
   };
 
   const handleResetPassword = async (id: number) => {
-    if (!window.confirm('¿Generar nueva contraseña?')) {
+    if (!window.confirm('¿Generar nueva contraseña temporal para este usuario?')) {
       setOpenMenuId(null);
       return;
     }
@@ -312,7 +337,7 @@ export const AdminUsuarios = () => {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="font-editorial text-[32px] leading-tight tracking-[-.03em] text-[#173d3b]">
             Gestión de Usuarios
@@ -321,15 +346,46 @@ export const AdminUsuarios = () => {
             Administra las cuentas del sistema
           </p>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          className="flex shrink-0 items-center gap-2"
-          onClick={openCreateModal}
-        >
-          <Plus className="h-4 w-4" />
-          Nuevo Usuario
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label>
+            <span className="sr-only">Filtrar por rol</span>
+            <select
+              value={roleFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                setRoleFilter(isUserRole(value) ? value : 'TODOS');
+              }}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="TODOS">Todos los roles</option>
+              <option value="STAFF">Staff</option>
+              <option value="COMITE">Comité</option>
+              <option value="DDI">DDI</option>
+              <option value="EDITOR">Editor</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </label>
+          <label className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Buscar usuario..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              aria-label="Buscar usuarios"
+              className="rounded-md border border-gray-300 py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="primary"
+            className="flex shrink-0 items-center gap-2"
+            onClick={openCreateModal}
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Usuario
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -368,29 +424,52 @@ export const AdminUsuarios = () => {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((usuario, index) => {
-                  const isNearBottom = index >= usuarios.length - 2;
+                {usuariosFiltrados.map((usuario, index) => {
+                  const isNearBottom = index >= usuariosFiltrados.length - 2;
+                  const profileImageUrl = getProfileImageUrl(usuario.profile_image);
 
                   return (
                     <tr
                       key={usuario.id}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-4 py-3 font-medium text-gray-800">
-                        {usuario.first_name} {usuario.last_name}
-                        <br />
-                        <span className="text-xs font-normal text-gray-400">
-                          @{usuario.username}
-                        </span>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {profileImageUrl ? (
+                            <img
+                              src={profileImageUrl}
+                              alt="Perfil"
+                              className="h-10 w-10 rounded-full border border-gray-200 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-500">
+                              {usuario.first_name?.charAt(0)}
+                              {usuario.last_name?.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <span className="block font-medium text-gray-800">
+                              {usuario.first_name} {usuario.last_name}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              @{usuario.username}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span className="rounded-full bg-[#e6f5ee] px-2 py-1 text-xs font-semibold text-[#07584f]">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="rounded-full border border-green-200 bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
                             {usuario.role}
                           </span>
                           {usuario.is_author && (
-                            <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
-                              Autor
+                            <span className="rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                              AUTOR
+                            </span>
+                          )}
+                          {usuario.is_guest && (
+                            <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+                              INVITADO
                             </span>
                           )}
                         </div>
@@ -403,7 +482,7 @@ export const AdminUsuarios = () => {
                               : 'bg-red-100 text-red-700'
                           }`}
                         >
-                          {usuario.active ? 'Activo' : 'Suspendido'}
+                          {usuario.active ? 'Habilitada' : 'Deshabilitada'}
                         </span>
                       </td>
                       <td className="relative px-4 py-3 text-right">
@@ -465,7 +544,7 @@ export const AdminUsuarios = () => {
                                   className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                 >
                                   <Ban className="h-4 w-4" />
-                                  Suspender cuenta
+                                  Deshabilitar cuenta
                                 </button>
                               ) : (
                                 <button
@@ -475,7 +554,7 @@ export const AdminUsuarios = () => {
                                   className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-green-700 hover:bg-green-50"
                                 >
                                   <UserCheck className="h-4 w-4" />
-                                  Reactivar
+                                  Habilitar cuenta
                                 </button>
                               )}
                             </div>
@@ -485,6 +564,16 @@ export const AdminUsuarios = () => {
                     </tr>
                   );
                 })}
+                {usuarios.length > 0 && usuariosFiltrados.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-8 text-center text-sm text-gray-500"
+                    >
+                      No se encontraron usuarios.
+                    </td>
+                  </tr>
+                )}
                 {usuarios.length === 0 && (
                   <tr>
                     <td
@@ -600,6 +689,7 @@ export const AdminUsuarios = () => {
               name="dni"
               value={formulario.dni ?? ''}
               onChange={handleChange}
+              required
             />
 
             <Input
@@ -683,6 +773,27 @@ export const AdminUsuarios = () => {
                       </label>
                       <p className="text-xs text-gray-500">
                         Habilita al usuario para enviar manuscritos como autor.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_guest"
+                      name="is_guest"
+                      checked={formulario.is_guest}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4 cursor-pointer rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <label
+                        htmlFor="is_guest"
+                        className="cursor-pointer text-sm font-medium text-gray-700"
+                      >
+                        Usuario Invitado (Autoregistrado)
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        Indica que el usuario se registró por su cuenta para una convocatoria.
                       </p>
                     </div>
                   </div>

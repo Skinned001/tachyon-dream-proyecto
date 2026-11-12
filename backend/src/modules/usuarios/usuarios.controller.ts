@@ -11,6 +11,7 @@ const createUsuarioSchema = z.object({
   dni: z.string().trim().min(1).max(255),
   role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN']),
   is_author: z.boolean().optional().default(false),
+  is_guest: z.boolean().optional().default(false),
   specialtyId: z.number().int().positive().nullable().optional(),
 });
 
@@ -23,6 +24,7 @@ const updateUsuarioSchema = z
     dni: z.string().trim().min(1).max(255).optional(),
     role: z.enum(['STAFF', 'DDI', 'COMITE', 'EDITOR', 'ADMIN']).optional(),
     is_author: z.boolean().optional(),
+    is_guest: z.boolean().optional(),
     specialtyId: z.number().int().positive().nullable().optional(),
     active: z.boolean().optional(),
   })
@@ -114,12 +116,12 @@ export class UsuariosController {
     }
 
     try {
-      const usuario = await this.usuariosService.update(
+      const user = await this.usuariosService.update(
         id,
         parsedBody.data,
         req.user.id,
       );
-      res.status(200).json({ success: true, data: usuario });
+      res.status(200).json({ success: true, data: user });
     } catch (error: unknown) {
       next(error);
     }

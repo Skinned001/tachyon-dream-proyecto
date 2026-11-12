@@ -110,7 +110,7 @@ export const Revisiones = () => {
                     <p className="mt-1.5 line-clamp-2 pr-4 text-[11px] text-[#52766d]">{articulo.abstract || 'Sin resumen'}</p>
                     <div className="mt-3 flex items-center gap-4">
                       {articulo.fileUrl && (
-                         <a href={`http://localhost:3000${articulo.fileUrl}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[10px] font-semibold text-[#087366] hover:underline">
+                         <a href={articulo.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[10px] font-semibold text-[#087366] hover:underline">
                            <FileText size={13} /> Leer PDF
                          </a>
                       )}
