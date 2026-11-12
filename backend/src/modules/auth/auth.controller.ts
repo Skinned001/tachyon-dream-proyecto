@@ -37,6 +37,14 @@ const removeUploadedProfileImage = async (
   }
 };
 
+const removeUploadedCredential = async (
+  file: Express.Multer.File | undefined,
+): Promise<void> => {
+  if (file) {
+    await unlink(file.path);
+  }
+};
+
 export class AuthController {
   constructor(private readonly authService = new AuthService()) {}
 
@@ -47,6 +55,12 @@ export class AuthController {
   ): Promise<void> => {
     const parsedBody = registerRequestSchema.safeParse(req.body);
     if (!parsedBody.success) {
+      try {
+        await removeUploadedCredential(req.file);
+      } catch (error: unknown) {
+        next(error);
+        return;
+      }
       res.status(400).json({
         success: false,
         error: 'Todos los campos son obligatorios y deben tener un formato válido',
@@ -55,7 +69,7 @@ export class AuthController {
     }
 
     try {
-      await this.authService.register(parsedBody.data);
+      await this.authService.register(parsedBody.data, req.file?.filename);
       res.status(201).json({
         success: true,
         data: {
@@ -64,6 +78,14 @@ export class AuthController {
         },
       });
     } catch (error: unknown) {
+      try {
+        await removeUploadedCredential(req.file);
+      } catch (cleanupError: unknown) {
+        console.error(
+          'No se pudo limpiar la credencial después de fallar el registro:',
+          cleanupError,
+        );
+      }
       next(error);
     }
   };

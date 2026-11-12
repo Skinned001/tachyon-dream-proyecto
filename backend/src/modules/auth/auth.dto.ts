@@ -14,6 +14,7 @@ export interface RegisterRequest {
   first_name: string;
   last_name: string;
   dni: string;
+  comentarios?: string;
 }
 
 export interface AuthUser {
@@ -57,6 +58,10 @@ export const registerRequestSchema = z.object({
   first_name: z.string().trim().min(1).max(255),
   last_name: z.string().trim().min(1).max(255),
   dni: z.string().trim().min(1).max(255),
+  comentarios: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().trim().max(2000).optional(),
+  ),
 });
 
 export const changePasswordRequestSchema = z.object({

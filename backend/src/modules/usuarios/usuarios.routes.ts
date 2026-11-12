@@ -9,6 +9,9 @@ const usuariosController = new UsuariosController();
 router.use(authenticateJWT, requireRole(['ADMIN']));
 
 router.get('/', usuariosController.list);
+router.get('/:id/credencial', usuariosController.credential);
+router.patch('/:id/aprobar', usuariosController.approve);
+router.patch('/:id/rechazar', usuariosController.reject);
 router.post('/', usuariosController.create);
 router.put('/:id', usuariosController.update);
 router.delete('/:id', usuariosController.delete);

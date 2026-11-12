@@ -42,6 +42,52 @@ export const uploadProfileImage = multer({
   },
 });
 
+const credentialExtensions: Record<string, string> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+};
+
+class UploadValidationError extends Error {
+  readonly statusCode = 400;
+}
+
+const credentialStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const directory = path.join(uploadsDirectory, 'credentials');
+    try {
+      fs.mkdirSync(directory, { recursive: true });
+      cb(null, directory);
+    } catch (error) {
+      cb(error instanceof Error ? error : new Error('No se pudo crear el directorio de credenciales.'), '');
+    }
+  },
+  filename: (_req, file, cb) => {
+    const extension = credentialExtensions[file.mimetype];
+    if (!extension) {
+      cb(new Error('Formato de credencial no permitido: use PDF, JPG o PNG.'), '');
+      return;
+    }
+    cb(null, `${randomUUID()}${extension}`);
+  },
+});
+
+export const uploadCredential = multer({
+  storage: credentialStorage,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!credentialExtensions[file.mimetype]) {
+      cb(
+        new UploadValidationError(
+          'Formato de credencial no permitido: use PDF, JPG o PNG.',
+        ),
+      );
+      return;
+    }
+    cb(null, true);
+  },
+});
+
 const storage = multer.diskStorage({
   destination: (req, _file, cb) => {
     const requestPath = `${req.originalUrl} ${req.baseUrl}`;

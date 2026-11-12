@@ -426,6 +426,8 @@ export const AdminUsuarios = () => {
               <tbody>
                 {usuariosFiltrados.map((usuario, index) => {
                   const isNearBottom = index >= usuariosFiltrados.length - 2;
+                  const isPendingApproval =
+                    !usuario.active && usuario.is_guest && usuario.is_author;
                   const profileImageUrl = getProfileImageUrl(usuario.profile_image);
 
                   return (
@@ -479,10 +481,16 @@ export const AdminUsuarios = () => {
                           className={`rounded-full px-2 py-1 text-xs font-semibold ${
                             usuario.active
                               ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
+                              : isPendingApproval
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-red-100 text-red-700'
                           }`}
                         >
-                          {usuario.active ? 'Habilitada' : 'Deshabilitada'}
+                          {usuario.active
+                            ? 'Habilitada'
+                            : isPendingApproval
+                              ? 'Pendiente de aprobación'
+                              : 'Deshabilitada'}
                         </span>
                       </td>
                       <td className="relative px-4 py-3 text-right">
@@ -505,6 +513,10 @@ export const AdminUsuarios = () => {
                           >
                             {busyUserId === usuario.id ? (
                               <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : isPendingApproval ? (
+                              <span className="block px-4 py-2 text-sm text-amber-800">
+                                Pendiente de aprobación
+                              </span>
                             ) : (
                               <MoreVertical className="h-5 w-5" />
                             )}

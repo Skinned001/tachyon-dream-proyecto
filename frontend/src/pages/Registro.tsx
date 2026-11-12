@@ -50,11 +50,14 @@ export const Registro = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    if (credencial && credencial.size > 5 * 1024 * 1024) {
+      setError('La documentación debe pesar 5 MB o menos.');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      // La API deberá aceptar FormData para incluir la documentación y los comentarios.
-      const message = await register(formulario);
+      const message = await register(formulario, { credencial, comentarios });
       setSuccessMessage(message);
       setIsSuccess(true);
     } catch (requestError: unknown) {
@@ -319,12 +322,12 @@ export const Registro = () => {
                         {credencial.name}
                       </span>
                     ) : (
-                      'Sube tu matrícula, diploma o certificado (PDF, JPG, PNG)'
+                      'Sube tu matrícula, diploma o certificado (PDF, JPG, PNG; hasta 5 MB)'
                     )}
                   </span>
                   <input
                     type="file"
-                    accept=".pdf,image/*"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                     aria-label="Subir documentación respaldatoria"
                     className="sr-only"
                     disabled={isSubmitting}
@@ -347,6 +350,7 @@ export const Registro = () => {
                   />
                   <textarea
                     rows={2}
+                    maxLength={2000}
                     placeholder="Ej: Soy residente de 3er año en el Instituto..."
                     value={comentarios}
                     disabled={isSubmitting}

@@ -72,8 +72,7 @@ permite configurar el origen autorizado por CORS y por defecto es
 `DB_PASSWORD` puede estar vacía si el usuario de la base no tiene contraseña.
 
 Al iniciar, el backend configura las asociaciones, valida la conexión y
-sincroniza los modelos con `alter: true` antes de aceptar peticiones. Revisar
-este comportamiento antes de utilizarlo en producción.
+sincroniza los modelos con `alter: true` antes de aceptar peticiones.
 
 Para insertar los roles, especialidades y cuentas de prueba de forma
 idempotente, ejecutar desde `backend/`:
@@ -82,20 +81,45 @@ idempotente, ejecutar desde `backend/`:
 npm run seed
 ```
 
-El seeder crea las tablas faltantes sin alterar las existentes y ejecuta la
-inserción de datos dentro de una transacción. Las cuentas usan la contraseña
-compartida `Hief2026*`; son solo para desarrollo y este seeder no debe
-ejecutarse en producción.
+El seeder sincroniza el esquema con los modelos y ejecuta la inserción de
+datos dentro de una transacción. Las cuentas usan la contraseña compartida
+`Hief2026*`; son solo para desarrollo y este seeder no debe ejecutarse en
+producción.
 
 ## Autenticación
 
 El backend expone `POST /api/auth/login`, `POST /api/auth/logout`,
 `GET /api/auth/me`, `GET /api/auth/verify` y
-`POST /api/auth/change-password`. No hay registro público. El login devuelve
+`POST /api/auth/change-password`. El login devuelve
 el token dentro de la respuesta estándar y además lo establece como cookie
 HttpOnly; las rutas protegidas aceptan esa cookie o `Authorization: Bearer
 <token>`. El cliente Axios usa `withCredentials` para enviar la cookie.
 Cambiar la contraseña requiere `currentPassword` y `newPassword`.
+
+## Registro y aprobación de usuarios
+
+`POST /api/auth/register` acepta `multipart/form-data` con `username`,
+`email`, `password`, `first_name`, `last_name`, `dni`, el comentario opcional
+`comentarios` y, opcionalmente, un archivo `credencial` PDF, JPG o PNG de hasta
+5 MB. Las solicitudes se crean inactivas con rol `STAFF` y permiso de autor;
+`STAFF` es el rol vigente para autores en este proyecto. La credencial se
+almacena en un directorio privado y no se sirve como archivo público.
+
+Los administradores pueden consultar las solicitudes con
+`GET /api/usuarios?estado=PENDIENTE`, abrir la credencial con
+`GET /api/usuarios/:id/credencial`, aprobar con
+`PATCH /api/usuarios/:id/aprobar` o rechazar con
+`PATCH /api/usuarios/:id/rechazar`. Estos endpoints requieren autenticación y
+rol `ADMIN`. El rechazo elimina la solicitud y su archivo asociado.
+
+Para enviar el correo al aprobar una cuenta, configurar `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER` y `SMTP_PASS` en `backend/.env`; `SMTP_FROM` es
+opcional. Si el envío falla, la cuenta queda aprobada y la respuesta indica
+explícitamente que no se pudo enviar el correo.
+
+Pendiente: configurar las credenciales SMTP del entorno y agregar una acción
+para reenviar el correo a cuentas que ya fueron aprobadas cuando falló la
+notificación inicial.
 
 ## Biblioteca virtual
 

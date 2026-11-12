@@ -81,7 +81,7 @@ const seedUsers = [
 const seedDatabase = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });
   await synchronizeRoles();
 
   const passwordHash = await bcrypt.hash('Hief2026*', 10);

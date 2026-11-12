@@ -35,11 +35,24 @@ export const login = async (email: string, password: string): Promise<User> => {
   }
 };
 
-export const register = async (user: RegisterRequest): Promise<string> => {
+export const register = async (
+  user: RegisterRequest,
+  extras: { credencial?: File | null; comentarios?: string } = {},
+): Promise<string> => {
   try {
+    const formData = new FormData();
+    Object.entries(user).forEach(([key, value]) => formData.append(key, value));
+    if (extras.comentarios?.trim()) {
+      formData.append('comentarios', extras.comentarios.trim());
+    }
+    if (extras.credencial) {
+      formData.append('credencial', extras.credencial);
+    }
+
     const { data } = await axiosClient.post<ApiResponse<{ message: string }>>(
       "/auth/register",
-      user,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
     if (!data.success || !data.data) {
       throw new Error(data.error || "Error al registrar usuario");

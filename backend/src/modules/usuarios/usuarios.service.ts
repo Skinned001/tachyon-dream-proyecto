@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { Op } from 'sequelize';
+import { Op, type Transaction } from 'sequelize';
 import { sequelize } from '../../config/database.js';
+import type { ApprovalEmailRecipient } from '../../config/email.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { isRoleName, type RoleName } from '../auth/auth.dto.js';
@@ -22,6 +23,17 @@ export interface UsuarioDTO {
   specialtyId: number | null;
   must_change_password: boolean;
   active: boolean;
+}
+
+export interface UsuarioPendienteDTO {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  email: string;
+  comentarios?: string;
+  credencialUrl?: string;
+  createdAt: string;
 }
 
 export interface CreateUsuarioData {
@@ -92,6 +104,38 @@ const findUsuarioOrThrow = async (id: number): Promise<Usuario> => {
   return usuario;
 };
 
+const findPendingUsuarioOrThrow = async (
+  id: number,
+  transaction: Transaction,
+): Promise<Usuario> => {
+  const usuario = await Usuario.findByPk(id, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  if (!usuario) {
+    throw new UsuariosError(404, 'Solicitud no encontrada');
+  }
+  if (usuario.active || !usuario.is_guest || !usuario.is_author) {
+    throw new UsuariosError(409, 'La solicitud ya no está pendiente');
+  }
+  return usuario;
+};
+
+const toUsuarioPendienteDTO = (usuario: Usuario): UsuarioPendienteDTO => ({
+  id: usuario.id,
+  nombre: usuario.first_name,
+  apellido: usuario.last_name,
+  dni: usuario.dni,
+  email: usuario.email,
+  ...(usuario.registration_comments
+    ? { comentarios: usuario.registration_comments }
+    : {}),
+  ...(usuario.credential_filename
+    ? { credencialUrl: `/api/usuarios/${usuario.id}/credencial` }
+    : {}),
+  createdAt: usuario.createdAt.toISOString(),
+});
+
 export class UsuariosService {
   async findAll(): Promise<UsuarioDTO[]> {
     const usuarios = await Usuario.findAll({
@@ -106,6 +150,69 @@ export class UsuariosService {
         throw new Error(`No se encontró el rol del usuario ${usuario.id}.`);
       }
       return toUsuarioDTO(usuario, roleName);
+    });
+  }
+
+  async findPendingRegistrations(): Promise<UsuarioPendienteDTO[]> {
+    const usuarios = await Usuario.findAll({
+      where: { active: false, is_guest: true, is_author: true },
+      attributes: [
+        'id',
+        'first_name',
+        'last_name',
+        'dni',
+        'email',
+        'registration_comments',
+        'credential_filename',
+        'createdAt',
+      ],
+      order: [['createdAt', 'ASC']],
+    });
+
+    return usuarios.map(toUsuarioPendienteDTO);
+  }
+
+  async findCredentialFilename(id: number): Promise<string | null> {
+    const usuario = await Usuario.findByPk(id, {
+      attributes: ['id', 'credential_filename'],
+    });
+    if (!usuario) {
+      throw new UsuariosError(404, 'Usuario no encontrado');
+    }
+    return usuario.credential_filename;
+  }
+
+  async approvePendingRegistration(
+    id: number,
+  ): Promise<ApprovalEmailRecipient> {
+    return sequelize.transaction(async (transaction) => {
+      const usuario = await findPendingUsuarioOrThrow(id, transaction);
+      usuario.active = true;
+      await usuario.save({ transaction });
+      await Notificacion.create(
+        {
+          userId: usuario.id,
+          title: 'Cuenta aprobada',
+          message: 'Tu cuenta fue aprobada. Ya puedes iniciar sesión.',
+          read: false,
+        },
+        { transaction },
+      );
+
+      return {
+        email: usuario.email,
+        firstName: usuario.first_name,
+        lastName: usuario.last_name,
+      };
+    });
+  }
+
+  async rejectPendingRegistration(id: number): Promise<string | null> {
+    return sequelize.transaction(async (transaction) => {
+      const usuario = await findPendingUsuarioOrThrow(id, transaction);
+      const credentialFilename = usuario.credential_filename;
+      await usuario.destroy({ transaction });
+      return credentialFilename;
     });
   }
 
@@ -192,6 +299,17 @@ export class UsuariosService {
       const usuario = await Usuario.findByPk(id, { transaction });
       if (!usuario) {
         throw new UsuariosError(404, 'Usuario no encontrado');
+      }
+      if (
+        !usuario.active &&
+        usuario.is_guest &&
+        usuario.is_author &&
+        input.active === true
+      ) {
+        throw new UsuariosError(
+          409,
+          'Apruebe esta solicitud desde el panel de solicitudes de registro',
+        );
       }
       const activated = input.active === true && !usuario.active;
       const deactivated = input.active === false && usuario.active;

@@ -60,7 +60,10 @@ const toAuthUser = (
 };
 
 export class AuthService {
-  async register(input: RegisterRequest): Promise<void> {
+  async register(
+    input: RegisterRequest,
+    credentialFilename?: string,
+  ): Promise<void> {
     await sequelize.transaction(async (transaction) => {
       const duplicate = await Usuario.findOne({
         where: {
@@ -97,12 +100,14 @@ export class AuthService {
           first_name: input.first_name,
           last_name: input.last_name,
           dni: input.dni,
-          is_author: false,
+          is_author: true,
           is_guest: true,
           active: false,
           roleId: staffRole.id,
           specialtyId: null,
           must_change_password: false,
+          registration_comments: input.comentarios ?? null,
+          credential_filename: credentialFilename ?? null,
         },
         { transaction },
       );
