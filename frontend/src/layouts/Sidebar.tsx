@@ -13,11 +13,22 @@ import {
   Users,
   FileText,
   CheckSquare,
+  Megaphone,
+  type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getNotificaciones } from "../api/notificaciones.api";
+import type { UserRole } from "../types/user.types";
+
+type SidebarLink = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  allowedRoles?: UserRole[];
+};
 
 type SidebarProps = {
   onSignOut: () => void;
@@ -57,12 +68,23 @@ export function Sidebar({
     };
   }, []);
 
-  const links = [
+  const links: SidebarLink[] = [
     { to: "/dashboard", label: "Inicio", icon: Activity, end: true },
     { to: "/articulos", label: "Mis Artículos", icon: FileText },
     { to: "/revisiones", label: "Panel de Revisión", icon: CheckSquare },
+    { to: "/editor", label: "Panel del Editor", icon: CheckSquare },
     { to: "/biblioteca", label: "Biblioteca virtual", icon: BookOpen },
+    {
+      to: "/convocatorias",
+      label: "Convocatorias",
+      icon: Megaphone,
+      allowedRoles: ["ADMIN"],
+    },
   ];
+  const visibleLinks = links.filter(
+    ({ allowedRoles }) =>
+      !allowedRoles || Boolean(user && allowedRoles.includes(user.role)),
+  );
 
   return (
     <>
@@ -102,7 +124,7 @@ export function Sidebar({
             Área de trabajo
           </p>
           <nav className="space-y-1">
-            {links.map(({ to, label, icon: Icon, end }) => (
+            {visibleLinks.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 end={end}
                 key={to}
@@ -175,6 +197,7 @@ export function Sidebar({
             )}
           </button>
           <button
+            type="button"
             onClick={onSignOut}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
           >

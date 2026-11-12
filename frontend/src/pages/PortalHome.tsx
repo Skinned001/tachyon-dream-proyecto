@@ -8,11 +8,21 @@ import {
   Download,
   FileText,
   Search,
+  Megaphone,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { articulosApi, type PublishedArticle } from '../api/articulos.api';
+import { getConvocatorias, type Convocatoria } from '../api/convocatorias.api';
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+const formatDate = (date: string): string =>
+  new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`));
 
 export function PortalHome() {
   const [articles, setArticles] = useState<PublishedArticle[]>([]);
@@ -20,6 +30,9 @@ export function PortalHome() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selectedYear, setSelectedYear] = useState('all');
+  const [convocatoriaActiva, setConvocatoriaActiva] =
+    useState<Convocatoria | null>(null);
+  const [convocatoriaError, setConvocatoriaError] = useState('');
 
   async function loadArticles() {
     setLoading(true);
@@ -33,8 +46,26 @@ export function PortalHome() {
     }
   }
 
+  async function loadConvocatoriaActiva() {
+    setConvocatoriaError('');
+    try {
+      const convocatorias = await getConvocatorias();
+      setConvocatoriaActiva(
+        convocatorias.find((convocatoria) => convocatoria.estado === 'ABIERTA') ??
+          null,
+      );
+    } catch (loadError: unknown) {
+      setConvocatoriaError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No se pudo cargar la convocatoria activa.',
+      );
+    }
+  }
+
   useEffect(() => {
     void loadArticles();
+    void loadConvocatoriaActiva();
   }, []);
 
   const years = useMemo(
@@ -123,6 +154,74 @@ export function PortalHome() {
           </aside>
         </div>
       </section>
+
+      {convocatoriaActiva && (
+        <section
+          id="convocatoria"
+          className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
+        >
+          <div className="relative flex flex-col items-center justify-between gap-8 overflow-hidden rounded-3xl border border-[#087d70]/20 bg-white p-7 shadow-[0_20px_40px_-15px_rgba(8,125,112,0.1)] md:flex-row md:p-10">
+            <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 -translate-y-1/3 rounded-full bg-[#e1f3eb] opacity-60 blur-3xl" />
+
+            <div className="relative z-10 max-w-2xl">
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#087d70] text-white">
+                  <Megaphone size={16} />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#087d70]">
+                  Convocatoria abierta
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-slate-600">
+                  <CalendarDays size={12} />
+                  Cierra el {formatDate(convocatoriaActiva.fechaFin)}
+                </span>
+              </div>
+              <h2 className="font-editorial text-[32px] leading-tight tracking-tight text-[#173d3b] md:text-[40px]">
+                {convocatoriaActiva.titulo}
+              </h2>
+              <p className="mt-4 text-[14px] leading-relaxed text-[#52766d]">
+                {convocatoriaActiva.tematica}
+              </p>
+              <p className="mt-4 text-[13px] font-medium text-[#244f47]">
+                Invitamos a los profesionales de la salud a enviar sus
+                manuscritos para la próxima edición del Chief Journal.
+              </p>
+            </div>
+
+            <div className="relative z-10 w-full shrink-0 md:w-auto">
+              <Link
+                to="/register"
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] px-8 text-[14px] font-semibold text-white shadow-lg shadow-[#087d70]/20 transition hover:scale-[1.02] hover:bg-[#07584f] md:w-auto"
+              >
+                Participar ahora <ArrowUpRight size={18} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {convocatoriaError && (
+        <section
+          id="convocatoria"
+          className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
+        >
+          <div
+            role="alert"
+            className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-[#e7c6bb] bg-[#fff9f6] p-5 sm:flex-row sm:items-center"
+          >
+            <p className="text-sm text-[#7b342d]">
+              No se pudo cargar la convocatoria activa: {convocatoriaError}
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadConvocatoriaActiva()}
+              className="text-sm font-semibold text-[#087366] hover:text-[#07584f]"
+            >
+              Reintentar
+            </button>
+          </div>
+        </section>
+      )}
 
       <section id="archivo" className="mx-auto max-w-[1240px] px-5 py-16 md:px-8 md:py-20">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">

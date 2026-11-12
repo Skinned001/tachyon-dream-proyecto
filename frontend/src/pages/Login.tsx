@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Activity,
+  ArrowLeft,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+} from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import * as authApi from "../api/auth.api";
 import { useAuth } from "../context/AuthContext";
 
@@ -85,7 +92,14 @@ export default function Login() {
         </div>
       </section>
 
-      <section className="flex min-h-[100dvh] items-center justify-center px-6 py-12 sm:px-12">
+      <section className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12 sm:px-12">
+        <Link
+          to="/"
+          className="absolute left-6 top-6 z-10 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-800 md:left-8 md:top-8"
+        >
+          <ArrowLeft size={18} />
+          Volver al portal
+        </Link>
         <div className="w-full max-w-[400px] page-enter">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#087d70] text-[#f4fffb]">

@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { PanelConvocatorias } from "../pages/PanelConvocatorias";
+import { PanelEditor } from "../pages/PanelEditor";
 import { BibliotecaHome } from "../pages/BibliotecaHome";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
@@ -20,6 +22,7 @@ export function AppRoutes() {
         <Route path="/" element={<PortalHome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/register" element={<Registro />} />
       </Route>
       <Route element={<PrivateRoutes />}>
         <Route path="/dashboard" element={<DashboardHome />} />
@@ -29,8 +32,10 @@ export function AppRoutes() {
         <Route path="biblioteca" element={<BibliotecaHome />} />
         <Route path="notificaciones" element={<Notificaciones />} />
         <Route path="perfil" element={<Perfil />} />
+        <Route path="editor" element={<PanelEditor />} />
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
+          <Route path="convocatorias" element={<PanelConvocatorias />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
