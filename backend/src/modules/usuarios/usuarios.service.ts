@@ -194,6 +194,7 @@ export class UsuariosService {
         throw new UsuariosError(404, 'Usuario no encontrado');
       }
       const activated = input.active === true && !usuario.active;
+      const deactivated = input.active === false && usuario.active;
 
       if (usuario.id === requesterId && input.active === false) {
         throw new UsuariosError(400, 'No puede suspender su propia cuenta');
@@ -273,6 +274,23 @@ export class UsuariosService {
             read: false,
           },
           { transaction },
+        );
+        console.info(
+          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido HABILITADA. Ya puedes iniciar sesión.`,
+        );
+      } else if (deactivated) {
+        await Notificacion.create(
+          {
+            userId: usuario.id,
+            title: 'Cuenta deshabilitada',
+            message:
+              'Un administrador deshabilitó tu cuenta. Contacta al equipo administrador si necesitas más información.',
+            read: false,
+          },
+          { transaction },
+        );
+        console.info(
+          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido DESHABILITADA.`,
         );
       }
 
