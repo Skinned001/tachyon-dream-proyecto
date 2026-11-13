@@ -7500,3 +7500,51 @@ Si el error persiste, significa que el backend no está enviando el campo `creat
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 76 (Backend): Montar la ruta pública de especialidades
+
+## Contexto
+Los usuarios necesitan ver la lista de especialidades para elegir una. El módulo existe, pero según la documentación, la ruta devuelve una lista vacía o no está montada.
+
+## Objetivo
+Asegurarse de que `GET /api/especialidades` devuelva la lista real de la base de datos.
+
+## Lo que debés hacer
+
+### 1. Revisar el controlador `src/modules/especialidades/especialidades.controller.ts`
+Si el controlador está vacío o devuelve un array hardcodeado, reemplazarlo por una consulta a la base de datos usando el modelo `Especialidad`.
+
+```typescript
+import { Request, Response } from 'express';
+import { Especialidad } from './Especialidad.model';
+
+export const getEspecialidades = async (req: Request, res: Response) => {
+  try {
+    // Traemos solo las especialidades activas
+    const especialidades = await Especialidad.findAll({ 
+      where: { active: true },
+      order: [['name', 'ASC']]
+    });
+    res.status(200).json({ success: true, data: especialidades });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Error al obtener especialidades' });
+  }
+};
+```
+
+### 2. Revisar las rutas `src/modules/especialidades/especialidades.routes.ts`
+Asegurarse de que la ruta `GET /` esté apuntando a `getEspecialidades` y sea **pública** (sin authMiddleware).
+
+### 3. Montar en `src/app.ts`
+Si no está montada, agregar:
+```typescript
+import especialidadesRoutes from './modules/especialidades/especialidades.routes';
+
+// ...
+app.use('/api/especialidades', especialidadesRoutes);
+```
+
+### 4. Verificación
+- Correr `npm run build` y reiniciar el backend.
+- Probar en Postman o el navegador: `http://localhost:3000/api/especialidades` (debería devolver el JSON con las 4 especialidades de tu captura).

@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import { EspecialidadesController } from './especialidades.controller.js';
 
 const router = Router();
-router.get('/', (_req, res) => res.json({ success: true, data: [] }));
+const controller = new EspecialidadesController();
+
+router.get('/', controller.list);
 
 export default router;

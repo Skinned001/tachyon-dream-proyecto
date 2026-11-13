@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import path from "node:path";
+import especialidadesRoutes from "./modules/especialidades/especialidades.routes.js";
 import articulosRoutes from "./modules/articulos/articulo.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
@@ -39,6 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/articulos", articulosRoutes);
 app.use("/api/biblioteca", bibliotecaRoutes);
 app.use("/api/notificaciones", notificacionesRoutes);
+app.use("/api/especialidades", especialidadesRoutes);
 app.use("/api/usuarios", usuariosRoutes);
 
 app.use(errorMiddleware);
