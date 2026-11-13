@@ -7134,3 +7134,182 @@ export const AdminUsuarios = () => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 70: Redirección desde notificaciones y acción "Marcar todas como leídas"
+
+## Contexto
+
+En la pantalla de notificaciones, al hacer clic en un mensaje, debe redirigir al usuario a la sección correspondiente (ej. si es una solicitud de registro, ir a `/admin/usuarios`). Además, necesitamos un botón arriba a la derecha para marcar todas las notificaciones como leídas de una sola vez.
+
+## Objetivo
+
+1. Actualizar `src/api/notificaciones.api.ts` con la función para marcar todas.
+2. Modificar `src/pages/Notificaciones.tsx` para manejar la redirección según el tipo de mensaje.
+3. Agregar el botón "Marcar todas como leídas".
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/api/notificaciones.api.ts`
+
+Agregar la función para marcar todas las notificaciones como leídas (si el backend aún no tiene el endpoint, el agente debe crearlo o simularlo en el frontend).
+
+```typescript
+export const markAllAsRead = async (): Promise<void> => {
+  await axiosClient.put("/notificaciones/read-all");
+};
+```
+
+### 2. Modificar `src/pages/Notificaciones.tsx`
+
+- Importar `useNavigate` de `react-router-dom`.
+- Importar el ícono `CheckCheck` de `lucide-react` (para el botón de marcar todas).
+- Agregar el botón en el encabezado.
+
+```tsx
+// src/pages/Notificaciones.tsx
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  getNotificaciones,
+  markAsRead,
+  markAllAsRead,
+  type Notificacion,
+} from "../api/notificaciones.api";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, Bell, CheckCircle, CheckCheck } from "lucide-react";
+
+export const Notificaciones = () => {
+  const [notifs, setNotifs] = useState<Notificacion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const fetchNotifs = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getNotificaciones();
+      setNotifs(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+  }, []);
+
+  const handleReadAndRedirect = async (notif: Notificacion) => {
+    // 1. Marcar como leída
+    if (!notif.read) {
+      await markAsRead(notif.id);
+      setNotifs(
+        notifs.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
+      );
+    }
+
+    // 2. Redirigir según el contenido del mensaje
+    // (Usamos el título o el mensaje para saber a dónde ir)
+    if (
+      notif.title.toLowerCase().includes("solicitud") ||
+      notif.message.toLowerCase().includes("habilitar su cuenta")
+    ) {
+      navigate("/admin/usuarios"); // Redirige a la gestión de usuarios
+    } else if (
+      notif.title.toLowerCase().includes("artículo") ||
+      notif.message.toLowerCase().includes("manuscrito")
+    ) {
+      navigate("/revisiones"); // Ejemplo futuro
+    }
+  };
+
+  const handleMarkAll = async () => {
+    try {
+      await markAllAsRead();
+      setNotifs(notifs.map((n) => ({ ...n, read: true })));
+    } catch (error) {
+      console.error("Error al marcar todas");
+    }
+  };
+
+  const unreadCount = notifs.filter((n) => !n.read).length;
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Notificaciones</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Mensajes y avisos del sistema
+          </p>
+        </div>
+
+        {/* BOTÓN MARCAR TODAS */}
+        {unreadCount > 0 && (
+          <Button
+            variant="secondary"
+            onClick={handleMarkAll}
+            className="flex items-center gap-2 text-sm"
+          >
+            <CheckCheck className="w-4 h-4" />
+            Marcar todas como leídas
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : notifs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+            <Bell className="w-12 h-12 mb-3 text-gray-300" />
+            <p>No tienes notificaciones por el momento.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {notifs.map((n) => (
+              <div
+                key={n.id}
+                onClick={() => handleReadAndRedirect(n)}
+                className={`p-4 border-b border-gray-100 flex gap-4 cursor-pointer transition-colors hover:bg-gray-50 ${!n.read ? "bg-blue-50/30" : ""}`}
+              >
+                <div
+                  className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!n.read ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500"}`}
+                >
+                  {!n.read ? (
+                    <Bell className="w-4 h-4" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <h4
+                    className={`text-sm ${!n.read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}
+                  >
+                    {n.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+                  <span className="text-xs text-blue-500 mt-2 inline-block font-medium">
+                    Haz clic para ir a la sección
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.

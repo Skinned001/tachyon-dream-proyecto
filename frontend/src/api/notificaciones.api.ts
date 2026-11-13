@@ -26,3 +26,12 @@ export const markAsRead = async (id: number): Promise<void> => {
     throw new Error(data.error || 'Error al marcar la notificación como leída');
   }
 };
+
+export const markAllAsRead = async (): Promise<void> => {
+  const { data } = await axiosClient.put<ApiResponse<{ updated: number }>>(
+    '/notificaciones/read-all',
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al marcar todas las notificaciones como leídas');
+  }
+};

@@ -7,6 +7,7 @@ const controller = new NotificacionesController();
 
 router.use(authenticateJWT);
 router.get('/', controller.list);
+router.put('/read-all', controller.markAllAsRead);
 router.patch('/:id/read', controller.markAsRead);
 
 export default router;

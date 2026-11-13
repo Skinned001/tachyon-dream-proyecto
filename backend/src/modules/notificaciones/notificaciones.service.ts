@@ -51,4 +51,12 @@ export class NotificacionesService {
       read: notification.read,
     };
   }
+
+  async markAllAsRead(userId: number): Promise<number> {
+    const [updatedCount] = await Notificacion.update(
+      { read: true },
+      { where: { userId, read: false } },
+    );
+    return updatedCount;
+  }
 }

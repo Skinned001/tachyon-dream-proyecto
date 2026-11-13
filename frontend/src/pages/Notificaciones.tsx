@@ -1,15 +1,38 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, CheckCircle, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, CheckCircle, Loader2 } from 'lucide-react';
 import {
   getNotificaciones,
+  markAllAsRead,
   markAsRead,
   type Notificacion,
 } from '../api/notificaciones.api';
+import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
+const getNotificationDestination = (
+  notification: Notificacion,
+): string | null => {
+  const content =
+    `${notification.title} ${notification.message}`.toLocaleLowerCase();
+
+  if (content.includes('solicitud') || content.includes('registro pendiente')) {
+    return '/admin/usuarios?tab=solicitudes';
+  }
+  if (content.includes('artículo') || content.includes('manuscrito')) {
+    return '/revisiones';
+  }
+  if (content.includes('cuenta habilitada') || content.includes('cuenta aprobada')) {
+    return '/perfil';
+  }
+  return null;
+};
+
 export const Notificaciones = () => {
+  const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [error, setError] = useState('');
 
   const fetchNotifs = useCallback(async () => {
@@ -32,17 +55,20 @@ export const Notificaciones = () => {
     void fetchNotifs();
   }, [fetchNotifs]);
 
-  const handleRead = async (notification: Notificacion) => {
-    if (notification.read) return;
-
+  const handleReadAndRedirect = async (notification: Notificacion) => {
     try {
-      await markAsRead(notification.id);
-      setNotifs((current) =>
-        current.map((item) =>
-          item.id === notification.id ? { ...item, read: true } : item,
-        ),
-      );
-      window.dispatchEvent(new Event('notifications-updated'));
+      if (!notification.read) {
+        await markAsRead(notification.id);
+        setNotifs((current) =>
+          current.map((item) =>
+            item.id === notification.id ? { ...item, read: true } : item,
+          ),
+        );
+        window.dispatchEvent(new Event('notifications-updated'));
+      }
+
+      const destination = getNotificationDestination(notification);
+      if (destination) navigate(destination);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -52,15 +78,49 @@ export const Notificaciones = () => {
     }
   };
 
+  const handleMarkAll = async () => {
+    setError('');
+    setIsMarkingAll(true);
+    try {
+      await markAllAsRead();
+      setNotifs((current) => current.map((item) => ({ ...item, read: true })));
+      window.dispatchEvent(new Event('notifications-updated'));
+    } catch (requestError: unknown) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Error al marcar todas las notificaciones como leídas.',
+      );
+    } finally {
+      setIsMarkingAll(false);
+    }
+  };
+
+  const unreadCount = notifs.filter((notification) => !notification.read).length;
+
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-6">
-        <h2 className="font-editorial text-[32px] leading-tight tracking-[-.03em] text-[#173d3b]">
-          Notificaciones
-        </h2>
-        <p className="mt-1 text-[13px] text-[#526e68]">
-          Mensajes y avisos del sistema
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="font-editorial text-[32px] leading-tight tracking-[-.03em] text-[#173d3b]">
+            Notificaciones
+          </h2>
+          <p className="mt-1 text-[13px] text-[#526e68]">
+            Mensajes y avisos del sistema
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void handleMarkAll()}
+            isLoading={isMarkingAll}
+            className="gap-2 text-sm"
+          >
+            <CheckCheck className="h-4 w-4" />
+            Marcar todas como leídas
+          </Button>
+        )}
       </header>
 
       <Card>
@@ -99,8 +159,8 @@ export const Notificaciones = () => {
                 <button
                   key={notification.id}
                   type="button"
-                  onClick={() => void handleRead(notification)}
-                  aria-label={`${notification.read ? 'Leída' : 'Marcar como leída'}: ${notification.title}`}
+                  onClick={() => void handleReadAndRedirect(notification)}
+                  aria-label={`${notification.read ? 'Abrir' : 'Marcar como leída y abrir'}: ${notification.title}`}
                   className={`flex w-full cursor-pointer gap-4 border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${
                     notification.read ? '' : 'bg-blue-50/30'
                   }`}
@@ -131,6 +191,11 @@ export const Notificaciones = () => {
                     <span className="mt-1 block text-sm text-gray-600">
                       {notification.message}
                     </span>
+                    {getNotificationDestination(notification) && (
+                      <span className="mt-2 inline-block text-xs font-medium text-blue-600">
+                        Haz clic para ir a la sección
+                      </span>
+                    )}
                   </span>
                 </button>
               ))}

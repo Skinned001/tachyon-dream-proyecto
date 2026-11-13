@@ -58,4 +58,25 @@ export class NotificacionesController {
       next(error);
     }
   }
+
+  markAllAsRead = async (
+    req: Request,
+    res: Response<ApiResponse<{ updated: number }>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Sesión expirada. Inicie sesión nuevamente',
+      });
+      return;
+    }
+
+    try {
+      const updated = await this.service.markAllAsRead(req.user.id);
+      res.status(200).json({ success: true, data: { updated } });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
 }
