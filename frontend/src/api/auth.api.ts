@@ -10,6 +10,7 @@ export interface RegisterRequest {
   first_name: string;
   last_name: string;
   dni: string;
+  specialtyId?: number | null;
 }
 
 const getRequestError = (error: unknown, fallback: string): Error => {
@@ -41,7 +42,11 @@ export const register = async (
 ): Promise<string> => {
   try {
     const formData = new FormData();
-    Object.entries(user).forEach(([key, value]) => formData.append(key, value));
+    Object.entries(user).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
     if (extras.comentarios?.trim()) {
       formData.append('comentarios', extras.comentarios.trim());
     }

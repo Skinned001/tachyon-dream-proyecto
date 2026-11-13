@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   Activity,
   ArrowLeft,
@@ -14,6 +14,10 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { register } from '../api/auth.api';
+import {
+  getEspecialidades,
+  type Especialidad,
+} from '../api/especialidades.api';
 import { useForm } from '../hooks/useForm';
 
 type RegistrationFormData = {
@@ -23,6 +27,7 @@ type RegistrationFormData = {
   first_name: string;
   last_name: string;
   dni: string;
+  specialtyId: string;
 };
 
 const initialFormData: RegistrationFormData = {
@@ -32,6 +37,7 @@ const initialFormData: RegistrationFormData = {
   first_name: '',
   last_name: '',
   dni: '',
+  specialtyId: '',
 };
 
 const inputClassName =
@@ -46,6 +52,29 @@ export const Registro = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credencial, setCredencial] = useState<File | null>(null);
   const [comentarios, setComentarios] = useState('');
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
+  const [especialidadesError, setEspecialidadesError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    getEspecialidades()
+      .then((items) => {
+        if (active) setEspecialidades(items);
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setEspecialidadesError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'No se pudieron cargar las especialidades.',
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,7 +86,14 @@ export const Registro = () => {
     setIsSubmitting(true);
 
     try {
-      const message = await register(formulario, { credencial, comentarios });
+      const { specialtyId, ...registrationData } = formulario;
+      const message = await register(
+        {
+          ...registrationData,
+          ...(specialtyId ? { specialtyId: Number(specialtyId) } : {}),
+        },
+        { credencial, comentarios },
+      );
       setSuccessMessage(message);
       setIsSuccess(true);
     } catch (requestError: unknown) {
@@ -230,6 +266,31 @@ export const Registro = () => {
                     className={`${inputClassName} pl-11`}
                   />
                 </span>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-semibold text-[#244f47]">
+                  Especialidad (Opcional)
+                </span>
+                <select
+                  name="specialtyId"
+                  value={formulario.specialtyId}
+                  onChange={handleChange}
+                  disabled={isSubmitting || especialidades.length === 0}
+                  className={inputClassName}
+                >
+                  <option value="">Seleccione una especialidad</option>
+                  {especialidades.map((especialidad) => (
+                    <option key={especialidad.id} value={especialidad.id}>
+                      {especialidad.name}
+                    </option>
+                  ))}
+                </select>
+                {especialidadesError && (
+                  <span className="mt-1 block text-xs text-red-600" role="alert">
+                    {especialidadesError}
+                  </span>
+                )}
               </label>
 
               <label className="block">

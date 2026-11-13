@@ -7504,47 +7504,127 @@ Confirmame que el archivo fue actualizado y si `npm run build` pasó.
 # Tarea 76 (Backend): Montar la ruta pública de especialidades
 
 ## Contexto
+
 Los usuarios necesitan ver la lista de especialidades para elegir una. El módulo existe, pero según la documentación, la ruta devuelve una lista vacía o no está montada.
 
 ## Objetivo
+
 Asegurarse de que `GET /api/especialidades` devuelva la lista real de la base de datos.
 
 ## Lo que debés hacer
 
 ### 1. Revisar el controlador `src/modules/especialidades/especialidades.controller.ts`
+
 Si el controlador está vacío o devuelve un array hardcodeado, reemplazarlo por una consulta a la base de datos usando el modelo `Especialidad`.
 
 ```typescript
-import { Request, Response } from 'express';
-import { Especialidad } from './Especialidad.model';
+import { Request, Response } from "express";
+import { Especialidad } from "./Especialidad.model";
 
 export const getEspecialidades = async (req: Request, res: Response) => {
   try {
     // Traemos solo las especialidades activas
-    const especialidades = await Especialidad.findAll({ 
+    const especialidades = await Especialidad.findAll({
       where: { active: true },
-      order: [['name', 'ASC']]
+      order: [["name", "ASC"]],
     });
     res.status(200).json({ success: true, data: especialidades });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: 'Error al obtener especialidades' });
+    res
+      .status(500)
+      .json({ success: false, error: "Error al obtener especialidades" });
   }
 };
 ```
 
 ### 2. Revisar las rutas `src/modules/especialidades/especialidades.routes.ts`
+
 Asegurarse de que la ruta `GET /` esté apuntando a `getEspecialidades` y sea **pública** (sin authMiddleware).
 
 ### 3. Montar en `src/app.ts`
+
 Si no está montada, agregar:
+
 ```typescript
-import especialidadesRoutes from './modules/especialidades/especialidades.routes';
+import especialidadesRoutes from "./modules/especialidades/especialidades.routes";
 
 // ...
-app.use('/api/especialidades', especialidadesRoutes);
+app.use("/api/especialidades", especialidadesRoutes);
 ```
 
 ### 4. Verificación
+
 - Correr `npm run build` y reiniciar el backend.
 - Probar en Postman o el navegador: `http://localhost:3000/api/especialidades` (debería devolver el JSON con las 4 especialidades de tu captura).
+
+# Tarea 77: Agregar selector de especialidad en Registro, Perfil y Admin
+
+## Contexto
+
+Ya tenemos las especialidades en el backend. Vamos a agregar un `<select>` (lista desplegable) en las 3 pantallas para que el usuario pueda elegir su especialidad (opcional). También agregaremos la columna en la tabla de Admin.
+
+## Lo que debés hacer
+
+### 1. Crear la API y Tipos
+
+Crear `src/api/especialidades.api.ts`:
+
+```typescript
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+
+export interface Especialidad {
+  id: number;
+  name: string;
+}
+
+export const getEspecialidades = async (): Promise<Especialidad[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Especialidad[]>>("/especialidades");
+  return data.success && data.data ? data.data : [];
+};
+```
+
+Actualizar `src/types/user.types.ts` para que el usuario acepte `specialtyId`:
+
+```typescript
+// Asegurarse de que esté en User, CreateUserRequest y UpdateUserRequest
+specialtyId?: number | null;
+```
+
+### 2. Modificar `src/pages/Registro.tsx`
+
+- Agregar `specialtyId: ''` al `useForm`.
+- Hacer un `useEffect` que traiga las especialidades (`getEspecialidades()`).
+- Agregar el `<select>` debajo del DNI:
+
+```tsx
+<select
+  name="specialtyId"
+  value={formulario.specialtyId}
+  onChange={handleChange}
+  className="px-3 py-2 border rounded-md"
+>
+  <option value="">Seleccione una especialidad (Opcional)</option>
+  {especialidades.map((e) => (
+    <option key={e.id} value={e.id}>
+      {e.name}
+    </option>
+  ))}
+</select>
+```
+
+### 3. Modificar `src/pages/Perfil.tsx` (Vista de Edición)
+
+Hacer exactamente lo mismo. Traer las especialidades y agregar el `<select>` en el formulario de edición.
+
+### 4. Modificar `src/pages/AdminUsuarios.tsx`
+
+- En la tabla: agregar una columna "Especialidad" que busque el nombre según el ID (o que el backend ya lo devuelva con el `include`).
+- En el Modal de Crear/Editar: agregar el `<select>` de especialidades.
+- En el menú de filtros: agregar un filtro por especialidad (opcional, si quieren).
+
+### 5. Verificación
+
+- Correr `npm run build`.

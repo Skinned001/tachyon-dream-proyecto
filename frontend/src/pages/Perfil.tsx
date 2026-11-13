@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Camera, Edit3, UserRound } from 'lucide-react';
 import { changePassword, updateProfile } from '../api/auth.api';
+import {
+  getEspecialidades,
+  type Especialidad,
+} from '../api/especialidades.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -23,7 +27,10 @@ export const Perfil = () => {
     first_name: '',
     last_name: '',
     username: '',
+    specialtyId: null as number | null,
   });
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
+  const [especialidadesError, setEspecialidadesError] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -37,6 +44,27 @@ export const Perfil = () => {
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<Message | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getEspecialidades()
+      .then((items) => {
+        if (active) setEspecialidades(items);
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setEspecialidadesError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'No se pudieron cargar las especialidades.',
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!avatarFile) {
@@ -54,6 +82,7 @@ export const Perfil = () => {
       first_name: user?.first_name ?? '',
       last_name: user?.last_name ?? '',
       username: user?.username ?? '',
+      specialtyId: user?.specialtyId ?? null,
     });
     setAvatarFile(null);
     setProfileMessage(null);
@@ -110,6 +139,10 @@ export const Perfil = () => {
     formData.append('first_name', firstName);
     formData.append('last_name', lastName);
     formData.append('username', username);
+    formData.append(
+      'specialtyId',
+      editData.specialtyId === null ? '' : String(editData.specialtyId),
+    );
     if (avatarFile) {
       formData.append('avatar', avatarFile);
     }
@@ -315,6 +348,37 @@ export const Perfil = () => {
               disabled={isUpdatingProfile}
               required
             />
+            <label className="flex w-full flex-col gap-1.5">
+              <span className="text-sm font-medium text-gray-700">
+                Especialidad (Opcional)
+              </span>
+              <select
+                name="specialtyId"
+                value={editData.specialtyId ?? ''}
+                onChange={(event) =>
+                  setEditData((current) => ({
+                    ...current,
+                    specialtyId: event.target.value
+                      ? Number(event.target.value)
+                      : null,
+                  }))
+                }
+                disabled={isUpdatingProfile || especialidades.length === 0}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-[#087d70] focus:outline-none focus:ring-2 focus:ring-[#bce8d8] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">Sin especialidad</option>
+                {especialidades.map((especialidad) => (
+                  <option key={especialidad.id} value={especialidad.id}>
+                    {especialidad.name}
+                  </option>
+                ))}
+              </select>
+              {especialidadesError && (
+                <span className="text-xs text-red-600" role="alert">
+                  {especialidadesError}
+                </span>
+              )}
+            </label>
             <Input
               label="Correo electrónico (no editable)"
               value={user?.email ?? ''}
@@ -387,6 +451,14 @@ export const Perfil = () => {
                 <dt className="font-medium text-gray-500">Estado</dt>
                 <dd className={user?.active ? 'font-medium text-green-600' : 'font-medium text-red-600'}>
                   {user?.active ? 'Activo' : 'Suspendido'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-gray-500">Especialidad</dt>
+                <dd className="text-right">
+                  {especialidades.find(
+                    (especialidad) => especialidad.id === user?.specialtyId,
+                  )?.name ?? 'No asignada'}
                 </dd>
               </div>
             </dl>

@@ -14,6 +14,7 @@ export interface RegisterRequest {
   first_name: string;
   last_name: string;
   dni: string;
+  specialtyId?: number | null;
   comentarios?: string;
 }
 
@@ -58,6 +59,14 @@ export const registerRequestSchema = z.object({
   first_name: z.string().trim().min(1).max(255),
   last_name: z.string().trim().min(1).max(255),
   dni: z.string().trim().min(1).max(255),
+  specialtyId: z.preprocess(
+    (value) => {
+      if (value === '' || value === undefined) return undefined;
+      if (typeof value === 'string') return Number(value);
+      return value;
+    },
+    z.number().int().positive().nullable().optional(),
+  ),
   comentarios: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.string().trim().max(2000).optional(),

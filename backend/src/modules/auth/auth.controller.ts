@@ -24,6 +24,14 @@ const updateProfileSchema = z
     last_name: z.string().trim().min(1).max(255).optional(),
     username: z.string().trim().min(1).max(255).optional(),
     profile_image: z.string().trim().max(255).nullable().optional(),
+    specialtyId: z.preprocess(
+      (value) => {
+        if (value === '') return null;
+        if (typeof value === 'string') return Number(value);
+        return value;
+      },
+      z.number().int().positive().nullable().optional(),
+    ),
   })
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'Debe proporcionar al menos un campo para actualizar',

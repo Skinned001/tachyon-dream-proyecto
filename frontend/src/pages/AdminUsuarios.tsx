@@ -22,6 +22,10 @@ import {
   resetPassword,
   updateUsuario,
 } from '../api/usuarios.api';
+import {
+  getEspecialidades,
+  type Especialidad,
+} from '../api/especialidades.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -54,6 +58,8 @@ export const AdminUsuarios = () => {
   );
   const [pendingCount, setPendingCount] = useState(0);
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
+  const [especialidadesError, setEspecialidadesError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
   const [isLoading, setIsLoading] = useState(true);
@@ -256,6 +262,27 @@ export const AdminUsuarios = () => {
 
   useEffect(() => {
     void fetchUsuarios();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getEspecialidades()
+      .then((items) => {
+        if (active) setEspecialidades(items);
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setEspecialidadesError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'Error al cargar las especialidades',
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -478,6 +505,9 @@ export const AdminUsuarios = () => {
                     Rol / Autor
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
+                    Especialidad
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
                     Estado
                   </th>
                   <th scope="col" className="px-4 py-3 text-right font-medium">
@@ -520,6 +550,12 @@ export const AdminUsuarios = () => {
                             </span>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {especialidades.find(
+                          (especialidad) =>
+                            especialidad.id === usuario.specialtyId,
+                        )?.name ?? 'No asignada'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col items-start gap-1.5">
@@ -641,7 +677,7 @@ export const AdminUsuarios = () => {
                 {usuarios.length > 0 && usuariosFiltrados.length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-8 text-center text-sm text-gray-500"
                     >
                       No se encontraron usuarios.
@@ -651,7 +687,7 @@ export const AdminUsuarios = () => {
                 {usuarios.length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="py-8 text-center text-gray-500"
                     >
                       No hay usuarios registrados.
@@ -676,6 +712,11 @@ export const AdminUsuarios = () => {
           onPendingCountChange={handlePendingCountChange}
         />
       </div>
+      {especialidadesError && activeTab === 'gestion' && (
+        <p className="mt-3 text-sm text-red-600" role="alert">
+          {especialidadesError}
+        </p>
+      )}
 
       <Modal
         isOpen={isModalOpen}
@@ -778,6 +819,38 @@ export const AdminUsuarios = () => {
               onChange={handleChange}
               required
             />
+
+            <label className="flex w-full flex-col gap-1.5">
+              <span className="text-sm font-medium text-gray-700">
+                Especialidad (Opcional)
+              </span>
+              <select
+                name="specialtyId"
+                value={formulario.specialtyId ?? ''}
+                onChange={(event) =>
+                  setFormulario((current) => ({
+                    ...current,
+                    specialtyId: event.target.value
+                      ? Number(event.target.value)
+                      : null,
+                  }))
+                }
+                disabled={isCreating || especialidades.length === 0}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-[#087d70] focus:outline-none focus:ring-2 focus:ring-[#bce8d8] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">Sin especialidad</option>
+                {especialidades.map((especialidad) => (
+                  <option key={especialidad.id} value={especialidad.id}>
+                    {especialidad.name}
+                  </option>
+                ))}
+              </select>
+              {especialidadesError && (
+                <span className="text-xs text-red-600">
+                  No se pudo cargar la lista de especialidades.
+                </span>
+              )}
+            </label>
 
             <Input
               label="Nombre de Usuario"

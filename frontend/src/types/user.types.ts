@@ -10,7 +10,7 @@ export interface User {
   role: UserRole;
   is_author: boolean;
   is_guest?: boolean;
-  specialtyId: number | null;
+  specialtyId?: number | null;
   must_change_password: boolean;
   dni?: string | null;
   active: boolean;

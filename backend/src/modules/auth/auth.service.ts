@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import { signToken, type AuthTokenPayload } from '../../config/jwt.js';
 import { sequelize } from '../../config/database.js';
+import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Notificacion } from '../notificaciones/Notificacion.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
@@ -17,6 +18,7 @@ export interface UpdateProfileData {
   last_name?: string;
   username?: string;
   profile_image?: string | null;
+  specialtyId?: number | null;
 }
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 10;
@@ -92,6 +94,14 @@ export class AuthService {
         throw new Error('No se encontró el rol STAFF para registrar al usuario.');
       }
 
+      const specialtyId = input.specialtyId ?? null;
+      if (specialtyId !== null) {
+        const specialty = await Especialidad.findByPk(specialtyId, { transaction });
+        if (!specialty || !specialty.active) {
+          throw new AuthError(400, 'La especialidad seleccionada no existe o está inactiva');
+        }
+      }
+
       const user = await Usuario.create(
         {
           username: input.username,
@@ -104,7 +114,7 @@ export class AuthService {
           is_guest: true,
           active: false,
           roleId: staffRole.id,
-          specialtyId: null,
+          specialtyId,
           must_change_password: false,
           registration_comments: input.comentarios ?? null,
           credential_filename: credentialFilename ?? null,
@@ -247,6 +257,15 @@ export class AuthService {
     if (input.first_name !== undefined) user.first_name = input.first_name;
     if (input.last_name !== undefined) user.last_name = input.last_name;
     if (input.profile_image !== undefined) user.profile_image = input.profile_image;
+    if (input.specialtyId !== undefined) {
+      if (input.specialtyId !== null) {
+        const specialty = await Especialidad.findByPk(input.specialtyId);
+        if (!specialty || !specialty.active) {
+          throw new AuthError(400, 'La especialidad seleccionada no existe o está inactiva');
+        }
+      }
+      user.specialtyId = input.specialtyId;
+    }
 
     await user.save();
     return this.getCurrentUser(id);
