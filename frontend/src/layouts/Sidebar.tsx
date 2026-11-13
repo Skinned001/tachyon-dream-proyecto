@@ -80,12 +80,6 @@ export function Sidebar({
       icon: Megaphone,
       allowedRoles: ["ADMIN"],
     },
-    {
-      to: "/admin/usuarios/pendientes",
-      label: "Solicitudes de registro",
-      icon: Users,
-      allowedRoles: ["ADMIN"],
-    },
   ];
   const visibleLinks = links.filter(
     ({ allowedRoles }) =>

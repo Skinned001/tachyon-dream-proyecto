@@ -6967,3 +6967,170 @@ useEffect(() => {
 ### 5. Verificación
 
 - Correr `npm run build`.
+
+# Tarea 69: Unificar Gestión de Usuarios y Solicitudes en Pestañas
+
+## Contexto
+
+Actualmente, "Manejo de Usuarios" y "Solicitudes de registro" son dos páginas separadas en el menú lateral. Queremos unificarlas en una sola pantalla con dos pestañas en la parte superior. Además, moveremos la lógica de "Solicitudes" dentro de este nuevo diseño.
+
+## Objetivo
+
+1. Modificar el Sidebar (`DashboardLayout.tsx`) para quitar la opción "Solicitudes de registro".
+2. Modificar `AdminUsuarios.tsx` para agregar el sistema de pestañas (Tabs).
+3. Integrar la vista de solicitudes pendientes como la segunda pestaña.
+
+## Lo que debés hacer
+
+### 1. Limpiar el Sidebar en `src/layouts/DashboardLayout.tsx`
+
+Buscar el enlace a `/admin/solicitudes` o "Solicitudes de registro" y **eliminarlo**. Todo el control de usuarios estará dentro de "Manejo de Usuarios".
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+Vamos a reestructurar la pantalla para que tenga el diseño de tu dibujo.
+
+_Nota: Si el agente ya tenía código de "Solicitudes" en otra página, debe copiar la lógica de obtención de datos de esa página y traerla aquí._
+
+```tsx
+// src/pages/AdminUsuarios.tsx
+import { useEffect, useState } from "react";
+import {
+  getUsuarios,
+  deleteUsuario,
+  resetPassword,
+  createUsuario,
+  updateUsuario,
+} from "../api/usuarios.api";
+import type {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
+import {
+  Loader2,
+  Plus,
+  MoreVertical,
+  Ban,
+  Key,
+  CheckCircle,
+  Copy,
+  Check,
+  Edit,
+  UserCheck,
+  Search,
+} from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const AdminUsuarios = () => {
+  // --- ESTADOS GLOBALES DE LA PÁGINA ---
+  const [activeTab, setActiveTab] = useState<"gestion" | "solicitudes">(
+    "gestion",
+  );
+
+  // (Aquí va el resto de estados que ya tenías: usuarios, isLoading, openMenuId, isModalOpen, etc.)
+  // ...
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* HEADER CON PESTAÑAS (Tu dibujo) */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-6 border-b border-gray-200">
+        <div className="flex gap-6">
+          <button
+            onClick={() => setActiveTab("gestion")}
+            className={`pb-3 text-lg font-semibold transition-colors border-b-2 ${
+              activeTab === "gestion"
+                ? "border-institucional-600 text-institucional-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Gestión de Usuarios
+          </button>
+
+          <button
+            onClick={() => setActiveTab("solicitudes")}
+            className={`pb-3 text-lg font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "solicitudes"
+                ? "border-institucional-600 text-institucional-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Solicitudes Pendientes
+            {/* Opcional: Un contador rojo si hay solicitudes */}
+            <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
+              0
+            </span>
+          </button>
+        </div>
+
+        {/* Botón de Nuevo Usuario (solo se muestra en la pestaña de gestión) */}
+        {activeTab === "gestion" && (
+          <div className="flex gap-4 mb-3 md:mb-0">
+            {/* BUSCADOR Y FILTRO QUE YA TENÍAS */}
+            {/* ... */}
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              variant="primary"
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Nuevo Usuario
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* CONTENIDO SEGÚN LA PESTAÑA */}
+      {activeTab === "gestion" ? (
+        // --- PESTAÑA 1: TABLA DE USUARIOS (Tu código actual) ---
+        <Card>
+          {/* ... Aquí va el renderizado de tu tabla de usuarios, con sus filtros y botones de acción ... */}
+          <div className="p-8 text-center text-gray-500">
+            Aquí va la tabla de usuarios existente
+          </div>
+        </Card>
+      ) : (
+        // --- PESTAÑA 2: SOLICITUDES DE REGISTRO ---
+        <Card>
+          {/* (Traer aquí el diseño de "Solicitudes de registro" que ya habían hecho) */}
+          <div className="p-8">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              Cuentas Pendientes
+            </h2>
+
+            {/* Ejemplo de cómo debería verse una solicitud */}
+            {/* 
+             <div className="flex justify-between items-center p-4 border border-gray-100 rounded-lg mb-2">
+                <div>
+                  <p className="font-medium">Juan Pérez (DNI: 12345678)</p>
+                  <p className="text-sm text-gray-500">juan@hief.gob.ar - Solicitado hace 2 horas</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="primary" onClick={() => handleApprove(1)}>Habilitar</Button>
+                  <Button variant="danger" onClick={() => handleReject(1)}>Rechazar</Button>
+                </div>
+             </div>
+             */}
+          </div>
+        </Card>
+      )}
+
+      {/* MODAL (Tu código actual) */}
+      {/* ... */}
+    </div>
+  );
+};
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Hacer clic en "Gestión de Usuarios" en el menú lateral.
+- Probar cambiar entre las dos pestañas arriba.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.

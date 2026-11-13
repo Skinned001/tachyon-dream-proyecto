@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { PanelConvocatorias } from "../pages/PanelConvocatorias";
 import { PanelEditor } from "../pages/PanelEditor";
-import { PanelUsuarios } from "../pages/PanelUsuarios";
 import { BibliotecaHome } from "../pages/BibliotecaHome";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
@@ -36,7 +35,10 @@ export function AppRoutes() {
         <Route path="editor" element={<PanelEditor />} />
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
-          <Route path="admin/usuarios/pendientes" element={<PanelUsuarios />} />
+          <Route
+            path="admin/usuarios/pendientes"
+            element={<Navigate to="/admin/usuarios?tab=solicitudes" replace />}
+          />
           <Route path="convocatorias" element={<PanelConvocatorias />} />
         </Route>
       </Route>

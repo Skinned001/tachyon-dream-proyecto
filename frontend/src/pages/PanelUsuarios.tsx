@@ -17,7 +17,15 @@ import {
   type UsuarioPendiente,
 } from '../api/usuarios.api';
 
-export const PanelUsuarios = () => {
+interface PanelUsuariosProps {
+  embedded?: boolean;
+  onPendingCountChange?: (count: number) => void;
+}
+
+export const PanelUsuarios = ({
+  embedded = false,
+  onPendingCountChange,
+}: PanelUsuariosProps) => {
   const [usuarios, setUsuarios] = useState<UsuarioPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +52,10 @@ export const PanelUsuarios = () => {
   useEffect(() => {
     void cargarUsuarios();
   }, []);
+
+  useEffect(() => {
+    onPendingCountChange?.(usuarios.length);
+  }, [onPendingCountChange, usuarios.length]);
 
   const handleAprobar = async (id: number) => {
     setProcessingId(id);
@@ -96,7 +108,8 @@ export const PanelUsuarios = () => {
   return (
     <div className="mx-auto max-w-7xl space-y-8">
       <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <div>
+        {!embedded && (
+          <div>
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#087d70]">
             <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#e1f3eb]">
               <Users size={10} />
@@ -109,7 +122,8 @@ export const PanelUsuarios = () => {
           <p className="mt-1 text-sm text-[#52766d]">
             Revisa la documentación y aprueba las cuentas de nuevos autores.
           </p>
-        </div>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => void cargarUsuarios()}

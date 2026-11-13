@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Ban,
   Check,
@@ -26,6 +27,7 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useForm } from '../hooks/useForm';
+import { PanelUsuarios } from './PanelUsuarios';
 import { getProfileImageUrl } from '../utils/profileImage';
 import type {
   CreateUserRequest,
@@ -46,6 +48,11 @@ const isUserRole = (value: string): value is UserRole =>
   userRoles.some((role) => role === value);
 
 export const AdminUsuarios = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'gestion' | 'solicitudes'>(() =>
+    searchParams.get('tab') === 'solicitudes' ? 'solicitudes' : 'gestion',
+  );
+  const [pendingCount, setPendingCount] = useState(0);
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
@@ -64,6 +71,10 @@ export const AdminUsuarios = () => {
   const [isCopied, setIsCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handlePendingCountChange = useCallback((count: number) => {
+    setPendingCount(count);
+  }, []);
 
   const { formulario, handleChange, resetForm, setFormulario } = useForm<{
     username: string;
@@ -95,6 +106,14 @@ export const AdminUsuarios = () => {
     setPasswordAction(null);
     setIsCopied(false);
     setCopyError('');
+  };
+
+  const selectTab = (tab: 'gestion' | 'solicitudes') => {
+    setActiveTab(tab);
+    setSearchParams(
+      tab === 'solicitudes' ? { tab: 'solicitudes' } : {},
+      { replace: true },
+    );
   };
 
   const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
@@ -337,16 +356,47 @@ export const AdminUsuarios = () => {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-editorial text-[32px] leading-tight tracking-[-.03em] text-[#173d3b]">
+      <div className="mb-6 flex flex-col justify-between gap-4 border-b border-gray-200 md:flex-row md:items-end">
+        <div className="flex gap-6" role="tablist" aria-label="Administración de usuarios">
+          <button
+            type="button"
+            role="tab"
+            id="usuarios-tab"
+            aria-selected={activeTab === 'gestion'}
+            aria-controls="usuarios-panel"
+            onClick={() => selectTab('gestion')}
+            className={`border-b-2 pb-3 text-lg font-semibold transition-colors ${
+              activeTab === 'gestion'
+                ? 'border-[#087d70] text-[#07584f]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
             Gestión de Usuarios
-          </h2>
-          <p className="mt-1 text-[13px] text-[#526e68]">
-            Administra las cuentas del sistema
-          </p>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="solicitudes-tab"
+            aria-selected={activeTab === 'solicitudes'}
+            aria-controls="solicitudes-panel"
+            onClick={() => selectTab('solicitudes')}
+            className={`flex items-center gap-2 border-b-2 pb-3 text-lg font-semibold transition-colors ${
+              activeTab === 'solicitudes'
+                ? 'border-[#087d70] text-[#07584f]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Solicitudes Pendientes
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">
+              {pendingCount}
+            </span>
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className={`mb-3 flex flex-wrap items-center gap-3 md:mb-0 ${
+            activeTab === 'gestion' ? '' : 'hidden'
+          }`}
+        >
           <label>
             <span className="sr-only">Filtrar por rol</span>
             <select
@@ -388,6 +438,12 @@ export const AdminUsuarios = () => {
         </div>
       </div>
 
+      <div
+        id="usuarios-panel"
+        role="tabpanel"
+        aria-labelledby="usuarios-tab"
+        hidden={activeTab !== 'gestion'}
+      >
       <Card>
         {isLoading ? (
           <div
@@ -601,6 +657,19 @@ export const AdminUsuarios = () => {
           </div>
         )}
       </Card>
+      </div>
+
+      <div
+        id="solicitudes-panel"
+        role="tabpanel"
+        aria-labelledby="solicitudes-tab"
+        hidden={activeTab !== 'solicitudes'}
+      >
+        <PanelUsuarios
+          embedded
+          onPendingCountChange={handlePendingCountChange}
+        />
+      </div>
 
       <Modal
         isOpen={isModalOpen}
