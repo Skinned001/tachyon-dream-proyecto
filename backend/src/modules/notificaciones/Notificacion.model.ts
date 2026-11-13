@@ -16,6 +16,7 @@ export class Notificacion extends Model<
   declare title: CreationOptional<string>;
   declare message: string;
   declare read: CreationOptional<boolean>;
+  declare createdAt: CreationOptional<Date>;
 }
 
 export const initializeNotificacionModel = (sequelize: Sequelize): void => {
@@ -26,6 +27,7 @@ export const initializeNotificacionModel = (sequelize: Sequelize): void => {
       title: { type: DataTypes.STRING, allowNull: false, defaultValue: 'Notificación' },
       message: { type: DataTypes.TEXT, allowNull: false },
       read: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+      createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     },
     { sequelize, tableName: 'notificaciones', timestamps: false },
   );

@@ -6,6 +6,7 @@ export interface Notificacion {
   title: string;
   message: string;
   read: boolean;
+  createdAt: string;
 }
 
 export const getNotificaciones = async (): Promise<Notificacion[]> => {

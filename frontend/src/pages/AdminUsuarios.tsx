@@ -72,6 +72,12 @@ export const AdminUsuarios = () => {
   const [copyError, setCopyError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setActiveTab(
+      searchParams.get('tab') === 'solicitudes' ? 'solicitudes' : 'gestion',
+    );
+  }, [searchParams]);
+
   const handlePendingCountChange = useCallback((count: number) => {
     setPendingCount(count);
   }, []);

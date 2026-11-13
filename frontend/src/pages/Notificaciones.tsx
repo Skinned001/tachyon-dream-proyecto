@@ -9,6 +9,7 @@ import {
 } from '../api/notificaciones.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { formatDateTime } from '../utils/formatDate';
 
 const getNotificationDestination = (
   notification: Notificacion,
@@ -109,18 +110,19 @@ export const Notificaciones = () => {
             Mensajes y avisos del sistema
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void handleMarkAll()}
-            isLoading={isMarkingAll}
-            className="gap-2 text-sm"
-          >
-            <CheckCheck className="h-4 w-4" />
-            Marcar todas como leídas
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => void handleMarkAll()}
+          disabled={unreadCount === 0 || isMarkingAll}
+          isLoading={isMarkingAll}
+          className={`gap-2 text-sm ${
+            unreadCount === 0 ? 'cursor-not-allowed opacity-50' : ''
+          }`}
+        >
+          <CheckCheck className="h-4 w-4" />
+          Marcar todas como leídas
+        </Button>
       </header>
 
       <Card>
@@ -191,8 +193,11 @@ export const Notificaciones = () => {
                     <span className="mt-1 block text-sm text-gray-600">
                       {notification.message}
                     </span>
+                    <span className="mt-2 block text-xs text-gray-400">
+                      {formatDateTime(notification.createdAt)}
+                    </span>
                     {getNotificationDestination(notification) && (
-                      <span className="mt-2 inline-block text-xs font-medium text-blue-600">
+                      <span className="mt-1 inline-block text-xs font-medium text-blue-600">
                         Haz clic para ir a la sección
                       </span>
                     )}

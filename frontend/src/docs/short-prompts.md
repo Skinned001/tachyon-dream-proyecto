@@ -7313,3 +7313,125 @@ export const Notificaciones = () => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 71: Arreglar botón "Marcar todas" y redirección a pestaña de Solicitudes
+
+## Contexto
+
+1. El botón de "Marcar todas" desaparece cuando no hay notificaciones sin leer. Queremos que siempre esté visible, pero deshabilitado si no hay nada que marcar.
+2. Al hacer clic en una notificación de solicitud, debe redirigir a `/admin/usuarios` pero abriendo automáticamente la pestaña de "Solicitudes Pendientes".
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/Notificaciones.tsx`
+
+En el encabezado, cambiar la condición del botón:
+
+```tsx
+{
+  /* BOTÓN MARCAR TODAS - Siempre visible, deshabilitado si no hay no leídas */
+}
+<Button
+  variant="secondary"
+  onClick={handleMarkAll}
+  disabled={unreadCount === 0}
+  className={`flex items-center gap-2 text-sm ${unreadCount === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+>
+  <CheckCheck className="w-4 h-4" />
+  Marcar todas como leídas
+</Button>;
+```
+
+Y en la función `handleReadAndRedirect`, cambiar la ruta para pasarle un parámetro por URL:
+
+```tsx
+if (notif.title.toLowerCase().includes("solicitud")) {
+  navigate("/admin/usuarios?tab=solicitudes"); // 👈 Le pasamos el parámetro
+}
+```
+
+### 2. Modificar `src/pages/AdminUsuarios.tsx`
+
+Necesitamos que esta pantalla "escuche" si la URL tiene `?tab=solicitudes` para abrir esa pestaña automáticamente.
+
+Importar `useSearchParams` de `react-router-dom`:
+
+```tsx
+import { useSearchParams } from 'react-router-dom';
+
+// Dentro del componente:
+export const AdminUsuarios = () => {
+  const [searchParams] = useSearchParams();
+
+  // Inicializamos la pestaña según el parámetro de la URL
+  const initialTab = searchParams.get('tab') === 'solicitudes' ? 'solicitudes' : 'gestion';
+  const [activeTab, setActiveTab] = useState<'gestion' | 'solicitudes'>(initialTab);
+
+  // ... el resto del código
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 72: Mostrar la fecha y hora de las notificaciones
+
+## Contexto
+
+Las notificaciones en `src/pages/Notificaciones.tsx` se muestran sin fecha. Queremos agregar la fecha y hora de creación (`createdAt`) debajo del mensaje, con un formato amigable.
+
+## Objetivo
+
+1. Agregar una función utilitaria para formatear fechas.
+2. Mostrar la fecha en cada tarjeta de notificación.
+
+## Lo que debés hacer
+
+### 1. Crear `src/utils/formatDate.ts`
+
+Crear un archivo para centralizar el formato de las fechas (así lo podemos usar en Artículos, Revisiones, etc. más adelante):
+
+```typescript
+export const formatDateTime = (dateString: string) => {
+  if (!dateString) return "";
+
+  const date = new Date(dateString);
+
+  // Opción 1: Formato completo (ej: 13 nov 2026, 14:30)
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+```
+
+### 2. Modificar `src/pages/Notificaciones.tsx`
+
+- Importar la función: `import { formatDateTime } from '../utils/formatDate';`
+- Dentro del `map` de las notificaciones, debajo del `<p>` del mensaje, agregar:
+
+```tsx
+                  <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+
+                  {/* FECHA Y HORA */}
+                  <span className="text-xs text-gray-400 mt-2 block">
+                    {formatDateTime(n.createdAt)}
+                  </span>
+
+                  <span className="text-xs text-blue-500 mt-1 inline-block font-medium">Haz clic para ir a la sección</span>
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.

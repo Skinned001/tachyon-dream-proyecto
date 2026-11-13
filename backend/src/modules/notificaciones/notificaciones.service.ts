@@ -5,6 +5,7 @@ export interface NotificacionDTO {
   title: string;
   message: string;
   read: boolean;
+  createdAt: string;
 }
 
 export class NotificacionesError extends Error {
@@ -23,11 +24,12 @@ export class NotificacionesService {
       where: { userId },
       order: [['id', 'DESC']],
     });
-    return notifications.map(({ id, title, message, read }) => ({
+    return notifications.map(({ id, title, message, read, createdAt }) => ({
       id,
       title,
       message,
       read,
+      createdAt: createdAt.toISOString(),
     }));
   }
 
@@ -49,6 +51,7 @@ export class NotificacionesService {
       title: notification.title,
       message: notification.message,
       read: notification.read,
+      createdAt: notification.createdAt.toISOString(),
     };
   }
 
