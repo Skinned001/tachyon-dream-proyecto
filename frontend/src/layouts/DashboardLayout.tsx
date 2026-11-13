@@ -1,5 +1,5 @@
 import { ChevronDown, LogOut, User } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getProfileImageUrl } from '../utils/profileImage';
@@ -18,7 +18,12 @@ export function DashboardLayout({
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
   const profileImageUrl = getProfileImageUrl(user?.profile_image);
+
+  useEffect(() => {
+    setProfileImageError(false);
+  }, [profileImageUrl]);
 
   const getTitle = () => {
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
@@ -65,11 +70,12 @@ export function DashboardLayout({
               className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-gray-50"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#bce8d8] text-[11px] font-bold text-[#07584f]">
-                {profileImageUrl ? (
+                {profileImageUrl && !profileImageError ? (
                   <img
                     src={profileImageUrl}
                     alt="Perfil"
                     className="h-full w-full object-cover"
+                    onError={() => setProfileImageError(true)}
                   />
                 ) : (
                   <>

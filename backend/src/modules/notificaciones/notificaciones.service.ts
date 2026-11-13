@@ -5,8 +5,15 @@ export interface NotificacionDTO {
   title: string;
   message: string;
   read: boolean;
-  createdAt: string;
+  createdAt: string | null;
 }
+
+const serializeCreatedAt = (value: Date | string | null | undefined): string | null => {
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
 
 export class NotificacionesError extends Error {
   constructor(
@@ -29,7 +36,7 @@ export class NotificacionesService {
       title,
       message,
       read,
-      createdAt: createdAt.toISOString(),
+      createdAt: serializeCreatedAt(createdAt),
     }));
   }
 
@@ -51,7 +58,7 @@ export class NotificacionesService {
       title: notification.title,
       message: notification.message,
       read: notification.read,
-      createdAt: notification.createdAt.toISOString(),
+      createdAt: serializeCreatedAt(notification.createdAt),
     };
   }
 

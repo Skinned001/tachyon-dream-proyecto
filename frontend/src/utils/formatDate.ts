@@ -1,8 +1,10 @@
-export const formatDateTime = (dateString: string): string => {
-  if (!dateString) return '';
+export const formatDateTime = (
+  dateString?: string | null,
+): string => {
+  if (!dateString) return 'Fecha desconocida';
 
   const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return 'Fecha desconocida';
 
   return new Intl.DateTimeFormat('es-AR', {
     day: 'numeric',

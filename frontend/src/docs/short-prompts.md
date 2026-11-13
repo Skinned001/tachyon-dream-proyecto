@@ -7435,3 +7435,68 @@ export const formatDateTime = (dateString: string) => {
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 73: Prevenir error "Invalid time value" en notificaciones
+
+## Contexto
+
+La aplicación está lanzando el error `Error: Invalid time value` en la consola al intentar renderizar las notificaciones. Esto ocurre porque el campo `createdAt` viene vacío, nulo, o con un formato que `new Date()` no puede interpretar.
+
+## Objetivo
+
+1. Hacer que la función `formatDateTime` sea a prueba de errores (que devuelva un texto por defecto si la fecha es inválida).
+2. Revisar la interfaz `Notificacion` en `src/api/notificaciones.api.ts` para asegurarnos de que el campo de fecha coincida con lo que envía el backend.
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/utils/formatDate.ts`
+
+Modificar la función para que verifique si la fecha es válida antes de formatearla:
+
+```typescript
+export const formatDateTime = (dateString?: string | null) => {
+  if (!dateString) return "Fecha no disponible";
+
+  const date = new Date(dateString);
+
+  // Verificamos si la fecha es válida (isNaN da true si la fecha es inválida)
+  if (isNaN(date.getTime())) {
+    return "Fecha inválida";
+  }
+
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+```
+
+### 2. Revisar la interfaz en `src/api/notificaciones.api.ts`
+
+Asegurate de que la interfaz `Notificacion` tenga el campo correcto. Si el backend envía `createdAt` (camelCase), debe estar así:
+
+```typescript
+export interface Notificacion {
+  id: number;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string; // Si el backend lo envía como created_at, cámbialo a created_at
+}
+```
+
+### 3. Revisar el Backend (Opcional)
+
+Si el error persiste, significa que el backend no está enviando el campo `createdAt` en el JSON. Verificar en `backend/src/modules/notificaciones/notificaciones.controller.ts` que el modelo de Sequelize tenga el campo `createdAt: true` (que es por defecto) y que el frontend lo esté leyendo bien.
+
+### 4. Verificación
+
+- Correr `npm run build`.
+- Recargar la página y verificar en la consola que el error desapareció.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
