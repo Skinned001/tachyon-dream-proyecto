@@ -35,6 +35,7 @@ export class Articulo extends Model<
   declare responsibleId: number;
   declare specialtyId: number;
   declare convocationId: CreationOptional<number | null>;
+  declare convocatoriaId: CreationOptional<number | null>;
   declare createdAt: CreationOptional<Date>;
   declare specialty?: NonAttribute<Especialidad>;
   declare versions?: NonAttribute<ArticuloVersion[]>;
@@ -66,6 +67,7 @@ export const initializeArticuloModel = (sequelize: Sequelize): void => {
       responsibleId: { type: DataTypes.INTEGER, allowNull: false },
       specialtyId: { type: DataTypes.INTEGER, allowNull: false },
       convocationId: { type: DataTypes.INTEGER, allowNull: true },
+      convocatoriaId: { type: DataTypes.INTEGER, allowNull: true },
       createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     },
     {

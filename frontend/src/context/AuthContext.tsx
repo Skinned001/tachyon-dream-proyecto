@@ -52,12 +52,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
-    }
+    setUser(null);
+    setIsAuthenticated(false);
+    await authApi.logout();
   };
 
   return (

@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
 import notificacionesRoutes from "./modules/notificaciones/notificaciones.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
+import editorialRoutes from "./modules/editorial/editorial.routes.js";
 import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -40,6 +41,7 @@ app.use("/api/articulos", articulosRoutes);
 app.use("/api/biblioteca", bibliotecaRoutes);
 app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/usuarios", usuariosRoutes);
+app.use("/api/convocatorias", editorialRoutes);
 
 app.use(errorMiddleware);
 

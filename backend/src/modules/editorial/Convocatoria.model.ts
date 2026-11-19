@@ -13,9 +13,12 @@ export class Convocatoria extends Model<
 > {
   declare id: CreationOptional<number>;
   declare title: string;
-  declare start_date: Date;
-  declare end_date: Date;
-  declare active: boolean;
+  declare fechaInicio: Date;
+  declare fechaFin: Date;
+  declare estado: CreationOptional<
+    'BORRADOR' | 'PROGRAMADA' | 'ABIERTA' | 'CERRADA'
+  >;
+  declare visibleEnLanding: CreationOptional<boolean>;
 }
 
 export const initializeConvocatoriaModel = (sequelize: Sequelize): void => {
@@ -23,9 +26,18 @@ export const initializeConvocatoriaModel = (sequelize: Sequelize): void => {
     {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       title: { type: DataTypes.STRING, allowNull: false },
-      start_date: { type: DataTypes.DATE, allowNull: false },
-      end_date: { type: DataTypes.DATE, allowNull: false },
-      active: { type: DataTypes.BOOLEAN, allowNull: false },
+      fechaInicio: { type: DataTypes.DATE, allowNull: false },
+      fechaFin: { type: DataTypes.DATE, allowNull: false },
+      estado: {
+        type: DataTypes.ENUM('BORRADOR', 'PROGRAMADA', 'ABIERTA', 'CERRADA'),
+        allowNull: false,
+        defaultValue: 'BORRADOR',
+      },
+      visibleEnLanding: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     { sequelize, tableName: 'convocations', timestamps: false },
   );

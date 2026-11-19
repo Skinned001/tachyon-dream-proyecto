@@ -7,6 +7,7 @@ export interface CreateArticleDraftRequest {
   title: string;
   abstract: string;
   specialtyId: number;
+  convocatoriaId: number;
 }
 
 export interface UpdateArticleStateRequest {
@@ -48,6 +49,7 @@ export interface ArticleDTO {
   responsibleId: number;
   specialtyId: number;
   convocationId: number | null;
+  convocatoriaId: number | null;
   publishedAt?: string | null;
   editionNumber?: string | null;
   doi?: string | null;

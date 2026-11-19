@@ -41,6 +41,7 @@ export interface LibraryResourceFilters {
   specialtyId?: number;
   category?: string;
   search?: string;
+  convocatoriaId?: number;
 }
 
 export interface LibraryListQuery extends LibraryResourceFilters {

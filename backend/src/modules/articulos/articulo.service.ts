@@ -7,6 +7,7 @@ import { ArticuloVersion } from './ArticuloVersion.model.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
+import { Convocatoria } from '../editorial/Convocatoria.model.js';
 import type {
   ArticleDTO,
   AuthenticatedArticleUser,
@@ -46,6 +47,7 @@ const toArticleDTO = (article: Articulo): ArticleDTO => {
     responsibleId: article.responsibleId,
     specialtyId: article.specialtyId,
     convocationId: article.convocationId,
+    convocatoriaId: article.convocatoriaId ?? article.convocationId,
     createdAt: article.createdAt.toISOString(),
   };
 
@@ -165,9 +167,13 @@ const cleanupUploadedFile = (filePath: string): void => {
 };
 
 export class ArticuloService {
-  async listarArticulosPublicados(): Promise<PublishedArticleDTO[]> {
+  async listarArticulosPublicados(convocatoriaId?: number): Promise<PublishedArticleDTO[]> {
+    const where: WhereOptions = { state: 'PUBLICADO' };
+    if (convocatoriaId !== undefined) {
+      Object.assign(where, { convocatoriaId });
+    }
     const articles = await Articulo.findAll({
-      where: { state: 'PUBLICADO' },
+      where,
       include: publishedArticleIncludes,
       order: [['createdAt', 'DESC']],
     });
@@ -232,7 +238,8 @@ export class ArticuloService {
             state: INITIAL_ARTICLE_STATE,
             responsibleId: authorId,
             specialtyId: data.specialtyId,
-            convocationId: null,
+            convocationId: data.convocatoriaId,
+            convocatoriaId: data.convocatoriaId,
           },
           { transaction },
         );
@@ -295,6 +302,17 @@ export class ArticuloService {
     const specialty = await Especialidad.findByPk(data.specialtyId, { transaction });
     if (!specialty) {
       throw new ArticuloError(400, 'La especialidad indicada no existe');
+    }
+
+    const convocatoria = await Convocatoria.findByPk(data.convocatoriaId, { transaction });
+    if (!convocatoria) {
+      throw new ArticuloError(400, 'La convocatoria indicada no existe');
+    }
+    if (convocatoria.estado !== 'ABIERTA') {
+      throw new ArticuloError(
+        400,
+        'La convocatoria debe estar en estado ABIERTA para recibir manuscritos',
+      );
     }
   }
 }

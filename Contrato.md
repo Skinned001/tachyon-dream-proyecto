@@ -32,7 +32,9 @@ password: string;
 // CONTRATOS GLOBALES DE API - TRY-TACHYON / HIEF JOURNAL PLATFORM
 // ============================================================================
 
-export type RoleName = 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'ADMIN';
+export type RoleName = 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'EDITOR' | 'ADMIN';
+
+export type ConvocationState = 'BORRADOR' | 'PROGRAMADA' | 'ABIERTA' | 'CERRADA';
 
 export type ArticleState =
   | 'BORRADOR'
@@ -134,7 +136,7 @@ export interface ArticleDTO {
   state: ArticleState;
   responsibleId: number;
   specialtyId: number;
-  convocationId: number | null;
+  convocatoriaId: number;
   publishedAt?: string | null;
   editionNumber?: string | null;
   doi?: string | null;
@@ -149,8 +151,13 @@ export interface CreateArticleDraftRequest {
   keywords?: string[];
   coauthors?: string[];
   specialtyId: number;
-  convocationId?: number;
+  convocatoriaId: number; // Obligatorio: debe referenciar una convocatoria ABIERTA
 }
+
+// POST /api/articulos
+// Roles: AUTOR.
+// Recibe CreateArticleDraftRequest; convocatoriaId es obligatorio y la
+// convocatoria referenciada debe estar en estado ABIERTA.
 
 // ----------------------------------------------------------------------------
 // 5. MÓDULO EDITORIAL Y CONVOCATORIAS (/api/editorial)
@@ -158,9 +165,44 @@ export interface CreateArticleDraftRequest {
 export interface ConvocationDTO {
   id: number;
   title: string;
-  start_date: string;
-  end_date: string;
-  active: boolean;
+  descripcion?: string;
+  fechaInicio: string; // ISO 8601 datetime con fecha y hora
+  fechaFin: string; // ISO 8601 datetime con fecha y hora
+  estado: ConvocationState;
+  visibleEnLanding: boolean;
+}
+
+export interface CreateConvocationRequest {
+  title: string;
+  descripcion?: string;
+  fechaInicio: string; // ISO 8601 datetime
+  fechaFin: string; // ISO 8601 datetime
+  estado: 'BORRADOR' | 'PROGRAMADA'; // ABIERTA solo se puede derivar según fechaInicio
+  visibleEnLanding?: boolean; // default false
+}
+
+export interface UpdateConvocationRequest {
+  title?: string;
+  descripcion?: string;
+  visibleEnLanding?: boolean;
+  fechaFin?: string; // ISO 8601 datetime; permite prórrogas
+  fechaInicio?: string; // Solo editable si la convocatoria no está ABIERTA
+  password: string; // Obligatoria; contraseña actual validada con bcrypt
+}
+
+export interface FinalizeConvocationRequest {
+  password: string; // Obligatoria; contraseña actual validada con bcrypt
+}
+
+export interface PublicConvocationDTO {
+  id: number;
+  title: string;
+  descripcion?: string;
+  fechaInicio: string;
+  fechaFin: string;
+  estado: 'ABIERTA' | 'PROGRAMADA' | 'CERRADA';
+  visibleEnLanding: boolean;
+  articulosPublicadosCount: number;
 }
 
 export interface AssignReviewersRequest {
@@ -186,6 +228,30 @@ export interface PublishArticleRequest {
   keywords?: string[];
   specialtyId?: number;
 }
+
+// POST /api/convocatorias
+// Roles: ADMIN, EDITOR.
+// Recibe CreateConvocationRequest.
+// El estado puede ser BORRADOR o PROGRAMADA; ABIERTA puede derivarse por fechaInicio.
+
+// PUT /api/convocatorias/:id
+// Roles: ADMIN, EDITOR.
+// Recibe UpdateConvocationRequest. Permite editar título, descripción,
+// visibleEnLanding y fechaFin; fechaInicio solo cuando no está ABIERTA.
+// password es obligatoria y se valida con bcrypt.
+// Respuesta 401 si password es incorrecta.
+
+// PATCH /api/convocatorias/:id/finalizar
+// Roles: ADMIN, EDITOR.
+// Recibe FinalizeConvocationRequest.
+// Solo opera convocatorias ABIERTAS: establece estado CERRADA y fija fechaFin
+// al instante actual. password es obligatoria y se valida con bcrypt.
+// Respuesta 401 si password es incorrecta.
+
+// GET /api/convocatorias/publicas
+// Endpoint público. Devuelve en PublicConvocationDTO las convocatorias ABIERTAS,
+// las próximas PROGRAMADA visibles en landing y las CERRADA de los últimos
+// 60 días. Cada elemento incluye articulosPublicadosCount: number.
 
 // ----------------------------------------------------------------------------
 // 7. MÓDULO MÉTRICAS (/api/metricas)
@@ -229,6 +295,10 @@ export interface LibraryResourceDTO {
   createdAt: string;
 }
 
+// GET /api/biblioteca — público.
+// Query opcional: ?convocatoriaId=<id>.
+// Filtra los recursos públicos de la Biblioteca por la convocatoria indicada.
+
 // ----------------------------------------------------------------------------
 // 9.1 ARCHIVO PÚBLICO DE ARTÍCULOS (/api/articulos/publicados)
 // ----------------------------------------------------------------------------
@@ -263,9 +333,29 @@ export interface AIReportDTO {
 // ----------------------------------------------------------------------------
 export interface NotificationDTO {
   id: number;
-  userId: number;
   title: string;
   message: string;
   read: boolean;
+  tipo: string;
+  referenciaId: number | null;
   createdAt: string;
 }
+
+export interface NotificacionesListDTO {
+  notificaciones: NotificationDTO[];
+  noLeidasCount: number;
+}
+
+// GET /api/notificaciones — JWT; últimas 30 del usuario autenticado,
+// ordenadas de más reciente a más antigua, y conteo total de no leídas.
+// PATCH /api/notificaciones/:id/leer — JWT; solo permite marcar las propias.
+// PATCH /api/notificaciones/leer-todas — JWT; marca todas las propias como leídas.
+// PATCH /api/notificaciones/preferencias — JWT; recibe
+// { recibirNotificaciones: boolean }.
+// Las rutas anteriores PUT /read-all y PATCH /:id/read se conservan temporalmente.
+//
+// Notificacion conserva las columnas actuales userId, title, message y read;
+// agrega tipo y referenciaId. Usuario agrega recibirNotificaciones (default true).
+// El servicio central filtra autores activos (is_author=true, rol STAFF/AUTOR)
+// con recibirNotificaciones=true y evita duplicados de apertura/recordatorio
+// por usuario, tipo y convocatoria.

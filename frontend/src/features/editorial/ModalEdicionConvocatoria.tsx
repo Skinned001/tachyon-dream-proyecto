@@ -1,0 +1,348 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { AlertCircle, Loader2, LockKeyhole, Save } from 'lucide-react';
+import {
+  editarConvocatoria,
+  finalizarConvocatoria,
+  type Convocatoria,
+  type EditarConvocatoriaRequest,
+  type EstadoConvocatoria,
+} from '../../api/convocatorias.api';
+import { Modal } from '../../components/ui/Modal';
+
+interface ModalEdicionConvocatoriaProps {
+  convocatoria: Convocatoria | null;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}
+
+const inputClassName =
+  'h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#087d70]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500';
+
+const getLocalDateTimeNow = (): string => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+};
+
+const toLocalDateTimeInput = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+};
+
+const getErrorMessage = (error: unknown): string => {
+  const message =
+    error instanceof Error ? error.message : 'No se pudo completar la acción.';
+  return /contraseñ|password/i.test(message)
+    ? 'La contraseña actual es incorrecta.'
+    : message;
+};
+
+const editableStates: EstadoConvocatoria[] = [
+  'BORRADOR',
+  'PROGRAMADA',
+  'ABIERTA',
+];
+
+export const ModalEdicionConvocatoria = ({
+  convocatoria,
+  onClose,
+  onSaved,
+}: ModalEdicionConvocatoriaProps) => {
+  const [title, setTitle] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [initialFechaInicio, setInitialFechaInicio] = useState('');
+  const [initialFechaFin, setInitialFechaFin] = useState('');
+  const [estado, setEstado] = useState<EstadoConvocatoria>('BORRADOR');
+  const [visibleEnLanding, setVisibleEnLanding] = useState(false);
+  const [password, setPassword] = useState('');
+  const [finalizePassword, setFinalizePassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
+  useEffect(() => {
+    if (!convocatoria) return;
+    setTitle(convocatoria.title);
+    const localFechaInicio = toLocalDateTimeInput(convocatoria.fechaInicio);
+    const localFechaFin = toLocalDateTimeInput(convocatoria.fechaFin);
+    setFechaInicio(localFechaInicio);
+    setFechaFin(localFechaFin);
+    setInitialFechaInicio(localFechaInicio);
+    setInitialFechaFin(localFechaFin);
+    setEstado(convocatoria.estado);
+    setVisibleEnLanding(convocatoria.visibleEnLanding);
+    setPassword('');
+    setFinalizePassword('');
+    setError('');
+  }, [convocatoria]);
+
+  const isOpen = convocatoria !== null;
+  const canEditLifecycle =
+    convocatoria?.estado === 'BORRADOR' ||
+    convocatoria?.estado === 'PROGRAMADA';
+  const minDateTime = getLocalDateTimeNow();
+
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!convocatoria || !password) return;
+
+    const dateStart = canEditLifecycle ? new Date(fechaInicio) : null;
+    const dateEnd = new Date(fechaFin);
+    const now = new Date();
+    const startChanged = canEditLifecycle && fechaInicio !== initialFechaInicio;
+    const endChanged = fechaFin !== initialFechaFin;
+    const startMinimum = new Date(now.getTime() - 2 * 60 * 1000);
+    if (
+      Number.isNaN(dateEnd.getTime()) ||
+      (dateStart && Number.isNaN(dateStart.getTime())) ||
+      (dateStart && dateEnd <= dateStart) ||
+      (!dateStart && dateEnd <= new Date(convocatoria.fechaInicio))
+    ) {
+      setError('La fecha de fin debe ser posterior a la fecha de inicio.');
+      return;
+    }
+    if (startChanged && dateStart && dateStart < startMinimum) {
+      setError('La fecha y hora de inicio no puede estar en el pasado.');
+      return;
+    }
+    if (endChanged && dateEnd <= now) {
+      setError('La fecha y hora de fin debe ser posterior al momento actual.');
+      return;
+    }
+
+    const request: EditarConvocatoriaRequest = {
+      title: title.trim(),
+      fechaFin: dateEnd.toISOString(),
+      visibleEnLanding,
+      password,
+      ...(canEditLifecycle && dateStart
+        ? {
+            fechaInicio: dateStart.toISOString(),
+            estado,
+          }
+        : {}),
+    };
+
+    setIsSaving(true);
+    setError('');
+    try {
+      await editarConvocatoria(convocatoria.id, request);
+      setPassword('');
+      onSaved('Convocatoria actualizada correctamente.');
+    } catch (saveError: unknown) {
+      setError(getErrorMessage(saveError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!convocatoria || !finalizePassword) return;
+    const confirmed = window.confirm(
+      `¿Finalizar ahora la convocatoria "${convocatoria.title}"? Esta acción detendrá los envíos.`,
+    );
+    if (!confirmed) return;
+
+    setIsFinalizing(true);
+    setError('');
+    try {
+      await finalizarConvocatoria(convocatoria.id, finalizePassword);
+      setFinalizePassword('');
+      onSaved('Convocatoria finalizada correctamente.');
+    } catch (finalizeError: unknown) {
+      setError(getErrorMessage(finalizeError));
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar convocatoria"
+    >
+      {convocatoria && (
+        <div className="max-h-[80vh] space-y-6 overflow-y-auto">
+          <form onSubmit={handleSave} className="space-y-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Título
+              </span>
+              <input
+                required
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className={inputClassName}
+              />
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Fecha y hora de inicio
+                </span>
+                <input
+                  type="datetime-local"
+                  min={
+                    fechaInicio === initialFechaInicio &&
+                    initialFechaInicio < minDateTime
+                      ? initialFechaInicio
+                      : minDateTime
+                  }
+                  value={fechaInicio}
+                  onChange={(event) => setFechaInicio(event.target.value)}
+                  disabled={!canEditLifecycle}
+                  className={inputClassName}
+                />
+                {!canEditLifecycle && (
+                  <span className="mt-1 block text-xs text-slate-500">
+                    La convocatoria ya está abierta; el inicio no se puede modificar.
+                  </span>
+                )}
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Fecha y hora de fin
+                </span>
+                <input
+                  required
+                  type="datetime-local"
+                  min={
+                    fechaFin === initialFechaFin && initialFechaFin < minDateTime
+                      ? initialFechaFin
+                      : canEditLifecycle && fechaInicio > minDateTime
+                        ? fechaInicio
+                        : minDateTime
+                  }
+                  value={fechaFin}
+                  onChange={(event) => setFechaFin(event.target.value)}
+                  className={inputClassName}
+                />
+              </label>
+            </div>
+
+            {canEditLifecycle && (
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Estado
+                </span>
+                <select
+                  value={estado}
+                  onChange={(event) =>
+                    setEstado(event.target.value as EstadoConvocatoria)
+                  }
+                  className={inputClassName}
+                >
+                  {editableStates.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3.5">
+              <input
+                type="checkbox"
+                checked={visibleEnLanding}
+                onChange={(event) => setVisibleEnLanding(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#087d70] focus:ring-[#087d70]"
+              />
+              <span className="text-sm text-slate-700">
+                Mostrar anuncio anticipado en el portal público
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Contraseña actual
+              </span>
+              <input
+                required
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError('');
+                }}
+                className={inputClassName}
+              />
+            </label>
+
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                <AlertCircle className="mt-0.5 shrink-0" size={17} />
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSaving || isFinalizing || !password || !title.trim()}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] px-5 text-sm font-semibold text-white transition hover:bg-[#06665c] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? (
+                <Loader2 className="animate-spin" size={17} />
+              ) : (
+                <Save size={17} />
+              )}
+              {isSaving ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          </form>
+
+          {convocatoria.estado === 'ABIERTA' && (
+            <section className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-red-800">
+                  Finalización anticipada
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-red-700">
+                  Cerrará la convocatoria inmediatamente y detendrá los envíos.
+                </p>
+              </div>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Confirma con tu contraseña actual
+                </span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={finalizePassword}
+                  onChange={(event) => {
+                    setFinalizePassword(event.target.value);
+                    setError('');
+                  }}
+                  className={inputClassName}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleFinalize()}
+                disabled={isSaving || isFinalizing || !finalizePassword}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isFinalizing ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <LockKeyhole size={16} />
+                )}
+                {isFinalizing ? 'Finalizando…' : 'Finalizar ahora'}
+              </button>
+            </section>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+};

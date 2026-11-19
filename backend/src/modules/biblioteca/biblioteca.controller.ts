@@ -7,6 +7,7 @@ import type {
   UpdateLibraryResourceRequest,
 } from './biblioteca.dto.js';
 import { BibliotecaService } from './biblioteca.service.js';
+import { ArticuloService } from '../articulos/articulo.service.js';
 
 const visibilitySchema = z.enum(['PUBLICO', 'INTERNO', 'CONFIDENCIAL']);
 
@@ -41,9 +42,28 @@ export class BibliotecaController {
 
   listar = async (
     req: Request,
-    res: Response<ApiResponse<LibraryResourceDTO[]>>,
+    res: Response<ApiResponse<LibraryResourceDTO[] | unknown[]>>,
     next: NextFunction,
   ): Promise<void> => {
+    const convocatoriaIdValue = getQueryString(req.query.convocatoriaId);
+    if (convocatoriaIdValue !== undefined) {
+      const convocatoriaId = Number(convocatoriaIdValue);
+      if (!Number.isSafeInteger(convocatoriaId) || convocatoriaId < 1) {
+        res.status(400).json({
+          success: false,
+          error: 'convocatoriaId debe ser un entero positivo',
+        });
+        return;
+      }
+      try {
+        const data = await new ArticuloService().listarArticulosPublicados(convocatoriaId);
+        res.status(200).json({ success: true, data });
+      } catch (error: unknown) {
+        next(error);
+      }
+      return;
+    }
+
     const specialtyIdValue = getQueryString(req.query.specialtyId);
     const specialtyId = specialtyIdValue === undefined ? undefined : Number(specialtyIdValue);
     if (

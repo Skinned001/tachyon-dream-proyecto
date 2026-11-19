@@ -28,14 +28,15 @@ Plataforma web digital institucional diseñada para comunicar conocimiento cient
 ---
 
 ## 4. Matriz de Roles, Perfiles y Permisos (RBAC)
-El sistema reconoce **5 perfiles institucionales operativos** (creados exclusivamente por el Administrador, sin registro público abierto):
+El sistema reconoce **7 perfiles institucionales operativos** (creados exclusivamente por el Administrador, sin registro público abierto):
 
 1. **INVITADO (Sin Autenticación):** Consulta pública de artículos con estado `PUBLICO` / `PUBLICADO` y descarga de PDFs.
 2. **AUTOR (`AUTOR`):** Profesionales que inician sesión para enviar manuscritos (`Article`) y subir nuevas versiones (`ArticleVersion`).
 3. **DEPARTAMENTO DE DOCENCIA E INVESTIGACIÓN (`DDI`):** Recibe envíos, valida pertinencia, realiza rechazos en escritorio y asigna manuscritos a los revisores del Comité Científico según especialidad.
 4. **MIEMBRO DEL COMITÉ CIENTÍFICO (`COMITE`):** Lee expedientes asignados, puede revisar análisis asistidos como apoyo (sin que estos determinen plagio ni reemplacen la evaluación humana) y emite dictámenes formales (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`) con comentarios.
 5. **ENCARGADO DE PUBLICACIÓN / PRENSA (`PUBLISHER`):** Revisa el formato final de artículos aprobados, ejecuta la publicación oficial en el portal y maneja la **Carga Masiva de Históricos** (migración de PDFs antiguos).
-6. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD completo de usuarios, habilitación de especialidades médicas (`specialties`), auditoría de logs y configuración general.
+6. **EDITOR (`EDITOR`):** Gestiona convocatorias y puede editar las convocatorias según las reglas de Convocatorias v2.
+7. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD completo de usuarios, habilitación de especialidades médicas (`specialties`), auditoría de logs y configuración general.
 
 ## 4.1 Portal público y acceso institucional
 
@@ -76,16 +77,65 @@ frontend.
 ---
 
 ## 5. Modelo de Datos Esencial (Sequelize TS)
-*   `roles`: id, name (`AUTOR`, `DDI`, `COMITE`, `PUBLISHER`, `ADMIN`), description.
+*   `roles`: id, name (`AUTOR`, `DDI`, `COMITE`, `PUBLISHER`, `EDITOR`, `ADMIN`), description.
 *   `specialties`: id, name, description, active (baja lógica).
 *   `users`: id, username, email, password, first_name, last_name, dni, active, roleId (FK), specialtyId (FK).
-*   `convocations`: id, title, start_date, end_date, active.
-*   `articles`: id, title, state (`PENDIENTE`, `EN_REVISION`, `APROBADO`, `RECHAZADO`, `PUBLICADO`), responsibleId (FK), specialtyId (FK), convocationId (FK).
+*   `convocations`: id, title, fechaInicio (`DATETIME`), fechaFin (`DATETIME`), estado (`BORRADOR`, `PROGRAMADA`, `ABIERTA`, `CERRADA`), visibleEnLanding (`BOOLEAN`, default `false`).
+*   `articles`: id, title, state (`PENDIENTE`, `EN_REVISION`, `APROBADO`, `RECHAZADO`, `PUBLICADO`), responsibleId (FK), specialtyId (FK), convocatoriaId (FK).
 *   `article_versions`: id, version_number, body_text, pdf_path, ai_report (JSON), articleId (FK).
 *   `committee_assignments`: id, read_status, reviewerId (FK), articleId (FK).
 *   `reviews`: id, verdict, comments, assignmentId (FK), versionId (FK).
 *   `library_resources`: id, title, category, file_path, file_size, visibility (`PUBLICO`, `INTERNO`, `CONFIDENCIAL`), uploadedBy (FK), specialtyId (FK).
 *   `metrics_logs`: id, action_type (`VISITA`, `DESCARGA`), articleId (FK), ip_hash, timestamp.
+
+---
+
+## 5.1 Reglas de Negocio - Convocatorias v2
+
+El sistema admite **múltiples convocatorias abiertas simultáneamente**; no existe la restricción de una sola convocatoria activa.
+
+Una convocatoria tiene exactamente uno de estos estados de ciclo de vida:
+
+*   `BORRADOR`: solo visible dentro de la gestión institucional y no disponible para envíos ni para `PortalHome`.
+*   `PROGRAMADA`: configuración futura que puede mostrarse públicamente solo según `visibleEnLanding`.
+*   `ABIERTA`: convocatoria vigente en la que los autores pueden enviar manuscritos.
+*   `CERRADA`: convocatoria finalizada y retirada de los envíos y de las grillas activas.
+
+`fechaInicio` y `fechaFin` tienen precisión exacta `DATETIME` (fecha y hora). Las fechas se almacenan y muestran con precisión de hora completa.
+
+El campo booleano `visibleEnLanding` tiene valor por defecto `false`. Una convocatoria `PROGRAMADA` solo se muestra en `PortalHome` si `visibleEnLanding = true`, con la etiqueta "A abrir el [fecha y hora]". Las convocatorias `BORRADOR` nunca se muestran públicamente.
+
+Una tarea programada con `node-cron` automatiza las transiciones:
+
+*   `PROGRAMADA` -> `ABIERTA` cuando se alcanza `fechaInicio`.
+*   `ABIERTA` -> `CERRADA` cuando se cumple `fechaFin`.
+
+### Gestión y edición
+
+Los roles `ADMIN` y `EDITOR` pueden editar el título, la descripción, `visibleEnLanding` y `fechaFin` (prórroga). Si la convocatoria está en estado `ABIERTA`, `fechaInicio` queda bloqueada y no puede modificarse.
+
+La acción "Guardar cambios" y el botón independiente "Finalizar ahora" requieren re-autenticación con la contraseña actual del usuario. La contraseña debe validarse con `bcrypt`.
+
+*   "Guardar cambios" aplica las modificaciones permitidas por el estado de la convocatoria.
+*   "Finalizar ahora" solo está disponible si el estado es `ABIERTA`; cambia el estado a `CERRADA` y fija `fechaFin` al instante actual.
+
+Si la contraseña proporcionada es incorrecta, ambas acciones devuelven `401`.
+
+### Portal público y Biblioteca
+
+`PortalHome` debe mostrar:
+
+*   Una grilla con todas las convocatorias en estado `ABIERTA`.
+*   Las convocatorias próximas en estado `PROGRAMADA` que tengan `visibleEnLanding = true`.
+*   El historial de convocatorias `CERRADA` cuya antigüedad sea menor o igual a 60 días.
+
+Cada convocatoria cerrada del historial debe mostrar la cantidad de artículos asociados con estado `PUBLICADO` y un enlace directo a la Biblioteca filtrada por esa convocatoria.
+
+La Biblioteca pública permite filtrar el listado mediante `convocatoriaId`.
+
+### Envío de manuscritos
+
+Cuando un `AUTOR` sube un manuscrito, es obligatorio seleccionar una convocatoria en estado `ABIERTA` mediante `convocatoriaId`. No se aceptan envíos asociados a convocatorias `BORRADOR`, `PROGRAMADA` o `CERRADA`.
 
 ---
 
