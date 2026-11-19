@@ -72,6 +72,7 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
+  active: boolean;
   role: RoleName;
   specialtyId: number | null;
   must_change_password: boolean;
@@ -256,6 +257,40 @@ export interface PublishArticleRequest {
 // ----------------------------------------------------------------------------
 // 7. MÓDULO MÉTRICAS (/api/metricas)
 // ----------------------------------------------------------------------------
+// GET /api/dashboard/summary — requiere sesión autenticada (cookie token).
+// Devuelve un resumen calculado desde MySQL adaptado a ADMIN/EDITOR/DDI,
+// autores (STAFF con is_author = true) y revisores (COMITE).
+//
+// Respuesta estándar { success: true, data: DashboardSummaryDTO }:
+// - ADMIN/EDITOR: kpis.convocatoriasActivas, convocatoriasProgramadas,
+//   enRevision, publicados, recursosBiblioteca, usuariosTotal, autoresCount
+//   y revisoresCount; distribucionEstados y los últimos 5 artículos recibidos.
+// - DDI: los mismos KPI y recientes de gestión, sin distribución de estados.
+// - AUTOR: misManuscritos, enRevision, publicados y convocatoriasAbiertas,
+//   con los últimos 5 manuscritos propios.
+// - REVISOR: pendientesRevision, evaluados, articulosPublicados y
+//   recursosBiblioteca, con los últimos 5 artículos asignados.
+// - Todos incluyen convocatoriasAbiertasList, ordenadas por fechaFin ascendente,
+//   con id, title y fechaFin ISO.
+export interface DashboardSummaryDTO {
+  role: 'ADMIN' | 'EDITOR' | 'DDI' | 'AUTOR' | 'REVISOR' | 'GENERAL';
+  kpis: Record<string, number>;
+  distribucionEstados: { estado: ArticleState; count: number }[];
+  recientes: {
+    id: number;
+    title: string;
+    estado: ArticleState;
+    createdAt: string;
+    autorNombre: string | null;
+    convocatoriaTitle: string | null;
+  }[];
+  convocatoriasAbiertasList: {
+    id: number;
+    title: string;
+    fechaFin: string;
+  }[];
+}
+
 export interface MetricsSummaryDTO {
   totalVisits: number;
   uniqueVisitors: number;
@@ -289,8 +324,8 @@ export interface LibraryResourceDTO {
   file_path: string;
   file_size: string;
   visibility: LibraryVisibility;
-  uploadedBy: number;
-  specialtyId: number;
+  uploadedBy: number | null;
+  specialtyId: number | null;
   specialty?: SpecialtyDTO;
   createdAt: string;
 }
@@ -300,7 +335,44 @@ export interface LibraryResourceDTO {
 // Filtra los recursos públicos de la Biblioteca por la convocatoria indicada.
 
 // ----------------------------------------------------------------------------
-// 9.1 ARCHIVO PÚBLICO DE ARTÍCULOS (/api/articulos/publicados)
+// 9.1 DOCUMENTOS INSTITUCIONALES (/api/library-resources)
+// ----------------------------------------------------------------------------
+export interface InstitutionalLibraryResourceDTO {
+  id: number;
+  title: string;
+  description: string | null;
+  category: string;
+  fileUrl: string;
+  fileName: string | null;
+  uploadedBy: number | null;
+  uploader?: { id: number; username: string; first_name: string; last_name: string };
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+// GET /api/library-resources — público; solo recursos PUBLICO, ordenados por
+// fecha de creación descendente. Filtros opcionales: ?category=MANUAL&search=...
+// Respuestas: 200 con InstitutionalLibraryResourceDTO[], 400 si los filtros
+// no son válidos.
+//
+// POST /api/library-resources — JWT; roles ADMIN y EDITOR.
+// Content-Type: multipart/form-data; campos obligatorios file (PDF, max. 20 MB),
+// title y category; description es opcional.
+// Respuestas: 201 creado, 400 por archivo/campos inválidos, 401 sin sesión,
+// 403 rol no permitido.
+//
+// DELETE /api/library-resources/:id — JWT; roles ADMIN y EDITOR.
+// Respuestas: 200 eliminado, 400 id inválido, 401 sin sesión, 403 rol no
+// permitido, 404 recurso inexistente.
+// fileUrl apunta a /uploads/library/<archivo>.pdf; la ruta es pública para
+// abrir o descargar el documento.
+//
+// library_resources conserva title, category, file_path, file_size, visibility
+// y specialtyId; agrega description, fileUrl y fileName. uploadedBy es FK
+// opcional a users.id; createdAt y updatedAt son timestamps.
+
+// ----------------------------------------------------------------------------
+// 9.2 ARCHIVO PÚBLICO DE ARTÍCULOS (/api/articulos/publicados)
 // ----------------------------------------------------------------------------
 export interface PublishedArticleDTO {
   id: number;

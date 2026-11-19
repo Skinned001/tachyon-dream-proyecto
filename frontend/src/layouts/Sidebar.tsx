@@ -12,6 +12,7 @@ import {
   Inbox,
   Users,
   FileText,
+  FolderOpen,
   CheckSquare,
   Megaphone,
   type LucideIcon,
@@ -44,14 +45,20 @@ export function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
   const [hasUnread, setHasUnread] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
+    if (userId === undefined) {
+      setHasUnread(false);
+      return;
+    }
+
     let isCurrent = true;
     const fetchUnread = async () => {
       try {
         const notifications = await getNotificaciones();
         if (isCurrent) {
-          setHasUnread(notifications.some((notification) => !notification.read));
+          setHasUnread(notifications.noLeidasCount > 0);
         }
       } catch (error: unknown) {
         console.error('Error al cargar el indicador de notificaciones:', error);
@@ -66,7 +73,7 @@ export function Sidebar({
       isCurrent = false;
       window.removeEventListener('notifications-updated', refreshUnread);
     };
-  }, []);
+  }, [userId]);
 
   const links: SidebarLink[] = [
     { to: "/dashboard", label: "Inicio", icon: Activity, end: true },
@@ -78,6 +85,12 @@ export function Sidebar({
       to: "/convocatorias",
       label: "Convocatorias",
       icon: Megaphone,
+      allowedRoles: ["ADMIN", "EDITOR"],
+    },
+    {
+      to: "/recursos-biblioteca",
+      label: "Manuales y Documentos",
+      icon: FolderOpen,
       allowedRoles: ["ADMIN", "EDITOR"],
     },
   ];

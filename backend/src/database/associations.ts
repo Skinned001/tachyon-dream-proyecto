@@ -1,3 +1,4 @@
+import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Articulo, initializeArticuloModel } from '../modules/articulos/Articulo.model.js';
 import {
@@ -76,8 +77,23 @@ export const setupAssociations = (): void => {
   ArticuloVersion.hasMany(Revision, { foreignKey: 'versionId', as: 'reviews' });
   Revision.belongsTo(ArticuloVersion, { foreignKey: 'versionId', as: 'version' });
 
-  Usuario.hasMany(RecursoBiblioteca, { foreignKey: 'uploadedBy', as: 'uploadedResources' });
-  RecursoBiblioteca.belongsTo(Usuario, { foreignKey: 'uploadedBy', as: 'uploader' });
+  const uploadedByForeignKey = {
+    name: 'uploadedBy',
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  };
+  Usuario.hasMany(RecursoBiblioteca, {
+    foreignKey: uploadedByForeignKey,
+    as: 'uploadedResources',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
+  RecursoBiblioteca.belongsTo(Usuario, {
+    foreignKey: uploadedByForeignKey,
+    as: 'uploader',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
 
   Especialidad.hasMany(RecursoBiblioteca, { foreignKey: 'specialtyId', as: 'libraryResources' });
   RecursoBiblioteca.belongsTo(Especialidad, { foreignKey: 'specialtyId', as: 'specialty' });

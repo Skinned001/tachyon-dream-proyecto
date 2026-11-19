@@ -2,6 +2,7 @@ import { ChevronDown, LogOut, User } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NotificacionesBell } from '../features/notificaciones/NotificacionesBell';
 import { getProfileImageUrl } from '../utils/profileImage';
 import { Sidebar } from './Sidebar';
 
@@ -62,6 +63,7 @@ export function DashboardLayout({
               <span>API Conectada</span>
             </div>
             <div className="hidden h-7 w-px bg-[#d5e6df] sm:block" />
+            {user && <NotificacionesBell />}
             <button
               type="button"
               onClick={() => setIsProfileMenuOpen((isOpen) => !isOpen)}

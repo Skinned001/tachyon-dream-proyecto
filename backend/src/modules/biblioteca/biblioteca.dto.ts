@@ -17,8 +17,8 @@ export interface LibraryResourceDTO {
   file_path: string;
   file_size: string;
   visibility: LibraryVisibility;
-  uploadedBy: number;
-  specialtyId: number;
+  uploadedBy: number | null;
+  specialtyId: number | null;
   specialty?: LibrarySpecialtyDTO;
   createdAt: string;
 }

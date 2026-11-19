@@ -8,6 +8,7 @@ import { Login } from "../pages/Login";
 import { MisArticulos } from "../pages/MisArticulos";
 import { Notificaciones } from "../pages/Notificaciones";
 import { Perfil } from "../pages/Perfil";
+import { RecursosBibliotecaAdmin } from "../pages/RecursosBibliotecaAdmin";
 import { Registro } from "../pages/Registro";
 import { Revisiones } from "../pages/Revisiones";
 import { PrivateRoutes } from "./PrivateRoutes";
@@ -40,6 +41,10 @@ export function AppRoutes() {
             element={<Navigate to="/admin/usuarios?tab=solicitudes" replace />}
           />
           <Route path="convocatorias" element={<PanelConvocatorias />} />
+          <Route
+            path="recursos-biblioteca"
+            element={<RecursosBibliotecaAdmin />}
+          />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

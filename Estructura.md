@@ -67,6 +67,10 @@ hief-journal/
 │   │   │   │   ├── biblioteca.routes.ts
 │   │   │   │   ├── biblioteca.controller.ts
 │   │   │   │   ├── biblioteca.service.ts
+│   │   │   │   ├── library-resources.routes.ts
+│   │   │   │   ├── library-resources.controller.ts
+│   │   │   │   ├── library-resources.service.ts
+│   │   │   │   ├── library-resources.dto.ts
 │   │   │   │   └── RecursoBiblioteca.model.ts
 │   │   │   ├── ai/                   ← Conecta Express con FastAPI / Ollama
 │   │   │   │   ├── providers/
@@ -81,6 +85,11 @@ hief-journal/
 │   │   │   │   └── Notificacion.model.ts
 │   │   │   ├── publico/              ← Endpoints abiertos sin JWT
 │   │   │   ├── metricas/             ← Estadísticas para DashboardHome
+│   │   │   ├── dashboard/            ← Resumen agregado por rol
+│   │   │   │   ├── dashboard.routes.ts
+│   │   │   │   ├── dashboard.controller.ts
+│   │   │   │   ├── dashboard.service.ts
+│   │   │   │   └── dashboard.dto.ts
 │   │   │   └── migracion/
 │   │   ├── services/
 │   │   │   └── notificaciones.service.ts      ← Creación y difusión centralizada
@@ -99,6 +108,7 @@ hief-journal/
     ├── src/
     │   ├── api/                      ← Clientes Axios tipados por módulo
     │   │   ├── axiosClient.ts        ← Interceptor JWT global
+    │   │   ├── dashboard.api.ts      ← GET /api/dashboard/summary
     │   │   ├── auth.api.ts
     │   │   ├── articulos.api.ts
     │   │   ├── editorial.api.ts
@@ -142,6 +152,11 @@ hief-journal/
 
 ## Modelos y archivos nuevos de Convocatorias v2 + Biblioteca
 
+### Dashboard
+
+*   `GET /api/dashboard/summary` requiere autenticación y calcula los KPI, estados y actividad reciente consultando los modelos reales. La respuesta se adapta al rol efectivo (`ADMIN`, `EDITOR`, `DDI`, autor identificado con `is_author` o revisor `COMITE`) e incluye las convocatorias ABIERTAS ordenadas por su cierre.
+*   El módulo está implementado en `backend/src/modules/dashboard/`; el cliente y la vista están en `frontend/src/api/dashboard.api.ts` y `frontend/src/pages/DashboardHome.tsx`.
+
 ### Convocatoria
 
 *   `fechaInicio`: `DATETIME` — inicio exacto de la convocatoria.
@@ -152,6 +167,13 @@ hief-journal/
 ### Article
 
 *   `convocatoriaId`: FK apuntando a `Convocatoria`; obligatorio al crear un envío de `AUTOR`.
+
+### Recursos institucionales de Biblioteca
+
+*   Los documentos institucionales PDF (manuales, protocolos, guías clínicas y normativas) se gestionan como `library_resources`, separados de artículos y convocatorias.
+*   Se conservan las columnas existentes `title`, `category` (`STRING`), `file_path`, `file_size`, `visibility` y `specialtyId`; se agregan `description` (`TEXT`, nullable), `fileUrl` y `fileName` (nullable). `uploadedBy` es FK nullable a `users.id`; `createdAt` y `updatedAt` son timestamps.
+*   `ADMIN` y `EDITOR` pueden subir y borrar recursos. La carga usa Multer, valida `application/pdf`, limita archivos a 20 MB y almacena en `backend/uploads/library/`. Express expone `/uploads/library/` públicamente.
+*   El módulo implementa `GET`, `POST` y `DELETE` bajo `/api/library-resources`; la lista pública permite filtrar por `category` y por búsqueda de título/descripción.
 
 ### Notificaciones y preferencias
 

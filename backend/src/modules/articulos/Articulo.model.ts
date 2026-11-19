@@ -8,7 +8,9 @@ import {
   Sequelize,
 } from 'sequelize';
 import type { Especialidad } from '../especialidades/Especialidad.model.js';
+import type { Convocatoria } from '../editorial/Convocatoria.model.js';
 import type { ArticuloVersion } from './ArticuloVersion.model.js';
+import type { Usuario } from '../usuarios/Usuario.model.js';
 
 export type ArticleState =
   | 'BORRADOR'
@@ -39,6 +41,8 @@ export class Articulo extends Model<
   declare createdAt: CreationOptional<Date>;
   declare specialty?: NonAttribute<Especialidad>;
   declare versions?: NonAttribute<ArticuloVersion[]>;
+  declare responsible?: NonAttribute<Usuario>;
+  declare convocatoria?: NonAttribute<Convocatoria>;
 }
 
 export const initializeArticuloModel = (sequelize: Sequelize): void => {

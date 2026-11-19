@@ -6,11 +6,18 @@ export interface Notificacion {
   title: string;
   message: string;
   read: boolean;
-  createdAt?: string | null;
+  tipo: string;
+  referenciaId: number | null;
+  createdAt: string | null;
 }
 
-export const getNotificaciones = async (): Promise<Notificacion[]> => {
-  const { data } = await axiosClient.get<ApiResponse<Notificacion[]>>(
+export interface NotificacionesList {
+  notificaciones: Notificacion[];
+  noLeidasCount: number;
+}
+
+export const getNotificaciones = async (): Promise<NotificacionesList> => {
+  const { data } = await axiosClient.get<ApiResponse<NotificacionesList>>(
     '/notificaciones',
   );
   if (!data.success || !data.data) {
@@ -21,7 +28,7 @@ export const getNotificaciones = async (): Promise<Notificacion[]> => {
 
 export const markAsRead = async (id: number): Promise<void> => {
   const { data } = await axiosClient.patch<ApiResponse<Notificacion>>(
-    `/notificaciones/${id}/read`,
+    `/notificaciones/${id}/leer`,
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al marcar la notificación como leída');
@@ -29,10 +36,22 @@ export const markAsRead = async (id: number): Promise<void> => {
 };
 
 export const markAllAsRead = async (): Promise<void> => {
-  const { data } = await axiosClient.put<ApiResponse<{ updated: number }>>(
-    '/notificaciones/read-all',
+  const { data } = await axiosClient.patch<ApiResponse<{ updated: number }>>(
+    '/notificaciones/leer-todas',
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al marcar todas las notificaciones como leídas');
   }
+};
+
+export const updateNotificationPreference = async (
+  recibirNotificaciones: boolean,
+): Promise<boolean> => {
+  const { data } = await axiosClient.patch<
+    ApiResponse<{ recibirNotificaciones: boolean }>
+  >('/notificaciones/preferencias', { recibirNotificaciones });
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al actualizar las preferencias');
+  }
+  return data.data.recibirNotificaciones;
 };

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { RequestHandler } from 'express';
 import multer from 'multer';
 import { uploadsDirectory } from './uploads.js';
 
@@ -135,3 +136,52 @@ const limits: multer.Options['limits'] = {
 
 export const uploadPdf = multer({ storage, fileFilter, limits });
 export const upload = uploadPdf;
+
+class LibraryPdfUploadError extends Error {
+  readonly statusCode = 400;
+}
+
+const libraryPdfStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const directory = path.join(uploadsDirectory, 'library');
+    try {
+      fs.mkdirSync(directory, { recursive: true });
+      cb(null, directory);
+    } catch (error) {
+      cb(
+        error instanceof Error
+          ? error
+          : new Error('No se pudo crear el directorio de documentos de Biblioteca.'),
+        '',
+      );
+    }
+  },
+  filename: (_req, _file, cb) => {
+    cb(null, `${randomUUID()}.pdf`);
+  },
+});
+
+const libraryPdfUpload = multer({
+  storage: libraryPdfStorage,
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') {
+      cb(new LibraryPdfUploadError('El archivo debe ser un PDF (application/pdf).'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+export const uploadLibraryResourcePdf: RequestHandler = (req, res, next) => {
+  libraryPdfUpload.single('file')(req, res, (error: unknown) => {
+    if (
+      error instanceof multer.MulterError &&
+      error.code === 'LIMIT_FILE_SIZE'
+    ) {
+      next(new LibraryPdfUploadError('El PDF no puede superar los 20 MB.'));
+      return;
+    }
+    next(error);
+  });
+};

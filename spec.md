@@ -85,7 +85,7 @@ frontend.
 *   `article_versions`: id, version_number, body_text, pdf_path, ai_report (JSON), articleId (FK).
 *   `committee_assignments`: id, read_status, reviewerId (FK), articleId (FK).
 *   `reviews`: id, verdict, comments, assignmentId (FK), versionId (FK).
-*   `library_resources`: id, title, category, file_path, file_size, visibility (`PUBLICO`, `INTERNO`, `CONFIDENCIAL`), uploadedBy (FK), specialtyId (FK).
+*   `library_resources`: id, title, description, category, file_path, file_size, fileUrl, fileName, visibility (`PUBLICO`, `INTERNO`, `CONFIDENCIAL`), uploadedBy (FK opcional), specialtyId (FK opcional), createdAt, updatedAt.
 *   `metrics_logs`: id, action_type (`VISITA`, `DESCARGA`), articleId (FK), ip_hash, timestamp.
 
 ---
@@ -132,6 +132,16 @@ Si la contraseña proporcionada es incorrecta, ambas acciones devuelven `401`.
 Cada convocatoria cerrada del historial debe mostrar la cantidad de artículos asociados con estado `PUBLICADO` y un enlace directo a la Biblioteca filtrada por esa convocatoria.
 
 La Biblioteca pública permite filtrar el listado mediante `convocatoriaId`.
+
+## 5.2 Recursos de Biblioteca: manuales y documentos institucionales
+
+Los manuales, protocolos, guías clínicas, normativas y otros documentos institucionales son recursos PDF independientes de los artículos (`articles`) y de las convocatorias (`convocations`). No son papers y no participan del flujo editorial ni de envíos por convocatoria.
+
+Solo los roles `ADMIN` y `EDITOR` pueden cargar o eliminar estos recursos. La consulta y descarga de recursos con visibilidad `PUBLICO` son públicas. Los archivos se guardan bajo `backend/uploads/library/`, con límite de 20 MB, y se sirven mediante `/uploads/library/<archivo>.pdf`.
+
+La tabla existente `library_resources` conserva sus columnas históricas (`file_path`, `file_size`, `visibility` y `specialtyId`) y agrega `description`, `fileUrl` y `fileName`. `category` sigue siendo texto (`STRING`); se pueden usar categorías como `MANUAL`, `PROTOCOLO`, `GUIA`, `NORMATIVA` y `OTRO`. `uploadedBy` es una FK opcional a `users.id`; los timestamps `createdAt` y `updatedAt` se conservan.
+
+La API de gestión es `GET /api/library-resources` (pública, con filtros opcionales `category` y `search`), `POST /api/library-resources` (protegida; `multipart/form-data` con `file`, `title`, `category` y `description` opcional) y `DELETE /api/library-resources/:id` (protegida). La subida acepta únicamente archivos `application/pdf`; formato o tamaño inválido devuelve `400`.
 
 ### Envío de manuscritos
 

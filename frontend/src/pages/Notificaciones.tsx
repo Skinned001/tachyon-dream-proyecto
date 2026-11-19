@@ -32,6 +32,7 @@ const getNotificationDestination = (
 export const Notificaciones = () => {
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
+  const [noLeidasCount, setNoLeidasCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +41,9 @@ export const Notificaciones = () => {
     setIsLoading(true);
     setError('');
     try {
-      setNotifs(await getNotificaciones());
+      const result = await getNotificaciones();
+      setNotifs(result.notificaciones);
+      setNoLeidasCount(result.noLeidasCount);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -65,6 +68,7 @@ export const Notificaciones = () => {
             item.id === notification.id ? { ...item, read: true } : item,
           ),
         );
+        setNoLeidasCount((current) => Math.max(0, current - 1));
         window.dispatchEvent(new Event('notifications-updated'));
       }
 
@@ -85,6 +89,7 @@ export const Notificaciones = () => {
     try {
       await markAllAsRead();
       setNotifs((current) => current.map((item) => ({ ...item, read: true })));
+      setNoLeidasCount(0);
       window.dispatchEvent(new Event('notifications-updated'));
     } catch (requestError: unknown) {
       setError(
@@ -96,8 +101,6 @@ export const Notificaciones = () => {
       setIsMarkingAll(false);
     }
   };
-
-  const unreadCount = notifs.filter((notification) => !notification.read).length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -114,10 +117,10 @@ export const Notificaciones = () => {
           type="button"
           variant="secondary"
           onClick={() => void handleMarkAll()}
-          disabled={unreadCount === 0 || isMarkingAll}
+          disabled={noLeidasCount === 0 || isMarkingAll}
           isLoading={isMarkingAll}
           className={`gap-2 text-sm ${
-            unreadCount === 0 ? 'cursor-not-allowed opacity-50' : ''
+            noLeidasCount === 0 ? 'cursor-not-allowed opacity-50' : ''
           }`}
         >
           <CheckCheck className="h-4 w-4" />
