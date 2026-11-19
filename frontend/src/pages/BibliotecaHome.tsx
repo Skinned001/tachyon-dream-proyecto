@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, BookMarked, BookOpen, FileText, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { getRecursosBiblioteca, type RecursoBiblioteca } from '../api/biblioteca.api';
+import { getConvocatoriasPublicas } from '../api/convocatorias.api';
 
 const tiposDisponibles = ['Todos los recursos', 'Guía', 'Estándar de reporte', 'Recurso formativo', 'Herramienta', 'Plantilla', 'Lista de verificación'];
 
@@ -12,31 +13,81 @@ export const BibliotecaHome = () => {
   const [category, setCategory] = useState('Todos los recursos');
   const [saved, setSaved] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [activeConvocationTitle, setActiveConvocationTitle] = useState('');
+  const [reloadCounter, setReloadCounter] = useState(0);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInput = useRef<HTMLInputElement>(null);
+  const convocatoriaIdParam = searchParams.get('convocatoriaId');
+  const convocatoriaId =
+    convocatoriaIdParam !== null ? Number(convocatoriaIdParam) : undefined;
+  const invalidConvocatoriaId =
+    convocatoriaIdParam !== null &&
+    (!Number.isSafeInteger(convocatoriaId) || (convocatoriaId ?? 0) < 1);
 
   useEffect(() => {
-    cargarRecursos();
     if (searchParams.get('focus') === 'search') {
       searchInput.current?.focus();
-      setSearchParams({}, { replace: true });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('focus');
+      setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
-  const cargarRecursos = async () => {
-    try {
+  useEffect(() => {
+    let isCurrent = true;
+
+    const cargarRecursos = async () => {
       setLoading(true);
-      const data = await getRecursosBiblioteca();
-      // Aseguramos que data sea un array válido, incluso si la API falla parcialmente
-      setRecursos(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error al cargar la biblioteca:', error);
-      setRecursos([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoadError('');
+      setActiveConvocationTitle('');
+
+      if (invalidConvocatoriaId) {
+        setRecursos([]);
+        setLoadError('El identificador de convocatoria no es válido.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [resources, publicConvocatorias] = await Promise.all([
+          getRecursosBiblioteca(convocatoriaId),
+          convocatoriaId !== undefined
+            ? getConvocatoriasPublicas()
+            : Promise.resolve(null),
+        ]);
+        if (!isCurrent) return;
+
+        setRecursos(Array.isArray(resources) ? resources : []);
+        if (convocatoriaId !== undefined && publicConvocatorias) {
+          const todas = [
+            ...(publicConvocatorias.abiertas ?? []),
+            ...(publicConvocatorias.proximas ?? []),
+            ...(publicConvocatorias.cerradas ?? []),
+          ];
+          setActiveConvocationTitle(
+            todas.find((item) => item.id === convocatoriaId)?.title ?? '',
+          );
+        }
+      } catch (error) {
+        if (!isCurrent) return;
+        setRecursos([]);
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar la biblioteca.',
+        );
+      } finally {
+        if (isCurrent) setLoading(false);
+      }
+    };
+
+    void cargarRecursos();
+    return () => {
+      isCurrent = false;
+    };
+  }, [convocatoriaId, convocatoriaIdParam, invalidConvocatoriaId, reloadCounter]);
 
   const visibleResources = useMemo(() => recursos.filter(resource => {
     // Protección contra valores nulos en la búsqueda
@@ -80,6 +131,34 @@ export const BibliotecaHome = () => {
         </div>
       </section>
 
+      {convocatoriaId !== undefined && !invalidConvocatoriaId && (
+        <section
+          aria-live="polite"
+          className="flex flex-col justify-between gap-3 rounded-2xl border border-[#9bcfbb] bg-[#f3fffa] p-4 sm:flex-row sm:items-center"
+        >
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[.15em] text-[#52766d]">
+              Filtro de convocatoria
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[#244f47]">
+              {activeConvocationTitle || `Convocatoria #${convocatoriaId}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete('convocatoriaId');
+              setSearchParams(nextParams);
+            }}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#087d70]/30 px-3 text-[11px] font-semibold text-[#087d70] transition hover:bg-[#e1f3eb]"
+          >
+            <X size={13} />
+            Ver todos los artículos
+          </button>
+        </section>
+      )}
+
       <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-[#52766d]">Biblioteca virtual</p>
@@ -119,7 +198,19 @@ export const BibliotecaHome = () => {
           </div>
 
           {loading ? (
-             <div className="py-16 text-center text-sm text-[#52766d]">Cargando recursos desde el servidor...</div>
+             <div role="status" className="py-16 text-center text-sm text-[#52766d]">Cargando recursos desde el servidor...</div>
+          ) : loadError ? (
+            <div role="alert" className="rounded-2xl border border-[#e7c6bb] bg-[#fff9f6] px-6 py-8 text-center">
+              <p className="text-[13px] font-semibold text-[#7b342d]">No pudimos cargar la biblioteca</p>
+              <p className="mt-2 text-[12px] text-[#765b55]">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => setReloadCounter((current) => current + 1)}
+                className="mt-4 rounded-xl bg-[#087d70] px-4 py-2 text-[11px] font-semibold text-white hover:bg-[#07584f]"
+              >
+                Reintentar
+              </button>
+            </div>
           ) : visibleResources.length ? (
             <div className="grid gap-3 md:grid-cols-2">
               {visibleResources.map((resource, i) => {
@@ -156,8 +247,16 @@ export const BibliotecaHome = () => {
           ) : (
             <div className="rounded-2xl border border-dashed border-[#a9d2c1] bg-[#f3faf6] px-6 py-16 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d7f2e6] text-[#087366]"><Search size={20} /></div>
-              <h4 className="font-editorial mt-4 text-[22px] text-[#244f47]">No se encontraron recursos</h4>
-              <p className="mt-2 text-[11px] text-[#526e68]">Intenta con otra búsqueda o comunícate con Docencia e Investigación.</p>
+              <h4 className="font-editorial mt-4 text-[22px] text-[#244f47]">
+                {convocatoriaId !== undefined && recursos.length === 0
+                  ? 'Aún no hay artículos publicados en esta convocatoria'
+                  : 'No se encontraron recursos'}
+              </h4>
+              <p className="mt-2 text-[11px] text-[#526e68]">
+                {convocatoriaId !== undefined && recursos.length === 0
+                  ? 'Las publicaciones aparecerán aquí cuando estén disponibles.'
+                  : 'Intenta con otra búsqueda o comunícate con Docencia e Investigación.'}
+              </p>
               <button onClick={() => { setCategory('Todos los recursos'); setQuery(''); }} className="mt-4 text-[11px] font-semibold text-[#087366] hover:underline">Borrar filtros</button>
             </div>
           )}

@@ -11,6 +11,20 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import * as authApi from "../api/auth.api";
 import { useAuth } from "../context/AuthContext";
 
+const getSafeInternalRedirect = (value: string | null): string | null => {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+};
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +39,7 @@ export default function Login() {
       from?: { pathname?: string; search?: string; hash?: string };
     } | null
   )?.from;
+  const redirect = new URLSearchParams(location.search).get("redirect");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,9 +54,14 @@ export default function Login() {
       setIsSubmitting(true);
       const userData = await authApi.login(email, password);
       login(userData);
-      const returnTo = from?.pathname
+      const isAuthor =
+        userData.is_author === true || String(userData.role) === "AUTOR";
+      const safeRedirect = isAuthor
+        ? getSafeInternalRedirect(redirect)
+        : null;
+      const returnTo = safeRedirect ?? (from?.pathname
         ? `${from.pathname}${from.search || ""}${from.hash || ""}`
-        : "/dashboard";
+        : "/dashboard");
       navigate(returnTo, { replace: true });
     } catch (err) {
       setError(

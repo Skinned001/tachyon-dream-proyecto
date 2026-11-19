@@ -78,7 +78,7 @@ export function Sidebar({
       to: "/convocatorias",
       label: "Convocatorias",
       icon: Megaphone,
-      allowedRoles: ["ADMIN"],
+      allowedRoles: ["ADMIN", "EDITOR"],
     },
   ];
   const visibleLinks = links.filter(

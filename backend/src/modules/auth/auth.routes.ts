@@ -8,7 +8,7 @@ const authController = new AuthController();
 
 router.post('/register', uploadCredential.single('credencial'), authController.register);
 router.post('/login', authController.login);
-router.post('/logout', authenticateJWT, authController.logout);
+router.post('/logout', authController.logout);
 router.get('/me', authenticateJWT, authController.me);
 router.get('/verify', authenticateJWT, authController.verify);
 router.post('/change-password', authenticateJWT, authController.changePassword);

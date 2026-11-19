@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { PanelConvocatorias } from "../pages/PanelConvocatorias";
 import { PanelEditor } from "../pages/PanelEditor";
-import { BibliotecaHome } from "../pages/BibliotecaHome";
+import { BibliotecaRoute } from "./BibliotecaRoute";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
 import { Login } from "../pages/Login";
@@ -19,21 +19,21 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<PublicRoutes />}>
-        <Route path="/" element={<PortalHome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
       </Route>
+      <Route path="/" element={<PortalHome />} />
+      <Route path="/biblioteca" element={<BibliotecaRoute />} />
       <Route element={<PrivateRoutes />}>
         <Route path="/dashboard" element={<DashboardHome />} />
         <Route path="articulos" element={<MisArticulos />} />
         <Route path="mis-articulos" element={<MisArticulos />} />
         <Route path="revisiones" element={<Revisiones />} />
-        <Route path="biblioteca" element={<BibliotecaHome />} />
         <Route path="notificaciones" element={<Notificaciones />} />
         <Route path="perfil" element={<Perfil />} />
         <Route path="editor" element={<PanelEditor />} />
-        <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+        <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR"]} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
           <Route
             path="admin/usuarios/pendientes"

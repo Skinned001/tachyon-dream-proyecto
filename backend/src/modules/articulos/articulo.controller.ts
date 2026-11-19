@@ -11,10 +11,20 @@ import { ArticuloService } from './articulo.service.js';
 const createArticleSchema = z
   .object({
     title: z.string().trim().min(1),
-    abstract: z.string().trim().min(1),
+    abstract: z.string().trim().min(1).optional(),
+    summary: z.string().trim().min(1).optional(),
     specialtyId: z.number().int().positive(),
+    convocatoriaId: z.number().int().positive(),
   })
-  .strip();
+  .transform((data) => ({
+    title: data.title,
+    abstract: data.abstract ?? data.summary ?? '',
+    specialtyId: data.specialtyId,
+    convocatoriaId: data.convocatoriaId,
+  }))
+  .refine((data) => data.abstract !== undefined, {
+    message: 'Debe enviar abstract o summary',
+  });
 
 const updateArticleStateSchema = z.object({
   status: z.enum(['EN_REVISION', 'APROBADO', 'RECHAZADO', 'PUBLICADO']),
@@ -35,6 +45,13 @@ const normalizeCreateBody = (body: unknown): unknown => {
   return {
     ...requestBody,
     specialtyId: Number(requestBody.specialtyId),
+    convocatoriaId: Number(requestBody.convocatoriaId),
+    abstract:
+      typeof requestBody.abstract === 'string'
+        ? requestBody.abstract
+        : typeof requestBody.summary === 'string'
+          ? requestBody.summary
+          : undefined,
   };
 };
 
@@ -53,12 +70,26 @@ export class ArticuloController {
   constructor(private readonly articuloService = new ArticuloService()) {}
 
   listarPublicados = async (
-    _req: Request,
+    req: Request,
     res: Response<ApiResponse<PublishedArticleDTO[]>>,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const data = await this.articuloService.listarArticulosPublicados();
+      const convocatoriaIdValue =
+        typeof req.query.convocatoriaId === 'string'
+          ? Number(req.query.convocatoriaId)
+          : undefined;
+      if (
+        convocatoriaIdValue !== undefined &&
+        (!Number.isSafeInteger(convocatoriaIdValue) || convocatoriaIdValue < 1)
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'convocatoriaId debe ser un entero positivo',
+        });
+        return;
+      }
+      const data = await this.articuloService.listarArticulosPublicados(convocatoriaIdValue);
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);

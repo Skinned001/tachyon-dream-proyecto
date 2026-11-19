@@ -58,8 +58,8 @@ export const setupAssociations = (): void => {
   Especialidad.hasMany(Articulo, { foreignKey: 'specialtyId', as: 'articles' });
   Articulo.belongsTo(Especialidad, { foreignKey: 'specialtyId', as: 'specialty' });
 
-  Convocatoria.hasMany(Articulo, { foreignKey: 'convocationId', as: 'articles' });
-  Articulo.belongsTo(Convocatoria, { foreignKey: 'convocationId', as: 'convocation' });
+  Convocatoria.hasMany(Articulo, { foreignKey: 'convocatoriaId', as: 'articles' });
+  Articulo.belongsTo(Convocatoria, { foreignKey: 'convocatoriaId', as: 'convocatoria' });
 
   Articulo.hasMany(ArticuloVersion, { foreignKey: 'articleId', as: 'versions' });
   ArticuloVersion.belongsTo(Articulo, { foreignKey: 'articleId', as: 'article' });

@@ -13,16 +13,26 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { articulosApi, type PublishedArticle } from '../api/articulos.api';
-import { getConvocatorias, type Convocatoria } from '../api/convocatorias.api';
+import { Modal } from '../components/ui/Modal';
+import {
+  getConvocatoriasPublicas,
+  type Convocatoria,
+  type ConvocatoriaCerrada,
+} from '../api/convocatorias.api';
+import { useAuth } from '../context/AuthContext';
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
-const formatDate = (date: string): string =>
-  new Intl.DateTimeFormat('es-AR', {
+const formatDate = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'fecha no disponible';
+  return new Intl.DateTimeFormat('es-AR', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00Z`));
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
 
 export function PortalHome() {
   const [articles, setArticles] = useState<PublishedArticle[]>([]);
@@ -30,9 +40,14 @@ export function PortalHome() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selectedYear, setSelectedYear] = useState('all');
-  const [convocatoriaActiva, setConvocatoriaActiva] =
-    useState<Convocatoria | null>(null);
+  const [abiertas, setAbiertas] = useState<Convocatoria[]>([]);
+  const [proximas, setProximas] = useState<Convocatoria[]>([]);
+  const [cerradas, setCerradas] = useState<ConvocatoriaCerrada[]>([]);
+  const [loadingConvocatorias, setLoadingConvocatorias] = useState(true);
   const [convocatoriaError, setConvocatoriaError] = useState('');
+  const [convocatoriaParaParticipar, setConvocatoriaParaParticipar] =
+    useState<Convocatoria | null>(null);
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   async function loadArticles() {
     setLoading(true);
@@ -46,26 +61,37 @@ export function PortalHome() {
     }
   }
 
-  async function loadConvocatoriaActiva() {
+  async function loadConvocatorias() {
+    setLoadingConvocatorias(true);
     setConvocatoriaError('');
     try {
-      const convocatorias = await getConvocatorias();
-      setConvocatoriaActiva(
-        convocatorias.find((convocatoria) => convocatoria.estado === 'ABIERTA') ??
-          null,
+      const convocatorias = await getConvocatoriasPublicas();
+      setAbiertas(
+        Array.isArray(convocatorias?.abiertas) ? convocatorias.abiertas : [],
+      );
+      setProximas(
+        Array.isArray(convocatorias?.proximas) ? convocatorias.proximas : [],
+      );
+      setCerradas(
+        Array.isArray(convocatorias?.cerradas) ? convocatorias.cerradas : [],
       );
     } catch (loadError: unknown) {
       setConvocatoriaError(
         loadError instanceof Error
           ? loadError.message
-          : 'No se pudo cargar la convocatoria activa.',
+          : 'No se pudieron cargar las convocatorias.',
       );
+      setAbiertas([]);
+      setProximas([]);
+      setCerradas([]);
+    } finally {
+      setLoadingConvocatorias(false);
     }
   }
 
   useEffect(() => {
     void loadArticles();
-    void loadConvocatoriaActiva();
+    void loadConvocatorias();
   }, []);
 
   const years = useMemo(
@@ -90,6 +116,7 @@ export function PortalHome() {
       return matchesYear && (!normalizedSearch || searchableText.includes(normalizedSearch));
     });
   }, [articles, search, selectedYear]);
+  const isAuthor = user?.is_author === true || String(user?.role) === 'AUTOR';
 
   return (
     <main className="min-h-screen bg-[#f2f7f4] text-[#173d3b]">
@@ -155,73 +182,231 @@ export function PortalHome() {
         </div>
       </section>
 
-      {convocatoriaActiva && (
-        <section
-          id="convocatoria"
-          className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
-        >
-          <div className="relative flex flex-col items-center justify-between gap-8 overflow-hidden rounded-3xl border border-[#087d70]/20 bg-white p-7 shadow-[0_20px_40px_-15px_rgba(8,125,112,0.1)] md:flex-row md:p-10">
-            <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 -translate-y-1/3 rounded-full bg-[#e1f3eb] opacity-60 blur-3xl" />
-
-            <div className="relative z-10 max-w-2xl">
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#087d70] text-white">
-                  <Megaphone size={16} />
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#087d70]">
-                  Convocatoria abierta
-                </span>
-                <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold tracking-wide text-slate-600">
-                  <CalendarDays size={12} />
-                  Cierra el {formatDate(convocatoriaActiva.fechaFin)}
-                </span>
-              </div>
-              <h2 className="font-editorial text-[32px] leading-tight tracking-tight text-[#173d3b] md:text-[40px]">
-                {convocatoriaActiva.titulo}
-              </h2>
-              <p className="mt-4 text-[14px] leading-relaxed text-[#52766d]">
-                {convocatoriaActiva.tematica}
-              </p>
-              <p className="mt-4 text-[13px] font-medium text-[#244f47]">
-                Invitamos a los profesionales de la salud a enviar sus
-                manuscritos para la próxima edición del Chief Journal.
-              </p>
-            </div>
-
-            <div className="relative z-10 w-full shrink-0 md:w-auto">
-              <Link
-                to="/register"
-                className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] px-8 text-[14px] font-semibold text-white shadow-lg shadow-[#087d70]/20 transition hover:scale-[1.02] hover:bg-[#07584f] md:w-auto"
-              >
-                Participar ahora <ArrowUpRight size={18} />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {convocatoriaError && (
-        <section
-          id="convocatoria"
-          className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
-        >
-          <div
-            role="alert"
-            className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-[#e7c6bb] bg-[#fff9f6] p-5 sm:flex-row sm:items-center"
-          >
-            <p className="text-sm text-[#7b342d]">
-              No se pudo cargar la convocatoria activa: {convocatoriaError}
+      <section
+        id="convocatorias-abiertas"
+        className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
+      >
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Recepción de manuscritos
             </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Convocatorias Abiertas
+            </h2>
+          </div>
+          {!loadingConvocatorias && (
+            <span className="rounded-full bg-[#e1f3eb] px-3 py-1 text-[11px] font-semibold text-[#07584f]">
+              {abiertas.length}
+            </span>
+          )}
+        </div>
+
+        {loadingConvocatorias ? (
+          <div role="status" className="rounded-2xl border border-[#d5e6df] bg-white p-8 text-center text-sm text-[#52766d]">
+            Cargando convocatorias…
+          </div>
+        ) : convocatoriaError ? (
+          <div role="alert" className="rounded-2xl border border-[#e7c6bb] bg-[#fff9f6] p-5 text-sm text-[#7b342d]">
+            <p>No se pudieron cargar las convocatorias: {convocatoriaError}</p>
             <button
               type="button"
-              onClick={() => void loadConvocatoriaActiva()}
-              className="text-sm font-semibold text-[#087366] hover:text-[#07584f]"
+              onClick={() => void loadConvocatorias()}
+              className="mt-3 font-semibold text-[#087366] hover:text-[#07584f]"
             >
               Reintentar
             </button>
           </div>
+        ) : abiertas.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#a9d2c1] bg-[#f3faf6] px-6 py-10 text-center">
+            <Megaphone className="mx-auto text-[#77a995]" size={24} />
+            <p className="mt-3 text-sm font-semibold text-[#244f47]">
+              No hay convocatorias abiertas en este momento.
+            </p>
+            <p className="mt-1 text-xs text-[#526e68]">
+              Vuelve pronto para conocer nuevas oportunidades de publicación.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {abiertas.map((convocatoria) => (
+              <article
+                key={convocatoria.id}
+                className="flex flex-col justify-between rounded-2xl border border-[#cfe4dc] bg-white p-5 shadow-sm transition hover:border-[#9bcfbb] hover:shadow-[0_12px_30px_rgba(23,61,59,.07)] md:p-6"
+              >
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f5ee] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#07584f]">
+                    <Megaphone size={12} />
+                    ABIERTA
+                  </span>
+                  <h3 className="font-editorial mt-4 text-[25px] leading-tight text-[#173d3b]">
+                    {convocatoria.title}
+                  </h3>
+                  <p className="mt-3 flex items-center gap-2 text-xs text-[#526e68]">
+                    <CalendarDays size={14} />
+                    Cierra el {formatDate(convocatoria.fechaFin)}
+                  </p>
+                </div>
+                <div className="mt-6">
+                  {isAuthLoading ? (
+                    <span className="inline-flex h-11 items-center rounded-xl bg-slate-100 px-4 text-xs font-semibold text-slate-500">
+                      Verificando sesión…
+                    </span>
+                  ) : isAuthor ? (
+                    <Link
+                      to={`/articulos?convocatoriaId=${convocatoria.id}`}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#087d70] px-5 text-xs font-semibold text-white transition hover:bg-[#07584f]"
+                    >
+                      Postular manuscrito <ArrowUpRight size={15} />
+                    </Link>
+                  ) : user ? (
+                    <button
+                      type="button"
+                      disabled
+                      title="La postulación está disponible para usuarios con cuenta de Autor."
+                      className="inline-flex h-11 cursor-not-allowed items-center rounded-xl bg-slate-100 px-4 text-xs font-medium text-slate-600"
+                    >
+                      Solo autores
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConvocatoriaParaParticipar(convocatoria)}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#087d70] px-5 text-xs font-semibold text-white transition hover:bg-[#07584f]"
+                    >
+                      Participar <ArrowUpRight size={15} />
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {!loadingConvocatorias && !convocatoriaError && proximas.length > 0 && (
+        <section className="mx-auto max-w-[1240px] px-5 pt-14 md:px-8">
+          <div className="mb-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Próximamente
+            </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Próximas Aperturas
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {proximas.map((convocatoria) => (
+              <article
+                key={convocatoria.id}
+                className="rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 md:p-6"
+              >
+                <span className="inline-flex rounded-full bg-[#fff0cf] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#85500b]">
+                  PROGRAMADA
+                </span>
+                <h3 className="font-editorial mt-4 text-[24px] leading-tight text-[#173d3b]">
+                  {convocatoria.title}
+                </h3>
+                <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#fff8e9] px-3 py-2 text-xs font-semibold text-[#85500b]">
+                  <CalendarDays size={14} />
+                  A abrir el {formatDate(convocatoria.fechaInicio)}
+                </p>
+                <p className="mt-3 text-xs text-[#718a81]">
+                  La postulación estará disponible al abrirse la convocatoria.
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
       )}
+
+      {!loadingConvocatorias && !convocatoriaError && cerradas.length > 0 && (
+        <section className="mx-auto max-w-[1240px] px-5 pt-14 md:px-8">
+          <div className="mb-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Convocatorias finalizadas recientemente
+            </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Historial Reciente
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {cerradas.map((convocatoria) => {
+              const publishedCount = convocatoria.articulosPublicadosCount ?? 0;
+              return (
+                <article
+                  key={convocatoria.id}
+                  className="flex flex-col justify-between rounded-2xl border border-[#d5e6df] bg-white p-5 md:p-6"
+                >
+                  <div>
+                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                      CERRADA
+                    </span>
+                    <h3 className="font-editorial mt-4 text-[24px] leading-tight text-[#173d3b]">
+                      {convocatoria.title}
+                    </h3>
+                    <p className="mt-3 flex items-center gap-2 text-xs text-[#526e68]">
+                      <CalendarDays size={14} />
+                      Cerró el {formatDate(convocatoria.fechaFin)}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-[#244f47]">
+                      {publishedCount}{' '}
+                      {publishedCount === 1
+                        ? 'artículo publicado'
+                        : 'artículos publicados'}
+                    </p>
+                  </div>
+                  <Link
+                    to={`/biblioteca?convocatoriaId=${convocatoria.id}`}
+                    className="mt-5 inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-[#087d70]/30 px-4 text-xs font-semibold text-[#087d70] transition hover:bg-[#e8f5f1]"
+                  >
+                    Ver en Biblioteca <ArrowRight size={14} />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <Modal
+        isOpen={convocatoriaParaParticipar !== null}
+        onClose={() => setConvocatoriaParaParticipar(null)}
+        title="Participar de la convocatoria"
+      >
+        {convocatoriaParaParticipar && (
+          <div className="space-y-5">
+            <p className="text-sm leading-6 text-slate-600">
+              Para participar en{' '}
+              <span className="font-semibold text-[#173d3b]">
+                {convocatoriaParaParticipar.title}
+              </span>{' '}
+              necesitás acceder con tu cuenta de Autor.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              {[
+                ['/login', 'Iniciar sesión'],
+                ['/register', 'Registrarse'],
+              ].map(([route, label]) => {
+                const redirect = `/articulos?convocatoriaId=${convocatoriaParaParticipar.id}`;
+                return (
+                  <Link
+                    key={route}
+                    to={`${route}?redirect=${encodeURIComponent(redirect)}`}
+                    onClick={() => setConvocatoriaParaParticipar(null)}
+                    className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold transition ${
+                      route === '/login'
+                        ? 'bg-[#087d70] text-white hover:bg-[#07584f]'
+                        : 'border border-[#087d70]/30 bg-white text-[#087d70] hover:bg-[#e8f5f1]'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <section id="archivo" className="mx-auto max-w-[1240px] px-5 py-16 md:px-8 md:py-20">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">

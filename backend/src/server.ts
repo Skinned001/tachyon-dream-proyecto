@@ -3,6 +3,10 @@ import { sequelize } from './config/database.js';
 import { setupAssociations } from './database/associations.js';
 import { synchronizeRoles } from './database/roles.js';
 import app from './app.js';
+import {
+  iniciarCronConvocatorias,
+  sincronizarEstadosConvocatorias,
+} from './modules/editorial/convocatoria-cron.service.js';
 
 dotenv.config();
 
@@ -13,6 +17,8 @@ const startServer = async (): Promise<void> => {
   await sequelize.authenticate();
   await sequelize.sync({ alter: true });
   await synchronizeRoles();
+  await sincronizarEstadosConvocatorias();
+  iniciarCronConvocatorias();
 
   app.listen(port, () => {
     console.log(`Backend running on http://localhost:${port}`);
