@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import articulosRoutes from "./modules/articulos/articulo.routes.js";
+import aiRoutes from "./modules/ai/ai.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import bibliotecaRoutes from "./modules/biblioteca/biblioteca.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
@@ -25,6 +26,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/articulos", articulosRoutes);
 app.use("/api/biblioteca", bibliotecaRoutes);
 app.use("/api/usuarios", usuariosRoutes);

@@ -250,13 +250,32 @@ export interface PublishedArticleDTO {
 // ----------------------------------------------------------------------------
 // 10. MÓDULO IA (/api/ai)
 // ----------------------------------------------------------------------------
-export interface AIReportDTO {
-  plagiarismPercentage: number;
-  similarityScore: number;
-  checklistPassed: boolean;
-  observations: string[];
-  analyzedAt: string;
+export type SimilarityAnalysisStatus = 'completed' | 'not_evaluable';
+export type SimilaritySourceMode = 'demo' | 'uploaded';
+
+export interface SimilarityFindingDTO {
+  sourceLabel: string;
+  sourcePage: number;
+  targetPage: number;
+  excerpt: string;
+  matchedTokens: number;
 }
+
+export interface AIReportDTO {
+  analysisId: string;
+  status: SimilarityAnalysisStatus;
+  sourceMode: SimilaritySourceMode;
+  analyzerVersion: string;
+  findings: SimilarityFindingDTO[];
+  warnings: string[];
+  message: string;
+  disclaimer: string;
+}
+
+// POST /ai/similarity/check — requiere autenticación y rol AUTOR, DDI, COMITE
+// o ADMIN; multipart con sourceMode, targetText o targetFile opcional y
+// referenceFiles[] cuando sourceMode = "uploaded".
+// El informe se devuelve en la respuesta y no se persiste en el prototipo.
 
 // ----------------------------------------------------------------------------
 // 11. MÓDULO NOTIFICACIONES (/api/notificaciones)

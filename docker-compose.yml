@@ -29,6 +29,7 @@ services:
       DB_USER: chief_user
       DB_PASSWORD: chief_pass
       JWT_SECRET: supersecret
+      AI_SERVICE_URL: http://ai-service:8000
     ports:
       - "4000:4000"
     volumes:
@@ -39,7 +40,7 @@ services:
       context: ./ai-service
     container_name: chief-journal-ai
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       PYTHONUNBUFFERED: "1"
     volumes:

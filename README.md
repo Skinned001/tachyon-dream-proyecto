@@ -55,8 +55,28 @@ terminales de PowerShell.
    `admin@hief.gob.ar` con la contraseña de desarrollo `Hief2026*`.
 
 La primera vez, el archivo público no mostrará artículos hasta que haya
-publicaciones cargadas y en estado `PUBLICADO`. El microservicio de IA no es
-necesario para iniciar la portada, el API y el acceso institucional.
+publicaciones cargadas y en estado `PUBLICADO`. El microservicio de IA es
+opcional para iniciar la portada y el acceso institucional; se necesita para
+usar el prototipo de análisis de similitud.
+
+## Prototipo de análisis de similitud
+
+Con Docker Desktop disponible, inicia el microservicio desde la raíz:
+
+```powershell
+docker compose up -d ai-service
+```
+
+El backend local se conecta por defecto a `http://localhost:8000`. Si también
+inicias el backend con Docker Compose, el servicio ya tiene configurada la URL
+interna `http://ai-service:8000`.
+
+En la plataforma, abre **Análisis de similitud**. Puedes usar el ejemplo
+sintético incluido o cargar un texto/PDF objetivo y hasta cinco PDFs de
+referencia. La comparación es local y se limita a las fuentes aportadas; no
+busca en internet, no determina plagio y no modifica el estado editorial. Los
+archivos se procesan para la solicitud y el prototipo no guarda informes ni
+documentos de referencia. No cargues información sensible de pacientes.
 
 ## Configuración de la base de datos del backend
 

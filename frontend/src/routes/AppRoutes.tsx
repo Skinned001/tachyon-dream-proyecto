@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { BibliotecaHome } from '../pages/BibliotecaHome';
 import { DashboardHome } from '../pages/DashboardHome';
 import { AdminUsuarios } from '../pages/AdminUsuarios';
+import { AnalisisSimilitud } from '../pages/AnalisisSimilitud';
 import { Login } from '../pages/Login';
 import { MisArticulos } from '../pages/MisArticulos';
 import { PortalHome } from '../pages/PortalHome';
@@ -25,6 +26,9 @@ export function AppRoutes() {
         <Route path="mis-articulos" element={<MisArticulos />} />
         <Route path="revisiones" element={<Revisiones />} />
         <Route path="biblioteca" element={<BibliotecaHome />} />
+        <Route element={<RoleRoute allowedRoles={['AUTOR', 'DDI', 'COMITE', 'ADMIN']} />}>
+          <Route path="analisis-similitud" element={<AnalisisSimilitud />} />
+        </Route>
         <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
         </Route>

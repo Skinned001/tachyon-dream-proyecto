@@ -1,4 +1,5 @@
 import type { ArticleState } from './Articulo.model.js';
+import type { SimilarityReport } from '../ai/ai.dto.js';
 
 export type { ArticleState };
 
@@ -19,13 +20,7 @@ export interface ArticleSpecialtyDTO {
   active: boolean;
 }
 
-export interface AIReportDTO {
-  plagiarismPercentage: number;
-  similarityScore: number;
-  checklistPassed: boolean;
-  observations: string[];
-  analyzedAt: string;
-}
+export type AIReportDTO = SimilarityReport;
 
 export interface ArticleVersionDTO {
   id: number;

@@ -16,9 +16,11 @@
 ## 1. Contexto
 
 El proyecto cuenta con un microservicio Python y FastAPI en `ai-service/`.
-Actualmente expone comprobaciones basicas de salud y nombres de checklists; sus
-funciones de similitud son prototipos y no constituyen una herramienta validada
-para decisiones editoriales.
+Además de salud y checklists, incluye un prototipo local de comparación textual
+descrito en la sección 12. Este prototipo sirve para validar el flujo técnico
+con fuentes sintéticas o PDFs aportados por quien lo prueba; no forma parte del
+MVP editorial definido en este documento ni constituye una herramienta
+validada para decisiones editoriales.
 
 Se autorizo utilizar una edicion en PDF de la revista institucional como guia
 para conocer su presentacion y variedad de contribuciones. La edicion contiene
@@ -238,3 +240,49 @@ estos criterios en pruebas normativas.
 - [ ] Definir quien aprueba nuevas versiones del conjunto de reglas.
 - [ ] Acordar si y como el comite autorizara en el futuro un corpus de
   similitud, independiente de la revista usada como guia.
+
+## 12. Prototipo técnico de similitud (no normativo)
+
+Esta sección documenta una prueba de concepto independiente del MVP de
+checklist. Su propósito es permitir pruebas reproducibles sin un corpus
+institucional. No debe interpretarse como aprobación para procesar documentos
+reales que contengan información sensible.
+
+### Alcance implementado
+
+- `POST /api/ai/similarity/check` recibe una solicitud autenticada del frontend.
+- El backend Express valida permisos y límites, y reenvía el contenido al
+  servicio FastAPI interno mediante `POST /analyze/similarity`.
+- El modo `demo` compara con textos sintéticos incluidos en el servicio.
+- El modo `uploaded` compara el objetivo con hasta cinco PDFs de referencia
+  cargados por la persona usuaria.
+- El objetivo puede ser texto pegado o un PDF. Los PDFs deben ser legibles y
+  contener texto extraíble; OCR no está incluido.
+- La comparación detecta secuencias textuales coincidentes de ocho o más
+  palabras consecutivas. No identifica paráfrasis y no equivale a una búsqueda
+  semántica.
+- La respuesta puede ser `completed` o `not_evaluable`; errores de solicitud,
+  formato, tamaño o servicio se expresan como errores HTTP.
+- El resultado solo informa coincidencias en las fuentes comparadas. Nunca
+  afirma que un documento está libre de plagio ni modifica su estado editorial.
+
+### Manejo de datos y límites
+
+- Express mantiene los archivos en memoria durante la solicitud; FastAPI los
+  recibe como carga temporal. No se guardan documentos, texto extraído ni
+  informes en la base de datos.
+- El límite por PDF es 10 MB, el total por solicitud es 20 MB y se permiten
+  hasta cinco referencias.
+- Los hallazgos muestran un fragmento textual y páginas para facilitar la
+  revisión; no se registran contenidos documentales en logs.
+- El prototipo no llama a proveedores externos ni busca en internet.
+- Los límites y el umbral de ocho palabras son parámetros iniciales para
+  probar el flujo, no umbrales editoriales validados.
+
+### Contrato de la respuesta
+
+La respuesta exitosa usa el envoltorio estándar `{ "success": true, "data": ... }`.
+`data` contiene `analysisId`, `status`, `sourceMode`, `analyzerVersion`,
+`findings`, `warnings`, `message` y `disclaimer`. Cada hallazgo declara
+`sourceLabel`, `sourcePage`, `targetPage`, `excerpt` y `matchedTokens`. El
+prototipo no devuelve porcentajes de plagio ni similitud global.

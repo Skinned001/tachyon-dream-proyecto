@@ -1,4 +1,4 @@
-import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileUp, Inbox, Users } from 'lucide-react';
+import { Activity, BookOpen, ChevronLeft, ChevronRight, ClipboardList, LogOut, Menu, X, FileUp, Inbox, ShieldCheck, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -8,11 +8,17 @@ type SidebarProps = { onSignOut: () => void; collapsed: boolean; onToggleCollaps
 export function Sidebar({ onSignOut, collapsed, onToggleCollapsed }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  const canAnalyzeSimilarity = ['AUTOR', 'DDI', 'COMITE', 'ADMIN'].includes(
+    user?.role ?? '',
+  );
   const links = [
     { to: '/dashboard', label: 'Inicio', icon: Activity, end: true },
     { to: '/articulos', label: 'Mis Manuscritos', icon: FileUp },
     { to: '/revisiones', label: 'Bandeja del Comité', icon: Inbox },
     { to: '/biblioteca', label: 'Biblioteca virtual', icon: BookOpen },
+    ...(canAnalyzeSimilarity
+      ? [{ to: '/analisis-similitud', label: 'Análisis de similitud', icon: ShieldCheck }]
+      : []),
   ];
 
   return <>

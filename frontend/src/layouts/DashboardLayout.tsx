@@ -19,6 +19,7 @@ export function DashboardLayout({
 
   const getTitle = () => {
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
+    if (pathname.includes('analisis-similitud')) return 'Análisis de similitud';
     if (pathname.includes('articulos')) return 'Mis Manuscritos';
     if (pathname.includes('revisiones')) return 'Bandeja del Comité';
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
