@@ -448,12 +448,6 @@ export const Perfil = () => {
                 <dd className="break-all text-right">{user?.email ?? 'No disponible'}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="font-medium text-gray-500">Estado</dt>
-                <dd className={user?.active ? 'font-medium text-green-600' : 'font-medium text-red-600'}>
-                  {user?.active ? 'Activo' : 'Suspendido'}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
                 <dt className="font-medium text-gray-500">Especialidad</dt>
                 <dd className="text-right">
                   {especialidades.find(

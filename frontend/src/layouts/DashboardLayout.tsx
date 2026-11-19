@@ -33,7 +33,7 @@ export function DashboardLayout({
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
     if (pathname.includes('admin/especialidades')) return 'Especialidades Médicas';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
-    if (pathname.includes('perfil')) return 'Mi Perfil';
+    if (pathname.includes('perfil')) return 'Cuenta personal';
     return 'Resumen de Investigación';
   };
 
@@ -49,7 +49,8 @@ export function DashboardLayout({
           collapsed ? 'md:pl-[82px]' : 'md:pl-[252px]'
         }`}
       >
-        <header className="sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-[#d5e6df] bg-[#f8fcfa]/95 px-5 pl-[68px] backdrop-blur md:px-9 md:pl-9">
+        {pathname !== '/perfil' && (
+          <header className="sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-[#d5e6df] bg-[#f8fcfa]/95 px-5 pl-[68px] backdrop-blur md:px-9 md:pl-9">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.15em] text-[#52766d]">
               Hospital Interdistrital Evita
@@ -128,7 +129,8 @@ export function DashboardLayout({
               </div>
             )}
           </div>
-        </header>
+          </header>
+        )}
         <main className="page-enter mx-auto max-w-[1440px] px-5 py-8 md:px-9 md:py-10">
           {children}
         </main>

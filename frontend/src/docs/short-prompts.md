@@ -8356,3 +8356,111 @@ _(Nota: Asegurate de adaptar los `<Link>` de arriba con tus clases de Tailwind e
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 83: Simplificar la vista del Perfil de Usuario
+
+## Contexto
+
+En la pantalla de Perfil (`src/pages/Perfil.tsx`), se está mostrando el estado de la cuenta (que siempre dice "Suspendido" por un error de lógica) y la barra superior (Navbar) muestra un encabezado redundante de "Mi Perfil". Queremos limpiar esto para que se vea más profesional.
+
+## Objetivo
+
+1. Eliminar el campo "Estado" de la vista de lectura del perfil.
+2. Quitar el título de "Mi Perfil" del Navbar superior (o adaptarlo para que solo muestre el nombre de la pantalla de forma más sutil).
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/Perfil.tsx`
+
+Buscar la sección de "Vista de Lectura" (donde está el `flex flex-col items-center py-6`).
+
+Eliminar el bloque que muestra el estado de la cuenta:
+
+```tsx
+{
+  /* ELIMINAR ESTO */
+}
+<div className="flex justify-between">
+  <span className="font-medium text-gray-500">Estado:</span>
+  <span className="text-green-600 font-medium">Activo</span>{" "}
+  {/* O Suspendido */}
+</div>;
+```
+
+Dejar solo la fila del correo electrónico:
+
+```tsx
+<div className="w-full max-w-md space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
+  <div className="flex justify-between">
+    <span className="font-medium text-gray-500">Correo:</span>
+    <span>{user?.email}</span>
+  </div>
+</div>
+```
+
+### 2. Modificar `src/layouts/DashboardLayout.tsx` (Navbar)
+
+Si en el `<header>` del Layout tienen un texto dinámico o estático que muestra la ruta actual (por ejemplo `{location.pathname === '/perfil' ? 'Mi Perfil' : ...}`), vamos a simplificarlo.
+
+Si el `<header>` tiene un título como `<h2 className="...">Mi Perfil</h2>`, cambiar esa lógica para que solo muestre el nombre de la aplicación o el nombre de la sección actual de forma más discreta, evitando el gran texto duplicado.
+
+_(Si el Navbar ya tiene un título fijo o un breadcrumb, simplemente asegúrate de que no haya un `<h1>` o `<h2>` que repita "Mi Perfil" en la parte superior de la pantalla)._
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Entrar a la pantalla de Perfil y confirmar que ya no aparece la etiqueta de estado y que el encabezado se ve limpio.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 84: Ocultar el encabezado del Layout en la vista de Perfil
+
+## Contexto
+En la captura de pantalla se ve que la vista de Perfil tiene un encabezado superior (Navbar) que dice "Hospital Interdistrital Evita - Cuenta personal", y justo debajo el título de la página "Mi Perfil". Esto es redundante y visualmente desordenado para esta sección en particular.
+
+## Objetivo
+Ocultar el encabezado superior (la barra blanca que tiene el título del sistema) **solo cuando el usuario está en la ruta `/perfil`**, dejando la pantalla del perfil más limpia.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/layouts/DashboardLayout.tsx`
+- Asegurarse de tener importado `useLocation` de `react-router-dom`.
+- Buscar el `<header>` (la barra superior blanca donde está el título "Hospital Interdistrital Evita" y las notificaciones/perfil).
+- Envolver ese `<header>` en una condición para que no se renderice si estamos en `/perfil`.
+
+```tsx
+import { useLocation } from 'react-router-dom';
+
+export const DashboardLayout = () => {
+  const location = useLocation();
+  // ... otras variables
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <aside>...</aside>
+      <div className="flex-1 flex flex-col">
+        
+        {/* OCULTAR EL HEADER EN LA RUTA /perfil */}
+        {location.pathname !== '/perfil' && (
+          <header className="...">
+             {/* Todo el código que ya tenías en el header */}
+          </header>
+        )}
+
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2. Verificación
+- Correr `npm run build`.
+- Entrar a `/perfil` y confirmar que la barra blanca superior desapareció, dejando más espacio para la tarjeta del perfil.
+
+## Respuesta esperada
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
