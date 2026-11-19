@@ -26,11 +26,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   '/uploads/profiles',
-  express.static(path.join(uploadsDirectory, 'profiles')),
+  express.static(path.join(uploadsDirectory, 'profiles'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
 );
 app.use(
   '/uploads/avatars',
-  express.static(path.join(uploadsDirectory, 'avatars')),
+  express.static(path.join(uploadsDirectory, 'avatars'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
 );
 
 app.get("/health", (_req, res) => {

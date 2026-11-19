@@ -9,14 +9,45 @@ export interface Notificacion {
   createdAt?: string | null;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isNotificacion = (value: unknown): value is Notificacion =>
+  isRecord(value) &&
+  typeof value.id === 'number' &&
+  typeof value.title === 'string' &&
+  typeof value.message === 'string' &&
+  typeof value.read === 'boolean' &&
+  (value.createdAt === undefined ||
+    value.createdAt === null ||
+    typeof value.createdAt === 'string');
+
 export const getNotificaciones = async (): Promise<Notificacion[]> => {
-  const { data } = await axiosClient.get<ApiResponse<Notificacion[]>>(
+  const { data } = await axiosClient.get<ApiResponse<unknown>>(
     '/notificaciones',
   );
-  if (!data.success || !data.data) {
+  if (!data.success) {
     throw new Error(data.error || 'Error al cargar las notificaciones');
   }
-  return data.data;
+
+  const payload = data.data;
+  let notifications: unknown;
+  if (Array.isArray(payload)) {
+    notifications = payload;
+  } else if (isRecord(payload)) {
+    if (Array.isArray(payload.notificaciones)) {
+      notifications = payload.notificaciones;
+    } else if (Array.isArray(payload.items)) {
+      notifications = payload.items;
+    } else if (Array.isArray(payload.data)) {
+      notifications = payload.data;
+    }
+  }
+
+  if (!Array.isArray(notifications) || !notifications.every(isNotificacion)) {
+    throw new Error('El servidor devolvió un formato de notificaciones inválido');
+  }
+  return notifications;
 };
 
 export const markAsRead = async (id: number): Promise<void> => {

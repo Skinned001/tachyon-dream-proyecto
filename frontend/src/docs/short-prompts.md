@@ -7628,3 +7628,112 @@ Hacer exactamente lo mismo. Traer las especialidades y agregar el `<select>` en 
 ### 5. Verificación
 
 - Correr `npm run build`.
+
+# Tarea 79: Adaptar notificaciones al nuevo formato del backend y arreglar CORS
+
+## Contexto
+
+Después de hacer un `git pull`, el sistema se rompió con el error `notifications.some is not a function` y `notifs.filter is not a function`. Esto ocurre porque el backend ahora devuelve las notificaciones dentro de un objeto paginado (ej. `{ items: [] }`) en lugar de un array directo. Además, las imágenes de perfil dan error de CORS (`OpaqueResponseBlocking`).
+
+## Objetivo
+
+1. Arreglar `src/api/notificaciones.api.ts` para que devuelva siempre un array.
+2. Revisar `Sidebar.tsx` y `Notificaciones.tsx` para que usen la función corregida.
+3. Asegurar que el backend sirva las imágenes correctamente.
+
+## Lo que debés hacer
+
+### 1. Frontend - Arreglar `src/api/notificaciones.api.ts`
+
+Modificar `getNotificaciones` para que sea a prueba de balas, verificando si la respuesta es un array o un objeto paginado.
+
+```typescript
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+
+export interface Notificacion {
+  id: number;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export const getNotificaciones = async (): Promise<Notificacion[]> => {
+  try {
+    const { data } = await axiosClient.get<any>("/notificaciones");
+
+    if (data.success && data.data) {
+      // Si el backend devuelve { items: [...] }
+      if (Array.isArray(data.data.items)) {
+        return data.data.items;
+      }
+      // Si el backend devuelve un array directo [...]
+      if (Array.isArray(data.data)) {
+        return data.data;
+      }
+    }
+    return []; // Si no hay datos, devolvemos array vacío
+  } catch (error) {
+    console.error("Error al obtener notificaciones:", error);
+    return [];
+  }
+};
+```
+
+### 2. Frontend - Arreglar `Sidebar.tsx`
+
+Donde se hace `fetchUnread`, asegurarse de que se esté llamando a `getNotificaciones()` de la API corregida:
+
+```tsx
+useEffect(() => {
+  const fetchUnread = async () => {
+    try {
+      const notifications = await getNotificaciones(); // Asegurate de importar esto
+      // Si notifications es un array, .some funciona
+      if (Array.isArray(notifications)) {
+        setUnreadCount(notifications.filter((n) => !n.read).length);
+      }
+    } catch (error) {
+      console.error("Error al cargar el indicador de notificaciones:", error);
+    }
+  };
+  fetchUnread();
+}, []);
+```
+
+### 3. Frontend - Arreglar `Notificaciones.tsx`
+
+Hacer lo mismo, asegurarse de que `notifs` sea siempre un array antes de usar `.filter` o `.map`.
+
+### 4. Backend - Solucionar el bloqueo de imágenes (CORS)
+
+En `src/app.ts` del backend, buscar la configuración de CORS y `express.static`. Asegurarse de que las imágenes puedan ser consumidas por el frontend:
+
+```typescript
+import cors from "cors";
+import path from "path";
+import express from "express";
+
+// Configuración de CORS para permitir credenciales (cookies) y recursos estáticos
+app.use(
+  cors({
+    origin: "http://localhost:5173", // El puerto de tu frontend
+    credentials: true,
+  }),
+);
+
+// Servir la carpeta uploads de forma pública
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+```
+
+_(Nota: Si el error de la imagen persiste, probar agregando el header `Cross-Origin-Resource-Policy: cross-origin` a la configuración de express.static)._
+
+### 5. Verificación
+
+- Correr `npm run build` en ambos proyectos.
+- Recargar la página y verificar que las notificaciones ya no rompen la pantalla.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
