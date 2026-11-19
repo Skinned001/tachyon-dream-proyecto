@@ -7737,3 +7737,622 @@ _(Nota: Si el error de la imagen persiste, probar agregando el header `Cross-Ori
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 80: Implementar Gestión de Especialidades con datos reales
+
+## Contexto
+
+La pantalla de gestión de especialidades actualmente usa datos mock (falsos). Necesitamos conectarla al backend real (`GET /api/especialidades`) para listar las que ya están en la base de datos, y permitir al Admin crear nuevas y editar las existentes.
+
+## Objetivo
+
+1. Completar el servicio `src/api/especialidades.api.ts`.
+2. Crear la página `src/pages/AdminEspecialidades.tsx` con la tabla y el modal.
+3. Agregar la ruta y la opción en el menú lateral (dentro de Administración).
+
+## Lo que debés hacer
+
+### 1. Completar `src/api/especialidades.api.ts`
+
+```typescript
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+
+export interface Especialidad {
+  id: number;
+  name: string;
+  description?: string;
+  active: boolean;
+}
+
+export const getEspecialidades = async (
+  soloActivas: boolean = true,
+): Promise<Especialidad[]> => {
+  const { data } =
+    await axiosClient.get<ApiResponse<Especialidad[]>>("/especialidades");
+  const especialidades = data.success && data.data ? data.data : [];
+  // Si el backend no filtra, lo hacemos acá
+  return soloActivas ? especialidades.filter((e) => e.active) : especialidades;
+};
+
+export const createEspecialidad = async (payload: {
+  name: string;
+  description?: string;
+}): Promise<Especialidad> => {
+  const { data } = await axiosClient.post<ApiResponse<Especialidad>>(
+    "/especialidades",
+    payload,
+  );
+  if (!data.success || !data.data)
+    throw new Error(data.error || "Error al crear");
+  return data.data;
+};
+
+export const updateEspecialidad = async (
+  id: number,
+  payload: { name?: string; description?: string; active?: boolean },
+): Promise<Especialidad> => {
+  const { data } = await axiosClient.put<ApiResponse<Especialidad>>(
+    `/especialidades/${id}`,
+    payload,
+  );
+  if (!data.success || !data.data)
+    throw new Error(data.error || "Error al actualizar");
+  return data.data;
+};
+```
+
+### 2. Crear `src/pages/AdminEspecialidades.tsx`
+
+Vamos a usar el mismo diseño de tabla que en Usuarios.
+
+```tsx
+// src/pages/AdminEspecialidades.tsx
+import { useEffect, useState } from "react";
+import {
+  getEspecialidades,
+  createEspecialidad,
+  updateEspecialidad,
+  type Especialidad,
+} from "../api/especialidades.api";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { Input } from "../components/ui/Input";
+import { Loader2, Plus, Edit } from "lucide-react";
+import { useForm } from "../hooks/useForm";
+
+export const AdminEspecialidades = () => {
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const { formulario, handleChange, resetForm, setFormulario } = useForm({
+    name: "",
+    description: "",
+  });
+
+  const fetchEspecialidades = async () => {
+    setIsLoading(true);
+    try {
+      // Traemos TODAS (activas e inactivas) para el panel de admin
+      const data = await getEspecialidades(false);
+      setEspecialidades(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEspecialidades();
+  }, []);
+
+  const openCreate = () => {
+    resetForm();
+    setEditingId(null);
+    setError("");
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (esp: Especialidad) => {
+    setFormulario({ name: esp.name, description: esp.description || "" });
+    setEditingId(esp.id);
+    setError("");
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formulario.name) return setError("El nombre es obligatorio");
+
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        await updateEspecialidad(editingId, formulario);
+      } else {
+        await createEspecialidad(formulario);
+      }
+      await fetchEspecialidades();
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleActive = async (esp: Especialidad) => {
+    if (
+      window.confirm(
+        `¿Seguro que deseas ${esp.active ? "deshabilitar" : "habilitar"} esta especialidad?`,
+      )
+    ) {
+      await updateEspecialidad(esp.id, { active: !esp.active });
+      await fetchEspecialidades();
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Especialidades Médicas
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Administra el catálogo del hospital
+          </p>
+        </div>
+        <Button
+          onClick={openCreate}
+          variant="primary"
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Nueva Especialidad
+        </Button>
+      </div>
+
+      <Card>
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 text-sm text-gray-500">
+                <th className="py-3 px-4">Nombre</th>
+                <th className="py-3 px-4">Descripción</th>
+                <th className="py-3 px-4">Estado</th>
+                <th className="py-3 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {especialidades.map((esp) => (
+                <tr
+                  key={esp.id}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <td className="py-3 px-4 font-medium text-gray-800">
+                    {esp.name}
+                  </td>
+                  <td className="py-3 px-4 text-gray-500 text-sm">
+                    {esp.description || "-"}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${esp.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    >
+                      {esp.active ? "Activa" : "Inactiva"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      onClick={() => openEdit(esp)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded mr-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => toggleActive(esp)}
+                      className="text-sm"
+                    >
+                      {esp.active ? "Deshabilitar" : "Habilitar"}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingId ? "Editar Especialidad" : "Nueva Especialidad"}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            label="Nombre"
+            name="name"
+            value={formulario.name}
+            onChange={handleChange}
+            required
+          />
+          <Input
+            label="Descripción (Opcional)"
+            name="description"
+            value={formulario.description}
+            onChange={handleChange}
+          />
+
+          {error && <div className="text-red-500 text-sm">{error}</div>}
+
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" isLoading={isSaving}>
+              Guardar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar `src/routes/AppRoutes.tsx`
+
+Importar y agregar la ruta:
+
+```tsx
+import { AdminEspecialidades } from "../pages/AdminEspecialidades";
+
+// Dentro de las rutas privadas, protegida por ADMIN:
+<Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+  <Route path="admin/especialidades" element={<AdminEspecialidades />} />
+</Route>;
+```
+
+### 4. Actualizar el Sidebar en `src/layouts/DashboardLayout.tsx`
+
+Dentro del submenú de "Administración", agregar el enlace:
+
+```tsx
+import { Stethoscope } from "lucide-react"; // O el ícono que prefieras
+
+<Link
+  to="/admin/especialidades"
+  className="flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-gray-600 hover:bg-gray-100"
+>
+  <Stethoscope className="w-4 h-4" />
+  Especialidades
+</Link>;
+```
+
+### 5. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 81: Panel de Revisión (DDI) y Asignación de Especialistas
+
+## Contexto
+
+El rol `EDITOR` o `DDI` necesita un panel para ver los artículos que los autores enviaron y asignarles un revisor del Comité Científico. El sistema solo debe permitir asignar artículos a usuarios cuyo rol sea `DDI` o `COMITE`.
+
+## Objetivo
+
+1. Modificar la página `PanelEditor.tsx` para listar artículos pendientes.
+2. Permitir al DDI seleccionar a un especialista (buscando solo usuarios con rol DDI o COMITE).
+3. Asignar el artículo al especialista seleccionado.
+
+## Lo que debés hacer
+
+### 1. Asegurar el servicio `src/api/editorial.api.ts`
+
+Necesitamos las funciones para obtener los especialistas y asignar un artículo. (Asumimos que el backend ya tiene estas rutas, si no, el agente deberá crearlas).
+
+```typescript
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+import type { User } from "../types/user.types";
+
+// Obtener solo usuarios que puedan revisar (DDI y COMITE)
+export const getEspecialistas = async (): Promise<User[]> => {
+  const { data } = await axiosClient.get<ApiResponse<User[]>>(
+    "/usuarios/especialistas",
+  );
+  return data.success && data.data ? data.data : [];
+};
+
+// Asignar un artículo a un revisor
+export const asignarRevisor = async (
+  articleId: number,
+  reviewerId: number,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    `/editorial/${articleId}/asignar`,
+    { reviewerId },
+  );
+  if (!data.success) throw new Error(data.error || "Error al asignar revisor");
+};
+```
+
+_(NOTA para el Backend: Si la ruta `/usuarios/especialistas` no existe, el backend debe crearla rápidamente para que devuelva solo los usuarios con rol `DDI` o `COMITE` y que estén activos)._
+
+### 2. Actualizar la vista `src/pages/PanelEditor.tsx`
+
+Reemplazar el código de esta pantalla con la siguiente lógica:
+
+```tsx
+// src/pages/PanelEditor.tsx
+import { useEffect, useState } from "react";
+import {
+  getArticulosPendientes,
+  getEspecialistas,
+  asignarRevisor,
+} from "../api/editorial.api";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, UserCheck } from "lucide-react";
+
+export const PanelEditor = () => {
+  const [articulos, setArticulos] = useState<any[]>([]); // Tipar correctamente con la interfaz de Artículo
+  const [especialistas, setEspecialistas] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedReviewer, setSelectedReviewer] = useState<{
+    [key: number]: number;
+  }>({});
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [arts, esp] = await Promise.all([
+          getArticulosPendientes(), // Artículos en estado 'PENDIENTE' o 'ENVIADO'
+          getEspecialistas(),
+        ]);
+        setArticulos(arts);
+        setEspecialistas(esp);
+      } catch (error) {
+        console.error("Error al cargar datos", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const handleAsignar = async (articleId: number) => {
+    const reviewerId = selectedReviewer[articleId];
+    if (!reviewerId) return alert("Seleccione un especialista primero");
+
+    try {
+      await asignarRevisor(articleId, reviewerId);
+      alert("Artículo asignado correctamente");
+      // Recargar los artículos
+      const arts = await getArticulosPendientes();
+      setArticulos(arts);
+    } catch (error) {
+      alert("Error al asignar");
+    }
+  };
+
+  if (isLoading)
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        Bandeja de Asignación (DDI)
+      </h1>
+
+      <Card>
+        {articulos.length === 0 ? (
+          <p className="text-gray-500 text-center py-6">
+            No hay artículos pendientes de asignación.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {articulos.map((art) => (
+              <div
+                key={art.id}
+                className="p-4 border border-gray-200 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4"
+              >
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">{art.title}</h3>
+                  <p className="text-sm text-gray-500">
+                    Especialidad: {art.specialty?.name || art.specialtyId}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={selectedReviewer[art.id] || ""}
+                    onChange={(e) =>
+                      setSelectedReviewer({
+                        ...selectedReviewer,
+                        [art.id]: Number(e.target.value),
+                      })
+                    }
+                  >
+                    <option value="">Seleccionar Especialista...</option>
+                    {especialistas.map((esp) => (
+                      <option key={esp.id} value={esp.id}>
+                        {esp.first_name} {esp.last_name} ({esp.role})
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    onClick={() => handleAsignar(art.id)}
+                    variant="primary"
+                    className="flex items-center gap-2"
+                  >
+                    <UserCheck className="w-4 h-4" /> Asignar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+```
+
+### 3. Actualizar el Menú (Sidebar)
+
+- Asegurarse de que en `DashboardLayout.tsx` el botón de "Administración" contenga las opciones de: **Manejo de Usuarios** y **Especialidades**.
+- Asegurarse de que el enlace a "Revisiones" o "Panel del Editor" sea visible para el rol `DDI` y `COMITE`.
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 82: Mejorar Sidebar con Submenú y Scroll vertical
+
+## Contexto
+
+El menú lateral (Sidebar) se está desbordando en pantallas pequeñas, ocultando el botón de "Cerrar sesión" y dejando las opciones de administración como etiquetas sueltas. Necesitamos que "Administración" sea un botón desplegable y que el menú tenga scroll.
+
+## Objetivo
+
+Modificar `src/layouts/DashboardLayout.tsx` (o el componente `Sidebar` si lo tienen separado) para:
+
+1. Fijar el logo arriba y el botón de "Cerrar sesión" abajo.
+2. Permitir scroll en la zona central del menú.
+3. Crear el submenú desplegable para "Administración".
+
+## Lo que debés hacer
+
+### 1. Actualizar `src/layouts/DashboardLayout.tsx`
+
+- Importar `useLocation` de `react-router-dom` (si no está) y los íconos `Settings`, `ChevronDown`, `ChevronRight` de `lucide-react`.
+- Agregar el estado para el submenú: `const [isAdminOpen, setIsAdminOpen] = useState(false);`
+
+Reemplazar la estructura del `<aside>` (el sidebar) para que quede con Flexbox y Scroll:
+
+```tsx
+{
+  /* Sidebar */
+}
+<aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex h-screen sticky top-0">
+  {/* LOGO (Fijo arriba) */}
+  <div className="h-16 flex items-center px-6 border-b border-gray-200 flex-shrink-0">
+    <h1 className="text-xl font-bold text-institucional-700">HIEF Journal</h1>
+  </div>
+
+  {/* MENÚ CON SCROLL (Zona central) */}
+  <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
+    {/* Opciones normales */}
+    <Link to="/" className="...">
+      Inicio
+    </Link>
+    <Link to="/mis-articulos" className="...">
+      Mis Artículos
+    </Link>
+    <Link to="/revisiones" className="...">
+      Panel de Revisión
+    </Link>
+    <Link to="/editor" className="...">
+      Panel del Editor
+    </Link>
+    <Link to="/biblioteca" className="...">
+      Biblioteca virtual
+    </Link>
+    <Link to="/convocatorias" className="...">
+      Convocatorias
+    </Link>
+    <Link to="/notificaciones" className="...">
+      Notificaciones
+    </Link>
+
+    {/* SEPARADOR Y SUBMENÚ DE ADMINISTRACIÓN */}
+    <div className="mt-4 mb-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+      Administración
+    </div>
+
+    <button
+      onClick={() => setIsAdminOpen(!isAdminOpen)}
+      className="flex items-center justify-between w-full px-3 py-2 text-gray-700 rounded-md hover:bg-institucional-50 transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <Settings className="w-5 h-5" />
+        Gestión del Sistema
+      </div>
+      {isAdminOpen ? (
+        <ChevronDown className="w-4 h-4" />
+      ) : (
+        <ChevronRight className="w-4 h-4" />
+      )}
+    </button>
+
+    {/* Opciones del submenú */}
+    {isAdminOpen && (
+      <div className="flex flex-col ml-8 border-l-2 border-gray-200 pl-2 gap-1 mt-1">
+        <Link
+          to="/admin/usuarios"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100"
+        >
+          <Users className="w-4 h-4" /> Manejo de Usuarios
+        </Link>
+        <Link
+          to="/admin/especialidades"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100"
+        >
+          <Stethoscope className="w-4 h-4" /> Especialidades
+        </Link>
+      </div>
+    )}
+  </div>
+
+  {/* BOTÓN CERRAR SESIÓN (Fijo abajo) */}
+  <div className="p-4 border-t border-gray-200 flex-shrink-0">
+    <button
+      onClick={handleLogout}
+      className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-md w-full transition-colors"
+    >
+      <LogOut className="w-5 h-5" />
+      Cerrar sesión
+    </button>
+  </div>
+</aside>;
+```
+
+_(Nota: Asegurate de adaptar los `<Link>` de arriba con tus clases de Tailwind exactas. La clave está en el `overflow-y-auto` en el div del medio y el `h-screen sticky top-0` en el aside)._
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Reducir el tamaño de la ventana del navegador y confirmar que aparece la barra de scroll en el menú, y que "Cerrar sesión" sigue visible abajo.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.

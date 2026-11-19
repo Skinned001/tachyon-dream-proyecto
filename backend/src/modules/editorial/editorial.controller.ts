@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '../auth/auth.dto.js';
+import { ArticuloService } from '../articulos/articulo.service.js';
 import { EditorialService, type ConvocatoriaDTO } from './editorial.service.js';
 
 const estadoSchema = z.enum(['BORRADOR', 'PROGRAMADA', 'ABIERTA', 'CERRADA']);
@@ -34,7 +35,59 @@ const getId = (value: string): number | undefined => {
 };
 
 export class EditorialController {
-  constructor(private readonly service = new EditorialService()) {}
+  constructor(
+    private readonly service = new EditorialService(),
+    private readonly articuloService = new ArticuloService(),
+  ) {}
+
+  listarArticulosPendientes = async (
+    _req: Request,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const data = await this.articuloService.listarPendientesDeAsignacion();
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  asignarRevisor = async (
+    req: Request<{ id: string }>,
+    res: Response<ApiResponse<{ articleId: number; reviewerId: number }>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    const id = getId(req.params.id);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'El id debe ser un entero positivo',
+      });
+      return;
+    }
+
+    const parsedBody = z
+      .object({ reviewerId: z.number().int().positive() })
+      .safeParse(req.body);
+    if (!parsedBody.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Debe seleccionar un especialista válido',
+      });
+      return;
+    }
+
+    try {
+      const data = await this.articuloService.asignarRevisor(
+        id,
+        parsedBody.data.reviewerId,
+      );
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
 
   listar = async (
     _req: Request,

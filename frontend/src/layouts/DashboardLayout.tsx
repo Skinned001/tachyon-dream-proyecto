@@ -29,7 +29,9 @@ export function DashboardLayout({
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
     if (pathname.includes('articulos')) return 'Mis Manuscritos';
     if (pathname.includes('revisiones')) return 'Bandeja del Comité';
+    if (pathname.includes('editor')) return 'Asignación de Revisores';
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
+    if (pathname.includes('admin/especialidades')) return 'Especialidades Médicas';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
     if (pathname.includes('perfil')) return 'Mi Perfil';
     return 'Resumen de Investigación';

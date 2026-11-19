@@ -49,6 +49,19 @@ const isMissingFileError = (error: unknown): boolean =>
 export class UsuariosController {
   constructor(private readonly usuariosService = new UsuariosService()) {}
 
+  specialists = async (
+    _req: Request,
+    res: Response<ApiResponse>,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const data = await this.usuariosService.findReviewers();
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
   list = async (
     req: Request,
     res: Response<ApiResponse>,

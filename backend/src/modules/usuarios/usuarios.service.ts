@@ -137,6 +137,34 @@ const toUsuarioPendienteDTO = (usuario: Usuario): UsuarioPendienteDTO => ({
 });
 
 export class UsuariosService {
+  async findReviewers(): Promise<UsuarioDTO[]> {
+    const usuarios = await Usuario.findAll({
+      where: { active: true },
+      attributes: { exclude: ['password'] },
+      include: [
+        {
+          model: Rol,
+          as: 'role',
+          attributes: ['id', 'name'],
+          where: { name: { [Op.in]: ['DDI', 'COMITE'] } },
+          required: true,
+        },
+      ],
+      order: [
+        ['first_name', 'ASC'],
+        ['last_name', 'ASC'],
+      ],
+    });
+
+    return usuarios.map((usuario) => {
+      const roleName = usuario.role?.name;
+      if (!roleName) {
+        throw new Error(`No se encontró el rol del usuario ${usuario.id}.`);
+      }
+      return toUsuarioDTO(usuario, roleName);
+    });
+  }
+
   async findAll(): Promise<UsuarioDTO[]> {
     const usuarios = await Usuario.findAll({
       attributes: { exclude: ['password'] },

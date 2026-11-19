@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   BookOpen,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -14,9 +15,11 @@ import {
   FileText,
   CheckSquare,
   Megaphone,
+  Settings,
+  Stethoscope,
   type LucideIcon,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getNotificaciones } from "../api/notificaciones.api";
@@ -42,8 +45,16 @@ export function Sidebar({
   onToggleCollapsed,
 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    if (pathname.startsWith('/admin/')) {
+      setIsAdminOpen(true);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -71,8 +82,18 @@ export function Sidebar({
   const links: SidebarLink[] = [
     { to: "/dashboard", label: "Inicio", icon: Activity, end: true },
     { to: "/articulos", label: "Mis Artículos", icon: FileText },
-    { to: "/revisiones", label: "Panel de Revisión", icon: CheckSquare },
-    { to: "/editor", label: "Panel del Editor", icon: CheckSquare },
+    {
+      to: "/revisiones",
+      label: "Panel de Revisión",
+      icon: CheckSquare,
+      allowedRoles: ["ADMIN", "DDI", "COMITE"],
+    },
+    {
+      to: "/editor",
+      label: "Panel del Editor",
+      icon: CheckSquare,
+      allowedRoles: ["ADMIN", "EDITOR", "DDI"],
+    },
     { to: "/biblioteca", label: "Biblioteca virtual", icon: BookOpen },
     {
       to: "/convocatorias",
@@ -104,7 +125,7 @@ export function Sidebar({
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#cfe4dc] bg-[#e7f4ee] transition-all duration-300 md:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "md:w-[82px]" : "md:w-[252px]"} w-[252px]`}
       >
-        <div className="flex h-[88px] items-center gap-3 border-b border-[#cfe4dc] px-5">
+        <div className="flex h-[88px] shrink-0 items-center gap-3 border-b border-[#cfe4dc] px-5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#087d70] text-[#f4fffb]">
             <ClipboardList size={20} strokeWidth={1.7} />
           </div>
@@ -117,7 +138,7 @@ export function Sidebar({
             </p>
           </div>
         </div>
-        <div className="px-4 pt-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-8">
           <p
             className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-[#58786f] ${collapsed ? "md:hidden" : ""}`}
           >
@@ -163,26 +184,84 @@ export function Sidebar({
               </span>
             </NavLink>
             {user?.role === "ADMIN" && (
-              <NavLink
-                to="/admin/usuarios"
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
+              <div className="mt-4">
+                {!collapsed && (
+                  <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[.16em] text-[#58786f]">
+                    Administración
+                  </p>
+                )}
+                <button
+                  type="button"
+                  aria-expanded={isAdminOpen}
+                  aria-controls="admin-submenu"
+                  onClick={() => setIsAdminOpen((isOpen) => !isOpen)}
+                  className={`group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
+                    pathname.startsWith('/admin/')
+                      ? "bg-[#bce8d8] text-[#07584f]"
                       : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
-                  }`
-                }
-              >
-                <Users size={18} strokeWidth={1.8} />
-                <span className={collapsed ? "md:hidden" : ""}>
-                  Manejo de Usuarios
-                </span>
-              </NavLink>
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <Settings size={18} strokeWidth={1.8} />
+                    <span className={collapsed ? "md:hidden" : ""}>
+                      Gestión del Sistema
+                    </span>
+                  </span>
+                  {!collapsed &&
+                    (isAdminOpen ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronRight size={16} />
+                    ))}
+                </button>
+                {isAdminOpen && (
+                  <div
+                    id="admin-submenu"
+                    className={`mt-1 flex flex-col gap-1 border-l-2 border-[#cfe4dc] ${
+                      collapsed ? 'ml-2 pl-1' : 'ml-8 pl-2'
+                    }`}
+                  >
+                    <NavLink
+                      to="/admin/usuarios"
+                      onClick={() => setMobileOpen(false)}
+                      title={collapsed ? 'Manejo de Usuarios' : undefined}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                          isActive
+                            ? 'bg-[#bce8d8] text-[#07584f]'
+                            : 'text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]'
+                        }`
+                      }
+                    >
+                      <Users size={16} strokeWidth={1.8} />
+                      <span className={collapsed ? "md:hidden" : ""}>
+                        Manejo de Usuarios
+                      </span>
+                    </NavLink>
+                    <NavLink
+                      to="/admin/especialidades"
+                      onClick={() => setMobileOpen(false)}
+                      title={collapsed ? 'Especialidades' : undefined}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                          isActive
+                            ? 'bg-[#bce8d8] text-[#07584f]'
+                            : 'text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]'
+                        }`
+                      }
+                    >
+                      <Stethoscope size={16} strokeWidth={1.8} />
+                      <span className={collapsed ? "md:hidden" : ""}>
+                        Especialidades
+                      </span>
+                    </NavLink>
+                  </div>
+                )}
+              </div>
             )}
           </nav>
         </div>
-        <div className="mt-auto px-4 pb-5">
+        <div className="mt-auto shrink-0 border-t border-[#cfe4dc] px-4 pb-5 pt-4">
           <button
             onClick={onToggleCollapsed}
             className="mb-3 hidden w-full items-center justify-center gap-2 rounded-lg py-2 text-xs text-[#45665f] hover:bg-[#d5eee4] md:flex"

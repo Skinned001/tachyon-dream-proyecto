@@ -6,6 +6,13 @@ import { UsuariosController } from './usuarios.controller.js';
 const router = Router();
 const usuariosController = new UsuariosController();
 
+router.get(
+  '/especialistas',
+  authenticateJWT,
+  requireRole(['ADMIN', 'EDITOR', 'DDI']),
+  usuariosController.specialists,
+);
+
 router.use(authenticateJWT, requireRole(['ADMIN']));
 
 router.get('/', usuariosController.list);

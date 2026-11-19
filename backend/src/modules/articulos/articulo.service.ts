@@ -4,6 +4,7 @@ import { Op, type Includeable, type Transaction, type WhereOptions } from 'seque
 import { sequelize } from '../../config/database.js';
 import { Articulo, type ArticleState } from './Articulo.model.js';
 import { ArticuloVersion } from './ArticuloVersion.model.js';
+import { AsignacionComite } from '../editorial/AsignacionComite.model.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
@@ -167,6 +168,69 @@ const cleanupUploadedFile = (filePath: string): void => {
 };
 
 export class ArticuloService {
+  async listarPendientesDeAsignacion(): Promise<ArticleDTO[]> {
+    const assignments = await AsignacionComite.findAll({
+      attributes: ['articleId'],
+    });
+    const where: WhereOptions = {
+      state: { [Op.in]: ['PENDIENTE', 'EN_REVISION'] },
+    };
+    if (assignments.length > 0) {
+      Object.assign(where, {
+        id: { [Op.notIn]: assignments.map(({ articleId }) => articleId) },
+      });
+    }
+
+    const articles = await Articulo.findAll({
+      where,
+      include: articleIncludes,
+      order: [['createdAt', 'ASC']],
+    });
+    return articles.map(toArticleDTO);
+  }
+
+  async asignarRevisor(
+    articleId: number,
+    reviewerId: number,
+  ): Promise<{ articleId: number; reviewerId: number }> {
+    return sequelize.transaction(async (transaction) => {
+      const article = await Articulo.findByPk(articleId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!article) {
+        throw new ArticuloError(404, 'Artículo no encontrado');
+      }
+      if (article.state !== 'PENDIENTE' && article.state !== 'EN_REVISION') {
+        throw new ArticuloError(409, 'El artículo no está pendiente de asignación');
+      }
+
+      const existingAssignment = await AsignacionComite.findOne({
+        where: { articleId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (existingAssignment) {
+        throw new ArticuloError(409, 'El artículo ya tiene un revisor asignado');
+      }
+
+      const reviewer = await Usuario.findByPk(reviewerId, { transaction });
+      if (!reviewer || !reviewer.active) {
+        throw new ArticuloError(400, 'El especialista no existe o está inactivo');
+      }
+      const reviewerRole = await Rol.findByPk(reviewer.roleId, { transaction });
+      if (!reviewerRole || (reviewerRole.name !== 'DDI' && reviewerRole.name !== 'COMITE')) {
+        throw new ArticuloError(400, 'Solo se puede asignar el artículo a usuarios DDI o COMITE');
+      }
+
+      await AsignacionComite.create(
+        { articleId, reviewerId, read_status: false },
+        { transaction },
+      );
+      return { articleId, reviewerId };
+    });
+  }
+
   async listarArticulosPublicados(convocatoriaId?: number): Promise<PublishedArticleDTO[]> {
     const where: WhereOptions = { state: 'PUBLICADO' };
     if (convocatoriaId !== undefined) {

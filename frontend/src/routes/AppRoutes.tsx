@@ -4,6 +4,7 @@ import { PanelEditor } from "../pages/PanelEditor";
 import { BibliotecaRoute } from "./BibliotecaRoute";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
+import { AdminEspecialidades } from "../pages/AdminEspecialidades";
 import { Login } from "../pages/Login";
 import { MisArticulos } from "../pages/MisArticulos";
 import { Notificaciones } from "../pages/Notificaciones";
@@ -29,10 +30,14 @@ export function AppRoutes() {
         <Route path="/dashboard" element={<DashboardHome />} />
         <Route path="articulos" element={<MisArticulos />} />
         <Route path="mis-articulos" element={<MisArticulos />} />
-        <Route path="revisiones" element={<Revisiones />} />
         <Route path="notificaciones" element={<Notificaciones />} />
         <Route path="perfil" element={<Perfil />} />
-        <Route path="editor" element={<PanelEditor />} />
+        <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR", "DDI"]} />}>
+          <Route path="editor" element={<PanelEditor />} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["ADMIN", "DDI", "COMITE"]} />}>
+          <Route path="revisiones" element={<Revisiones />} />
+        </Route>
         <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR"]} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
           <Route
@@ -40,6 +45,12 @@ export function AppRoutes() {
             element={<Navigate to="/admin/usuarios?tab=solicitudes" replace />}
           />
           <Route path="convocatorias" element={<PanelConvocatorias />} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+          <Route
+            path="admin/especialidades"
+            element={<AdminEspecialidades />}
+          />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
