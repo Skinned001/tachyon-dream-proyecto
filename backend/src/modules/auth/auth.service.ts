@@ -53,6 +53,7 @@ const toAuthUser = (
     last_name: user.last_name,
     profile_image: user.profile_image,
     role: roleName,
+    active: user.active,
     is_author: user.is_author,
     specialtyId: user.specialtyId,
     must_change_password: user.must_change_password,

@@ -385,8 +385,8 @@ export const Perfil = () => {
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="font-medium text-gray-500">Estado</dt>
-                <dd className={user?.active ? 'font-medium text-green-600' : 'font-medium text-red-600'}>
-                  {user?.active ? 'Activo' : 'Suspendido'}
+                <dd className={user?.active === false ? 'font-medium text-red-600' : 'font-medium text-green-600'}>
+                  {user?.active === false ? 'Suspendido' : 'Activo'}
                 </dd>
               </div>
             </dl>
