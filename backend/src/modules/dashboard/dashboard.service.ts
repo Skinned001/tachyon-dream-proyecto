@@ -181,23 +181,20 @@ const getReviewerSummary = async (
   userId: number,
   convocatoriasAbiertasList: Awaited<ReturnType<typeof getOpenConvocations>>,
 ): Promise<DashboardSummaryDTO> => {
-  const [pendientesCount, asignadasCount, articulosPublicados, recursosBiblioteca, asignaciones] =
+  const [allAssignments, articulosPublicados, recursosBiblioteca, asignaciones] =
     await Promise.all([
-      AsignacionComite.count({
+      AsignacionComite.findAll({
         where: { reviewerId: userId },
+        attributes: ['id'],
         include: [
           {
             model: Revision,
             as: 'reviews',
-            attributes: [],
+            attributes: ['id'],
             required: false,
-            where: { id: null },
           },
         ],
-        distinct: true,
-        col: 'id',
       }),
-      AsignacionComite.count({ where: { reviewerId: userId } }),
       Articulo.count({ where: { state: 'PUBLICADO' } }),
       RecursoBiblioteca.count(),
       AsignacionComite.findAll({
@@ -216,7 +213,10 @@ const getReviewerSummary = async (
       }),
     ]);
 
-  const evaluados = Math.max(0, asignadasCount - pendientesCount);
+  const pendientesCount = allAssignments.filter(
+    (asignacion) => !asignacion.reviews || asignacion.reviews.length === 0,
+  ).length;
+  const evaluados = allAssignments.length - pendientesCount;
   return {
     role: 'REVISOR',
     kpis: {

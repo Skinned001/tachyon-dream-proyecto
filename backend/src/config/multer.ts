@@ -103,7 +103,7 @@ const storage = multer.diskStorage({
       return;
     }
 
-    const directory = path.resolve(process.cwd(), 'uploads', subdirectory);
+    const directory = path.join(uploadsDirectory, subdirectory);
 
     try {
       if (!fs.existsSync(directory)) {

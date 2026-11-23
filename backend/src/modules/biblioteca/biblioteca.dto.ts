@@ -1,6 +1,8 @@
 import type { RoleName } from '../auth/auth.dto.js';
+import type { FavoriteTargetType } from './Favorito.model.js';
 import type { ResourceVisibility } from './RecursoBiblioteca.model.js';
 
+export type { FavoriteTargetType };
 export type LibraryVisibility = ResourceVisibility;
 
 export interface LibrarySpecialtyDTO {
@@ -13,9 +15,11 @@ export interface LibrarySpecialtyDTO {
 export interface LibraryResourceDTO {
   id: number;
   title: string;
+  description?: string | null;
   category: string;
   file_path: string;
   file_size: string;
+  fileUrl?: string | null;
   visibility: LibraryVisibility;
   uploadedBy: number | null;
   specialtyId: number | null;
@@ -46,4 +50,21 @@ export interface LibraryResourceFilters {
 
 export interface LibraryListQuery extends LibraryResourceFilters {
   userRole?: RoleName;
+}
+
+export interface FavoriteItemDTO {
+  id: number;
+  targetType: FavoriteTargetType;
+  targetId: number;
+  title: string;
+  category: string;
+  area: string;
+  fileUrl: string | null;
+  createdAt: string;
+}
+
+export interface ToggleFavoriteResultDTO {
+  saved: boolean;
+  targetType: FavoriteTargetType;
+  targetId: number;
 }

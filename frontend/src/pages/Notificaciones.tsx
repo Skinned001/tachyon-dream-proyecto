@@ -14,6 +14,28 @@ import { formatDateTime } from '../utils/formatDate';
 const getNotificationDestination = (
   notification: Notificacion,
 ): string | null => {
+  if (notification.tipo === 'MANUSCRITO_RECIBIDO') {
+    return '/mesa-entrada';
+  }
+  if (
+    notification.tipo === 'MANUSCRITO_ASIGNADO' ||
+    notification.tipo === 'MANUSCRITO_CORREGIDO'
+  ) {
+    return '/revisiones';
+  }
+  if (
+    notification.tipo === 'MANUSCRITO_EN_REVISION' ||
+    notification.tipo === 'MANUSCRITO_RECHAZADO_DDI' ||
+    notification.tipo === 'MANUSCRITO_RESUELTO' ||
+    notification.tipo === 'MANUSCRITO_PUBLICADO' ||
+    notification.tipo === 'MANUSCRITO_RETIRADO'
+  ) {
+    return '/mis-articulos';
+  }
+  if (notification.tipo === 'MANUSCRITO_APROBADO_PUBLICACION') {
+    return '/editor';
+  }
+
   const content =
     `${notification.title} ${notification.message}`.toLocaleLowerCase();
 
@@ -21,7 +43,7 @@ const getNotificationDestination = (
     return '/admin/usuarios?tab=solicitudes';
   }
   if (content.includes('artículo') || content.includes('manuscrito')) {
-    return '/revisiones';
+    return '/mis-articulos';
   }
   if (content.includes('cuenta habilitada') || content.includes('cuenta aprobada')) {
     return '/perfil';
@@ -119,9 +141,8 @@ export const Notificaciones = () => {
           onClick={() => void handleMarkAll()}
           disabled={noLeidasCount === 0 || isMarkingAll}
           isLoading={isMarkingAll}
-          className={`gap-2 text-sm ${
-            noLeidasCount === 0 ? 'cursor-not-allowed opacity-50' : ''
-          }`}
+          className={`gap-2 text-sm ${noLeidasCount === 0 ? 'cursor-not-allowed opacity-50' : ''
+            }`}
         >
           <CheckCheck className="h-4 w-4" />
           Marcar todas como leídas
@@ -166,16 +187,14 @@ export const Notificaciones = () => {
                   type="button"
                   onClick={() => void handleReadAndRedirect(notification)}
                   aria-label={`${notification.read ? 'Abrir' : 'Marcar como leída y abrir'}: ${notification.title}`}
-                  className={`flex w-full cursor-pointer gap-4 border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${
-                    notification.read ? '' : 'bg-blue-50/30'
-                  }`}
+                  className={`flex w-full cursor-pointer gap-4 border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${notification.read ? '' : 'bg-blue-50/30'
+                    }`}
                 >
                   <span
-                    className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                      notification.read
-                        ? 'bg-gray-100 text-gray-500'
-                        : 'bg-blue-100 text-blue-600'
-                    }`}
+                    className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${notification.read
+                      ? 'bg-gray-100 text-gray-500'
+                      : 'bg-blue-100 text-blue-600'
+                      }`}
                   >
                     {notification.read ? (
                       <CheckCircle className="h-4 w-4" />
@@ -185,11 +204,10 @@ export const Notificaciones = () => {
                   </span>
                   <span>
                     <span
-                      className={`block text-sm ${
-                        notification.read
-                          ? 'font-medium text-gray-700'
-                          : 'font-bold text-gray-900'
-                      }`}
+                      className={`block text-sm ${notification.read
+                        ? 'font-medium text-gray-700'
+                        : 'font-bold text-gray-900'
+                        }`}
                     >
                       {notification.title}
                     </span>

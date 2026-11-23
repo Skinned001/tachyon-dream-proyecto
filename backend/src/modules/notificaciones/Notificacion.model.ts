@@ -45,7 +45,6 @@ export const initializeNotificacionModel = (sequelize: Sequelize): void => {
       timestamps: true,
       indexes: [
         {
-          unique: true,
           fields: ['userId', 'tipo', 'referenciaId'],
         },
       ],

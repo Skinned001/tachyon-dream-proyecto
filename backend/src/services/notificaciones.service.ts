@@ -1,4 +1,5 @@
 import { Op, UniqueConstraintError } from 'sequelize';
+import type { RoleName } from '../modules/auth/auth.dto.js';
 import { Notificacion } from '../modules/notificaciones/Notificacion.model.js';
 import { Rol } from '../modules/usuarios/Rol.model.js';
 import { Usuario } from '../modules/usuarios/Usuario.model.js';
@@ -82,4 +83,57 @@ export const notificarAutoresActivos = async (
     }
   }
   return creadas;
+};
+
+export const notificarUsuariosPorIds = async (
+  userIds: number[],
+  tipo: string,
+  titulo: string,
+  mensaje: string,
+  referenciaId?: number,
+): Promise<number> => {
+  const uniqueIds = Array.from(new Set(userIds));
+  let creadas = 0;
+  for (const userId of uniqueIds) {
+    const notificacion = await crearNotificacion(
+      userId,
+      tipo,
+      titulo,
+      mensaje,
+      referenciaId,
+    );
+    if (notificacion) {
+      creadas += 1;
+    }
+  }
+  return creadas;
+};
+
+export const notificarUsuariosPorRol = async (
+  roles: RoleName[],
+  tipo: string,
+  titulo: string,
+  mensaje: string,
+  referenciaId?: number,
+): Promise<number> => {
+  const usuarios = await Usuario.findAll({
+    attributes: ['id'],
+    where: { active: true },
+    include: [
+      {
+        model: Rol,
+        as: 'role',
+        attributes: [],
+        where: { name: { [Op.in]: roles } },
+      },
+    ],
+  });
+
+  return notificarUsuariosPorIds(
+    usuarios.map((usuario) => usuario.id),
+    tipo,
+    titulo,
+    mensaje,
+    referenciaId,
+  );
 };

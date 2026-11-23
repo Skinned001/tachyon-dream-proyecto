@@ -156,9 +156,66 @@ export interface CreateArticleDraftRequest {
 }
 
 // POST /api/articulos
-// Roles: AUTOR.
-// Recibe CreateArticleDraftRequest; convocatoriaId es obligatorio y la
-// convocatoria referenciada debe estar en estado ABIERTA.
+// Roles: AUTOR (is_author = true) o ADMIN.
+// Multipart/form-data: file (PDF, max 10 MB), title, abstract/summary,
+// specialtyId, convocatoriaId (debe estar ABIERTA), coauthors (opcional).
+// Crea el artículo en estado PENDIENTE y su versión 1 en article_versions.
+// Notifica a todos los usuarios activos con rol DDI.
+//
+// GET /api/articulos
+// Requiere sesión. Filtra según rol:
+// - STAFF/AUTOR: solo sus propios manuscritos (dictámenes del comité anónimos: "Revisor 1", "Revisor 2", ...).
+// - COMITE: solo manuscritos asignados al revisor.
+// - DDI, EDITOR, ADMIN: todos los manuscritos con metadatos completos y comité asignado.
+//
+// GET /api/articulos/revisores
+// Roles: DDI, ADMIN. Lista usuarios activos con rol COMITE.
+//
+// GET /api/articulos/:id/pdf y GET /api/articulos/:id/versions/:versionId/pdf
+// Requiere sesión. Descarga/visualización del PDF solo para autor dueño, DDI,
+// revisor COMITE asignado, EDITOR o ADMIN.
+//
+// PATCH /api/articulos/:id/rechazar-ddi
+// Roles: DDI, ADMIN. Solo sobre artículos PENDIENTE.
+// Body: { reason: string }. Pasa a RECHAZADO (terminal), guarda rejection_reason y notifica al autor.
+//
+// PUT /api/articulos/:id/asignar
+// Roles: DDI, ADMIN. Solo sobre artículos PENDIENTE.
+// Body: { reviewerIds: number[] } (exactamente 1 o 3 miembros activos de COMITE).
+// Crea committee_assignments, pasa a EN_REVISION y notifica al autor y a cada revisor asignado.
+//
+// POST /api/articulos/:id/dictamen
+// Roles: COMITE (asignado al artículo), ADMIN (si está asignado). Solo en EN_REVISION.
+// Body: { verdict: 'APROBAR' | 'APROBAR_CON_CORRECCIONES' | 'RECHAZAR', comments: string, observations?: string[] }.
+// Registra un único voto por (assignmentId, versionId).
+// - Ronda v1: espera votos de todos los revisores asignados (1 o 3).
+//   * Mayoría RECHAZAR -> RECHAZADO (terminal, notifica al autor).
+//   * Mayoría aprobatoria (APROBAR + APROBAR_CON_CORRECCIONES) con al menos un
+//     APROBAR_CON_CORRECCIONES -> REVISION_MENOR (notifica al autor).
+//   * Mayoría aprobatoria sin pedidos de corrección -> APROBADO (notifica al autor y a EDITOR).
+// - Rondas de corrección (v2+): un revisor asignado puede confirmar APROBAR (-> APROBADO,
+//   notifica a autor y EDITOR), solicitar nuevas correcciones (-> REVISION_MENOR) o votar RECHAZAR.
+//
+// POST /api/articulos/:id/versiones
+// Roles: AUTOR dueño del manuscrito (o ADMIN). Solo cuando state === 'REVISION_MENOR'.
+// Multipart/form-data: file (PDF, max 10 MB), notes/abstract (opcional), title/summary/coauthors (opcional).
+// Crea una nueva ArticleVersion (version_number = última + 1), vuelve a EN_REVISION
+// manteniendo los mismos revisores asignados (sin volver al DDI) y notifica al COMITE asignado.
+//
+// POST /api/articulos/:id/aprobar-correccion
+// Roles: EDITOR, ADMIN. Solo sobre artículos en EN_REVISION con versión >= 2 (ronda de corrección).
+// Pasa directamente a APROBADO y notifica al autor y a los EDITOR.
+//
+// PATCH /api/articulos/:id/publicar
+// Roles: EDITOR, ADMIN. Solo sobre artículos en estado APROBADO o ACEPTADO con PDF disponible.
+// Body opcional: { publishedAt?, editionNumber?, doi?, keywords? }.
+// Pasa a PUBLICADO, fija publishedAt y notifica al autor (MANUSCRITO_PUBLICADO).
+//
+// PATCH /api/articulos/:id/retirar
+// Roles: EDITOR, ADMIN. Solo sobre artículos en estado PUBLICADO.
+// Body obligatorio: { reason: string, password: string } (contraseña actual validada con bcrypt; 401 si es incorrecta).
+// Retira inmediatamente del portal público (pasa a APROBADO y limpia publishedAt, conservando historial y versiones)
+// y notifica al autor (MANUSCRITO_RETIRADO) con el motivo.
 
 // ----------------------------------------------------------------------------
 // 5. MÓDULO EDITORIAL Y CONVOCATORIAS (/api/editorial)
@@ -320,9 +377,11 @@ export interface HistoricalMigrationResultDTO {
 export interface LibraryResourceDTO {
   id: number;
   title: string;
+  description?: string | null;
   category: string;
   file_path: string;
   file_size: string;
+  fileUrl?: string | null;
   visibility: LibraryVisibility;
   uploadedBy: number | null;
   specialtyId: number | null;
@@ -330,9 +389,29 @@ export interface LibraryResourceDTO {
   createdAt: string;
 }
 
+export interface FavoriteItemDTO {
+  id: number;
+  targetType: 'ARTICULO' | 'RECURSO';
+  targetId: number;
+  title: string;
+  category: string;
+  area: string;
+  fileUrl: string | null;
+  createdAt: string;
+}
+
 // GET /api/biblioteca — público.
 // Query opcional: ?convocatoriaId=<id>.
-// Filtra los recursos públicos de la Biblioteca por la convocatoria indicada.
+// Sin convocatoriaId devuelve recursos de library_resources (el frontend los
+// combina con GET /api/articulos/publicados para mostrar papers y documentos juntos).
+// Con convocatoriaId filtra artículos PUBLICADO de esa convocatoria.
+//
+// GET /api/biblioteca/favoritos — requiere sesión.
+// Devuelve FavoriteItemDTO[] persistidos en user_favorites para el usuario autenticado.
+//
+// POST /api/biblioteca/favoritos/toggle — requiere sesión.
+// Body: { targetType: 'ARTICULO' | 'RECURSO', targetId: number }.
+// Agrega o quita el favorito y devuelve { saved: boolean, targetType, targetId }.
 
 // ----------------------------------------------------------------------------
 // 9.1 DOCUMENTOS INSTITUCIONALES (/api/library-resources)
@@ -379,15 +458,19 @@ export interface PublishedArticleDTO {
   title: string;
   summary?: string;
   keywords?: string[];
+  authorName?: string;
   coauthors?: string[];
+  publishedAt?: string | null;
+  editionNumber?: string | null;
+  doi?: string | null;
   specialty?: { id: number; name: string };
   createdAt: string;
   pdfAvailable: boolean;
 }
 
 // GET /articulos/publicados — sin autenticación; solo estado PUBLICADO.
-// GET /articulos/publicados/:id/pdf — sin autenticación; solo mientras el
-// artículo siga PUBLICADO y tenga un archivo PDF asociado.
+// GET /articulos/publicados/:id/pdf — sin autenticación; descarga el PDF de la última
+// versión con el nombre original del archivo (original_filename) mientras siga PUBLICADO.
 
 // ----------------------------------------------------------------------------
 // 10. MÓDULO IA (/api/ai)

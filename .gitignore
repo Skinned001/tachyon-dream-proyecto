@@ -9,3 +9,5 @@ dist/
 __pycache__/
 .venv/
 funciones.md
+backend/uploads/*/*
+!backend/uploads/*/.gitkeep

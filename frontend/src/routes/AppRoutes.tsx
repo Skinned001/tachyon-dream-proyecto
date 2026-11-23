@@ -5,6 +5,7 @@ import { BibliotecaRoute } from "./BibliotecaRoute";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
 import { Login } from "../pages/Login";
+import { MesaEntradaDDI } from "../pages/MesaEntradaDDI";
 import { MisArticulos } from "../pages/MisArticulos";
 import { Notificaciones } from "../pages/Notificaciones";
 import { Perfil } from "../pages/Perfil";
@@ -28,18 +29,29 @@ export function AppRoutes() {
       <Route path="/biblioteca" element={<BibliotecaRoute />} />
       <Route element={<PrivateRoutes />}>
         <Route path="/dashboard" element={<DashboardHome />} />
-        <Route path="articulos" element={<MisArticulos />} />
-        <Route path="mis-articulos" element={<MisArticulos />} />
-        <Route path="revisiones" element={<Revisiones />} />
+        <Route element={<RoleRoute requireAuthor />}>
+          <Route path="articulos" element={<MisArticulos />} />
+          <Route path="mis-articulos" element={<MisArticulos />} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["DDI", "ADMIN"]} />}>
+          <Route path="mesa-entrada" element={<MesaEntradaDDI />} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["COMITE", "ADMIN"]} />}>
+          <Route path="revisiones" element={<Revisiones />} />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["EDITOR", "ADMIN"]} />}>
+          <Route path="editor" element={<PanelEditor />} />
+        </Route>
         <Route path="notificaciones" element={<Notificaciones />} />
         <Route path="perfil" element={<Perfil />} />
-        <Route path="editor" element={<PanelEditor />} />
-        <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR"]} />}>
+        <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
           <Route path="admin/usuarios" element={<AdminUsuarios />} />
           <Route
             path="admin/usuarios/pendientes"
             element={<Navigate to="/admin/usuarios?tab=solicitudes" replace />}
           />
+        </Route>
+        <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR"]} />}>
           <Route path="convocatorias" element={<PanelConvocatorias />} />
           <Route
             path="recursos-biblioteca"

@@ -3,10 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import type { UserRole } from '../types/user.types';
 
 interface RoleRouteProps {
-  allowedRoles: UserRole[];
+  allowedRoles?: UserRole[];
+  requireAuthor?: boolean;
 }
 
-export const RoleRoute = ({ allowedRoles }: RoleRouteProps) => {
+export const RoleRoute = ({
+  allowedRoles = [],
+  requireAuthor = false,
+}: RoleRouteProps) => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -19,9 +23,13 @@ export const RoleRoute = ({ allowedRoles }: RoleRouteProps) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  return allowedRoles.includes(user.role) ? (
+  const hasRoleAccess = allowedRoles.includes(user.role);
+  const hasAuthorAccess =
+    requireAuthor && (user.is_author || user.role === 'ADMIN');
+
+  return hasRoleAccess || hasAuthorAccess ? (
     <Outlet />
   ) : (
-    <Navigate to="/" replace />
+    <Navigate to="/dashboard" replace />
   );
 };

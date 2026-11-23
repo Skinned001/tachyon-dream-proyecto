@@ -29,6 +29,7 @@ type SidebarLink = {
   icon: LucideIcon;
   end?: boolean;
   allowedRoles?: UserRole[];
+  requireAuthor?: boolean;
 };
 
 type SidebarProps = {
@@ -77,9 +78,30 @@ export function Sidebar({
 
   const links: SidebarLink[] = [
     { to: "/dashboard", label: "Inicio", icon: Activity, end: true },
-    { to: "/articulos", label: "Mis Artículos", icon: FileText },
-    { to: "/revisiones", label: "Panel de Revisión", icon: CheckSquare },
-    { to: "/editor", label: "Panel del Editor", icon: CheckSquare },
+    {
+      to: "/articulos",
+      label: "Mis Artículos",
+      icon: FileText,
+      requireAuthor: true,
+    },
+    {
+      to: "/mesa-entrada",
+      label: "Mesa de Entrada (DDI)",
+      icon: Inbox,
+      allowedRoles: ["DDI", "ADMIN"],
+    },
+    {
+      to: "/revisiones",
+      label: "Panel de Revisión",
+      icon: CheckSquare,
+      allowedRoles: ["COMITE", "ADMIN"],
+    },
+    {
+      to: "/editor",
+      label: "Panel del Editor",
+      icon: FileUp,
+      allowedRoles: ["EDITOR", "ADMIN"],
+    },
     { to: "/biblioteca", label: "Biblioteca virtual", icon: BookOpen },
     {
       to: "/convocatorias",
@@ -94,10 +116,13 @@ export function Sidebar({
       allowedRoles: ["ADMIN", "EDITOR"],
     },
   ];
-  const visibleLinks = links.filter(
-    ({ allowedRoles }) =>
-      !allowedRoles || Boolean(user && allowedRoles.includes(user.role)),
-  );
+  const visibleLinks = links.filter(({ allowedRoles, requireAuthor }) => {
+    if (!allowedRoles && !requireAuthor) return true;
+    if (!user) return false;
+    if (allowedRoles && allowedRoles.includes(user.role)) return true;
+    if (requireAuthor && (user.is_author || user.role === "ADMIN")) return true;
+    return false;
+  });
 
   return (
     <>
@@ -155,10 +180,9 @@ export function Sidebar({
               to="/notificaciones"
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
-                    : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
+                `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${isActive
+                  ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
+                  : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
                 }`
               }
             >
@@ -180,10 +204,9 @@ export function Sidebar({
                 to="/admin/usuarios"
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
-                      : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
+                  `group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium transition-colors ${isActive
+                    ? "bg-[#bce8d8] text-[#07584f] shadow-[inset_3px_0_0_#087d70]"
+                    : "text-[#45665f] hover:bg-[#d5eee4] hover:text-[#07584f]"
                   }`
                 }
               >

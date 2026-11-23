@@ -6,6 +6,10 @@ import {
   initializeArticuloVersionModel,
 } from '../modules/articulos/ArticuloVersion.model.js';
 import {
+  Favorito,
+  initializeFavoritoModel,
+} from '../modules/biblioteca/Favorito.model.js';
+import {
   RecursoBiblioteca,
   initializeRecursoBibliotecaModel,
 } from '../modules/biblioteca/RecursoBiblioteca.model.js';
@@ -45,6 +49,7 @@ export const setupAssociations = (): void => {
   initializeAsignacionComiteModel(sequelize);
   initializeRevisionModel(sequelize);
   initializeRecursoBibliotecaModel(sequelize);
+  initializeFavoritoModel(sequelize);
   initializeNotificacionModel(sequelize);
 
   Rol.hasMany(Usuario, { foreignKey: 'roleId', as: 'users' });
@@ -100,6 +105,13 @@ export const setupAssociations = (): void => {
 
   Usuario.hasMany(Notificacion, { foreignKey: 'userId', as: 'notifications' });
   Notificacion.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
+
+  Usuario.hasMany(Favorito, {
+    foreignKey: 'userId',
+    as: 'favorites',
+    onDelete: 'CASCADE',
+  });
+  Favorito.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
 
   associationsConfigured = true;
 };

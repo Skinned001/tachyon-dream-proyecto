@@ -10,6 +10,7 @@ import notificacionesRoutes from "./modules/notificaciones/notificaciones.routes
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import editorialRoutes from "./modules/editorial/editorial.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
+import especialidadesRoutes from "./modules/especialidades/especialidades.routes.js";
 import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -50,6 +51,7 @@ app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/usuarios", usuariosRoutes);
 app.use("/api/convocatorias", editorialRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/especialidades", especialidadesRoutes);
 
 app.use(errorMiddleware);
 

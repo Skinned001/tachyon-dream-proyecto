@@ -27,9 +27,13 @@ export function DashboardLayout({
   }, [profileImageUrl]);
 
   const getTitle = () => {
+    if (pathname.includes('recursos-biblioteca')) return 'Manuales y Documentos';
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
     if (pathname.includes('articulos')) return 'Mis Manuscritos';
-    if (pathname.includes('revisiones')) return 'Bandeja del Comité';
+    if (pathname.includes('mesa-entrada')) return 'Mesa de Entrada (DDI)';
+    if (pathname.includes('revisiones')) return 'Panel de Revisión';
+    if (pathname.includes('editor')) return 'Panel del Editor';
+    if (pathname.includes('convocatorias')) return 'Convocatorias';
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
     if (pathname.includes('perfil')) return 'Mi Perfil';

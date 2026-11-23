@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   ArrowUpRight,
+  BookMarked,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -11,6 +12,10 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  getFavoritosBiblioteca,
+  type FavoriteItem,
+} from '../api/biblioteca.api';
 import {
   getDashboardSummary,
   type DashboardArticleState,
@@ -67,7 +72,8 @@ const getStatusTone = (state: DashboardArticleState): string => {
 
 const getRecentPath = (summary: DashboardSummary): string => {
   if (summary.role === 'REVISOR') return '/revisiones';
-  if (summary.role === 'ADMIN' || summary.role === 'EDITOR' || summary.role === 'DDI') {
+  if (summary.role === 'DDI') return '/mesa-entrada';
+  if (summary.role === 'ADMIN' || summary.role === 'EDITOR') {
     return '/editor';
   }
   return '/mis-articulos';
@@ -204,6 +210,7 @@ const RecentArticle = ({ article }: { article: DashboardRecentArticle }) => (
 export const DashboardHome = () => {
   const { user } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
@@ -223,13 +230,20 @@ export const DashboardHome = () => {
     setLoading(true);
     setError('');
 
-    getDashboardSummary()
-      .then((data) => {
-        if (active) setSummary(data);
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setError(cause instanceof Error ? cause.message : 'No se pudo cargar el Dashboard.');
+    Promise.allSettled([getDashboardSummary(), getFavoritosBiblioteca()])
+      .then(([summaryResult, favoritesResult]) => {
+        if (!active) return;
+        if (summaryResult.status === 'fulfilled') {
+          setSummary(summaryResult.value);
+        } else {
+          setError(
+            summaryResult.reason instanceof Error
+              ? summaryResult.reason.message
+              : 'No se pudo cargar el Dashboard.',
+          );
+        }
+        if (favoritesResult.status === 'fulfilled') {
+          setFavorites(favoritesResult.value);
         }
       })
       .finally(() => {
@@ -481,6 +495,73 @@ export const DashboardHome = () => {
           </aside>
         </section>
       ) : null}
+
+      {!loading && summary && (
+        <section className="overflow-hidden rounded-2xl border border-[#d5e6df] bg-white">
+          <div className="flex items-center justify-between border-b border-[#dcebe5] px-5 py-4 md:px-6">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#d7f2e6] text-[#087366]">
+                <BookMarked className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-[14px] font-semibold text-[#244f47]">
+                  Mis guardados ({favorites.length})
+                </h3>
+                <p className="text-[11px] text-[#58786f]">
+                  Acceso rápido a tus papers y documentos favoritos
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/biblioteca?guardados=1"
+              className="inline-flex items-center rounded-lg px-2 py-1.5 text-[11px] font-semibold text-[#087366] hover:bg-[#e2f4ec]"
+            >
+              Ver en Biblioteca <ArrowUpRight className="ml-1 h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          {favorites.length > 0 ? (
+            <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4 md:p-6">
+              {favorites.slice(0, 4).map((item) => (
+                <article
+                  key={`${item.targetType}-${item.targetId}`}
+                  className="flex flex-col justify-between rounded-xl border border-[#dcebe5] bg-[#f8fcfa] p-4"
+                >
+                  <div>
+                    <span className="inline-block rounded-full bg-[#e1f3eb] px-2 py-0.5 text-[9px] font-semibold text-[#17624f]">
+                      {item.category}
+                    </span>
+                    <h4 className="mt-2 line-clamp-2 text-[12px] font-semibold leading-5 text-[#173d3b]">
+                      {item.title}
+                    </h4>
+                    {item.area && (
+                      <p className="mt-1 text-[10px] text-[#58786f]">{item.area}</p>
+                    )}
+                  </div>
+                  <div className="mt-3 border-t border-[#e3eee9] pt-2.5">
+                    {item.fileUrl ? (
+                      <a
+                        href={item.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#087366] hover:underline"
+                      >
+                        <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                        Abrir PDF
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-[#78918a]">Sin PDF</span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="px-5 py-7 text-center text-[12px] text-[#58786f]">
+              Todavía no guardaste favoritos. Marcá cualquier paper o manual con el ícono de marcador en la Biblioteca para tenerlo aquí a mano.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 };
