@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises';
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '../auth/auth.dto.js';
+import { registrarAuditoria } from '../../services/auditoria.service.js';
 import type { InstitutionalLibraryResourceDTO } from './library-resources.dto.js';
 import { LibraryResourcesService } from './library-resources.service.js';
 
@@ -101,6 +102,15 @@ export class LibraryResourcesController {
         req.file,
         req.user.id,
       );
+      await registrarAuditoria({
+        userId: req.user.id,
+        actorRole: req.user.role,
+        action: 'RECURSO_BIBLIOTECA_CREADO',
+        entityType: 'RECURSO_BIBLIOTECA',
+        entityId: data.id,
+        summary: `Cargó el documento institucional "${data.title}" (${data.category}).`,
+        details: { category: data.category, fileName: data.fileName },
+      });
       res.status(201).json({ success: true, data });
     } catch (error: unknown) {
       try {
@@ -129,6 +139,14 @@ export class LibraryResourcesController {
 
     try {
       await this.service.delete(id);
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'RECURSO_BIBLIOTECA_ELIMINADO',
+        entityType: 'RECURSO_BIBLIOTECA',
+        entityId: id,
+        summary: `Eliminó el documento institucional #${id} de Biblioteca.`,
+      });
       res.status(200).json({
         success: true,
         data: { message: 'Recurso de Biblioteca eliminado correctamente.' },

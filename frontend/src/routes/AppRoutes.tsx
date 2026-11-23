@@ -3,6 +3,7 @@ import { PanelConvocatorias } from "../pages/PanelConvocatorias";
 import { PanelEditor } from "../pages/PanelEditor";
 import { BibliotecaRoute } from "./BibliotecaRoute";
 import { DashboardHome } from "../pages/DashboardHome";
+import { AdminAuditoria } from "../pages/AdminAuditoria";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
 import { Login } from "../pages/Login";
 import { MesaEntradaDDI } from "../pages/MesaEntradaDDI";
@@ -50,6 +51,7 @@ export function AppRoutes() {
             path="admin/usuarios/pendientes"
             element={<Navigate to="/admin/usuarios?tab=solicitudes" replace />}
           />
+          <Route path="admin/auditoria" element={<AdminAuditoria />} />
         </Route>
         <Route element={<RoleRoute allowedRoles={["ADMIN", "EDITOR"]} />}>
           <Route path="convocatorias" element={<PanelConvocatorias />} />

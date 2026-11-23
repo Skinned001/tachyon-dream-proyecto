@@ -1,5 +1,6 @@
 import { Bell, CheckCheck, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getNotificaciones,
   markAllAsRead,
@@ -215,19 +216,28 @@ export function NotificacionesBell() {
           aria-label="Notificaciones"
           className="absolute right-0 top-full z-[60] mt-3 flex max-h-[min(34rem,calc(100dvh-6rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[#cfe4dc] bg-[#fcfefd] shadow-[0_16px_50px_rgba(23,61,59,.18)] sm:w-[360px]"
         >
-          <header className="flex items-center justify-between gap-3 border-b border-[#e1eee8] px-4 py-4">
+          <header className="flex items-center justify-between gap-2 border-b border-[#e1eee8] px-4 py-3.5">
             <h2 className="text-sm font-bold text-[#173d3b]">Notificaciones</h2>
-            {noLeidasCount > 0 && (
-              <button
-                type="button"
-                onClick={() => void handleMarkAllAsRead()}
-                disabled={isMarkingAll}
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-[#087d70] transition-colors hover:bg-[#e7f4ee] disabled:opacity-60"
+            <div className="flex items-center gap-2">
+              {noLeidasCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void handleMarkAllAsRead()}
+                  disabled={isMarkingAll}
+                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-[#087d70] transition-colors hover:bg-[#e7f4ee] disabled:opacity-60"
+                >
+                  <CheckCheck size={14} />
+                  Leídas
+                </button>
+              )}
+              <Link
+                to="/notificaciones"
+                onClick={() => setIsOpen(false)}
+                className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#385f56] transition-colors hover:bg-[#e7f4ee] hover:text-[#07584f]"
               >
-                <CheckCheck size={14} />
-                Marcar todas como leídas
-              </button>
-            )}
+                Ver todas
+              </Link>
+            </div>
           </header>
 
           {error && (

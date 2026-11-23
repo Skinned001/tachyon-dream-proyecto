@@ -514,3 +514,31 @@ export interface NotificacionesListDTO {
 // El servicio central filtra autores activos (is_author=true, rol STAFF/AUTOR)
 // con recibirNotificaciones=true y evita duplicados de apertura/recordatorio
 // por usuario, tipo y convocatoria.
+
+// ----------------------------------------------------------------------------
+// 12. MÓDULO AUDITORÍA (/api/auditoria)
+// ----------------------------------------------------------------------------
+export type AuditEntityType =
+  | 'ARTICULO'
+  | 'CONVOCATORIA'
+  | 'USUARIO'
+  | 'RECURSO_BIBLIOTECA';
+
+export interface AuditLogDTO {
+  id: number;
+  userId: number | null;
+  actorName: string | null;
+  actorRole: string | null;
+  action: string;
+  entityType: AuditEntityType;
+  entityId: number | null;
+  summary: string;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+// GET /api/auditoria — JWT; solo rol ADMIN.
+// Query opcionales: entityType, action, search, from (YYYY-MM-DD), to (YYYY-MM-DD),
+// page (default 1), limit (default 25, max 100).
+// Devuelve { items: AuditLogDTO[], total, page, limit } ordenado por createdAt DESC.
+// Tabla audit_logs alimentada por backend/src/services/auditoria.service.ts.

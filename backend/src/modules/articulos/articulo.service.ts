@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { Op, type Includeable, type Transaction, type WhereOptions } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { uploadsDirectory } from '../../config/uploads.js';
+import { registrarAuditoria } from '../../services/auditoria.service.js';
 import {
   notificarUsuariosPorIds,
   notificarUsuariosPorRol,
@@ -583,13 +584,27 @@ export class ArticuloService {
       });
 
       const authorName = formatFullName(article.responsible) ?? 'Un autor';
-      await notificarUsuariosPorRol(
-        ['DDI'],
-        'MANUSCRITO_RECIBIDO',
-        'Nuevo manuscrito recibido',
-        `${authorName} envió el manuscrito "${article.title}" para evaluación inicial en Mesa de Entrada.`,
-        article.id,
-      );
+      await Promise.all([
+        notificarUsuariosPorRol(
+          ['DDI'],
+          'MANUSCRITO_RECIBIDO',
+          'Nuevo manuscrito recibido',
+          `${authorName} envió el manuscrito "${article.title}" para evaluación inicial en Mesa de Entrada.`,
+          article.id,
+        ),
+        registrarAuditoria({
+          userId: authorId,
+          action: 'MANUSCRITO_ENVIADO',
+          entityType: 'ARTICULO',
+          entityId: article.id,
+          summary: `Envió el manuscrito "${article.title}" (v1) a Mesa de Entrada.`,
+          details: {
+            convocatoriaId: data.convocatoriaId,
+            specialtyId: data.specialtyId,
+            originalFilename: file.originalname,
+          },
+        }),
+      ]);
 
       return toArticleDTO(article, {
         id: authorId,
@@ -688,15 +703,29 @@ export class ArticuloService {
         },
       );
 
-      if (reviewerIds.length > 0) {
-        await notificarUsuariosPorIds(
-          reviewerIds,
-          'MANUSCRITO_CORREGIDO',
-          `Corrección recibida (v${newVersionNumber})`,
-          `El autor envió la versión v${newVersionNumber} corregida del manuscrito "${article.title}" para su verificación.`,
-          article.id,
-        );
-      }
+      await Promise.all([
+        reviewerIds.length > 0
+          ? notificarUsuariosPorIds(
+              reviewerIds,
+              'MANUSCRITO_CORREGIDO',
+              `Corrección recibida (v${newVersionNumber})`,
+              `El autor envió la versión v${newVersionNumber} corregida del manuscrito "${article.title}" para su verificación.`,
+              article.id,
+            )
+          : Promise.resolve(0),
+        registrarAuditoria({
+          userId: user.id,
+          actorRole: user.role,
+          action: 'MANUSCRITO_VERSION_SUBIDA',
+          entityType: 'ARTICULO',
+          entityId: article.id,
+          summary: `Subió la versión v${newVersionNumber} corregida de "${article.title}".`,
+          details: {
+            versionNumber: newVersionNumber,
+            originalFilename: file.originalname,
+          },
+        }),
+      ]);
 
       return toArticleDTO(article, user);
     } catch (error: unknown) {
@@ -730,13 +759,24 @@ export class ArticuloService {
       return findArticleOrThrow(existing.id, transaction);
     });
 
-    await notificarUsuariosPorIds(
-      [article.responsibleId],
-      'MANUSCRITO_RECHAZADO_DDI',
-      'Manuscrito rechazado por Docencia e Investigación',
-      `Tu manuscrito "${article.title}" fue rechazado en evaluación inicial. Motivo: ${reason.trim()}`,
-      article.id,
-    );
+    await Promise.all([
+      notificarUsuariosPorIds(
+        [article.responsibleId],
+        'MANUSCRITO_RECHAZADO_DDI',
+        'Manuscrito rechazado por Docencia e Investigación',
+        `Tu manuscrito "${article.title}" fue rechazado en evaluación inicial. Motivo: ${reason.trim()}`,
+        article.id,
+      ),
+      registrarAuditoria({
+        userId: user.id,
+        actorRole: user.role,
+        action: 'MANUSCRITO_RECHAZADO_DDI',
+        entityType: 'ARTICULO',
+        entityId: article.id,
+        summary: `Rechazó en Mesa de Entrada (DDI) el manuscrito "${article.title}".`,
+        details: { reason: reason.trim() },
+      }),
+    ]);
 
     return toArticleDTO(article, user);
   }
@@ -820,6 +860,15 @@ export class ArticuloService {
         `El DDI te asignó el manuscrito "${article.title}" para emitir dictamen.`,
         article.id,
       ),
+      registrarAuditoria({
+        userId: user.id,
+        actorRole: user.role,
+        action: 'MANUSCRITO_ASIGNADO',
+        entityType: 'ARTICULO',
+        entityId: article.id,
+        summary: `Asignó ${uniqueReviewerIds.length} revisor(es) del Comité al manuscrito "${article.title}".`,
+        details: { reviewerIds: uniqueReviewerIds },
+      }),
     ]);
 
     return toArticleDTO(article, user);
@@ -984,6 +1033,20 @@ export class ArticuloService {
       );
     }
 
+    await registrarAuditoria({
+      userId: user.id,
+      actorRole: user.role,
+      action: 'MANUSCRITO_DICTAMEN',
+      entityType: 'ARTICULO',
+      entityId: article.id,
+      summary: `Emitió dictamen ${data.verdict} sobre "${article.title}"${newState ? ` (estado resultante: ${newState})` : ''}.`,
+      details: {
+        verdict: data.verdict,
+        resultingState: newState ?? article.state,
+        observationsCount: data.observations?.length ?? 0,
+      },
+    });
+
     return toArticleDTO(article, user);
   }
 
@@ -1030,6 +1093,14 @@ export class ArticuloService {
         `El manuscrito "${article.title}" quedó aprobado para publicación tras validar sus correcciones.`,
         article.id,
       ),
+      registrarAuditoria({
+        userId: user.id,
+        actorRole: user.role,
+        action: 'MANUSCRITO_CORRECCION_APROBADA',
+        entityType: 'ARTICULO',
+        entityId: article.id,
+        summary: `Aprobó la versión corregida de "${article.title}" para publicación.`,
+      }),
     ]);
 
     return toArticleDTO(article, user);
@@ -1085,13 +1156,27 @@ export class ArticuloService {
       return findArticleOrThrow(existing.id, transaction);
     });
 
-    await notificarUsuariosPorIds(
-      [article.responsibleId],
-      'MANUSCRITO_PUBLICADO',
-      '¡Tu manuscrito fue publicado!',
-      `Tu manuscrito "${article.title}" ya se encuentra publicado y disponible en el Portal Público del HIEF.`,
-      article.id,
-    );
+    await Promise.all([
+      notificarUsuariosPorIds(
+        [article.responsibleId],
+        'MANUSCRITO_PUBLICADO',
+        '¡Tu manuscrito fue publicado!',
+        `Tu manuscrito "${article.title}" ya se encuentra publicado y disponible en el Portal Público del HIEF.`,
+        article.id,
+      ),
+      registrarAuditoria({
+        userId: user.id,
+        actorRole: user.role,
+        action: 'MANUSCRITO_PUBLICADO',
+        entityType: 'ARTICULO',
+        entityId: article.id,
+        summary: `Publicó en el Portal Público el manuscrito "${article.title}".`,
+        details: {
+          editionNumber: article.editionNumber ?? null,
+          doi: article.doi ?? null,
+        },
+      }),
+    ]);
 
     return toArticleDTO(article, user);
   }
@@ -1131,13 +1216,24 @@ export class ArticuloService {
       return findArticleOrThrow(existing.id, transaction);
     });
 
-    await notificarUsuariosPorIds(
-      [article.responsibleId],
-      'MANUSCRITO_RETIRADO',
-      'Publicación retirada del portal público',
-      `Tu manuscrito "${article.title}" fue retirado temporalmente del portal público. Motivo: ${reason.trim()}`,
-      article.id,
-    );
+    await Promise.all([
+      notificarUsuariosPorIds(
+        [article.responsibleId],
+        'MANUSCRITO_RETIRADO',
+        'Publicación retirada del portal público',
+        `Tu manuscrito "${article.title}" fue retirado temporalmente del portal público. Motivo: ${reason.trim()}`,
+        article.id,
+      ),
+      registrarAuditoria({
+        userId: user.id,
+        actorRole: user.role,
+        action: 'MANUSCRITO_RETIRADO',
+        entityType: 'ARTICULO',
+        entityId: article.id,
+        summary: `Retiró del Portal Público el manuscrito "${article.title}".`,
+        details: { reason: reason.trim() },
+      }),
+    ]);
 
     return toArticleDTO(article, user);
   }

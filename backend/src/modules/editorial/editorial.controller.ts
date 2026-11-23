@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '../auth/auth.dto.js';
+import { registrarAuditoria } from '../../services/auditoria.service.js';
 import { EditorialService, type ConvocatoriaDTO } from './editorial.service.js';
 
 const estadoSchema = z.enum(['BORRADOR', 'PROGRAMADA', 'ABIERTA', 'CERRADA']);
@@ -72,6 +73,20 @@ export class EditorialController {
     }
     try {
       const data = await this.service.crearConvocatoria(parsed.data);
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'CONVOCATORIA_CREADA',
+        entityType: 'CONVOCATORIA',
+        entityId: data.id,
+        summary: `Creó la convocatoria "${data.title}" (${data.estado}).`,
+        details: {
+          estado: data.estado,
+          fechaInicio: data.fechaInicio,
+          fechaFin: data.fechaFin,
+          visibleEnLanding: data.visibleEnLanding,
+        },
+      });
       res.status(201).json({ success: true, data });
     } catch (error: unknown) {
       next(error);
@@ -100,6 +115,20 @@ export class EditorialController {
     }
     try {
       const data = await this.service.editarConvocatoria(id, req.user.id, parsed.data);
+      await registrarAuditoria({
+        userId: req.user.id,
+        actorRole: req.user.role,
+        action: 'CONVOCATORIA_EDITADA',
+        entityType: 'CONVOCATORIA',
+        entityId: data.id,
+        summary: `Editó la convocatoria "${data.title}" (${data.estado}).`,
+        details: {
+          estado: data.estado,
+          fechaInicio: data.fechaInicio,
+          fechaFin: data.fechaFin,
+          visibleEnLanding: data.visibleEnLanding,
+        },
+      });
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);
@@ -128,6 +157,15 @@ export class EditorialController {
     }
     try {
       const data = await this.service.finalizarConvocatoria(id, req.user.id, parsed.data.password);
+      await registrarAuditoria({
+        userId: req.user.id,
+        actorRole: req.user.role,
+        action: 'CONVOCATORIA_FINALIZADA',
+        entityType: 'CONVOCATORIA',
+        entityId: data.id,
+        summary: `Finalizó anticipadamente la convocatoria "${data.title}".`,
+        details: { fechaFin: data.fechaFin },
+      });
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);

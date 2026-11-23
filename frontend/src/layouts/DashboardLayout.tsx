@@ -34,6 +34,7 @@ export function DashboardLayout({
     if (pathname.includes('revisiones')) return 'Panel de Revisión';
     if (pathname.includes('editor')) return 'Panel del Editor';
     if (pathname.includes('convocatorias')) return 'Convocatorias';
+    if (pathname.includes('admin/auditoria')) return 'Auditoría del Sistema';
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
     if (pathname.includes('perfil')) return 'Mi Perfil';

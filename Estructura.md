@@ -91,11 +91,17 @@ hief-journal/
 │   │   │   │   ├── dashboard.controller.ts
 │   │   │   │   ├── dashboard.service.ts
 │   │   │   │   └── dashboard.dto.ts
+│   │   │   ├── auditoria/               ← GET /api/auditoria (solo ADMIN, trazabilidad inmutable)
+│   │   │   │   ├── auditoria.routes.ts
+│   │   │   │   ├── auditoria.controller.ts
+│   │   │   │   ├── auditoria.service.ts
+│   │   │   │   └── AuditLog.model.ts        ← Tabla audit_logs
 │   │   │   ├── ai/                      ← Stub preparado para integración con ai-service
 │   │   │   ├── metricas/                ← Pendiente (etapa posterior)
 │   │   │   ├── migracion/               ← Pendiente (etapa posterior)
 │   │   │   └── publico/
 │   │   ├── services/
+│   │   │   ├── auditoria.service.ts     ← Helper registrarAuditoria(...) usado por todos los módulos
 │   │   │   └── notificaciones.service.ts ← Difusión por rol, por IDs y a autores activos
 │   │   ├── types/
 │   │   │   └── express.d.ts
@@ -113,6 +119,7 @@ hief-journal/
     │   │   ├── axiosClient.ts           ← withCredentials: true + normalización de errores
     │   │   ├── auth.api.ts
     │   │   ├── articulos.api.ts         ← Ciclo editorial completo, PDFs, publicar y retirar
+    │   │   ├── auditoria.api.ts         ← GET /api/auditoria con filtros y paginación
     │   │   ├── biblioteca.api.ts        ← Recursos + artículos publicados + favoritos
     │   │   ├── convocatorias.api.ts
     │   │   ├── dashboard.api.ts
@@ -145,6 +152,7 @@ hief-journal/
     │   │   ├── PanelConvocatorias.tsx   ← /convocatorias: gestión Convocatorias v2
     │   │   ├── RecursosBibliotecaAdmin.tsx ← /recursos-biblioteca: carga/eliminación de manuales PDF
     │   │   ├── AdminUsuarios.tsx        ← /admin/usuarios: CRUD usuarios + pestaña solicitudes
+    │   │   ├── AdminAuditoria.tsx       ← /admin/auditoria: visor de auditoría con filtros y paginación
     │   │   ├── PanelUsuarios.tsx        ← Componente de aprobación/rechazo de solicitudes
     │   │   ├── Notificaciones.tsx       ← /notificaciones: listado y redirección por tipo
     │   │   ├── Perfil.tsx               ← /perfil: datos, avatar y cambio de contraseña
@@ -210,7 +218,8 @@ AUTOR sube v1 ──► PENDIENTE (DDI)
 - **`DDI` o `ADMIN`:** `/mesa-entrada` (`MesaEntradaDDI`).
 - **`COMITE` o `ADMIN`:** `/revisiones` (`Revisiones`).
 - **`EDITOR` o `ADMIN`:** `/editor` (`PanelEditor`), `/convocatorias` (`PanelConvocatorias`), `/recursos-biblioteca` (`RecursosBibliotecaAdmin`).
-- **`ADMIN` exclusivo:** `/admin/usuarios` (`AdminUsuarios` + pestaña de solicitudes).
+- **`ADMIN` exclusivo:** `/admin/usuarios` (`AdminUsuarios` + pestaña de solicitudes), `/admin/auditoria` (`AdminAuditoria`).
+- **Organización del menú lateral (`Sidebar.tsx`):** agrupado en secciones visuales (**General**, **Flujo Editorial**, **Gestión**, **Administración**) mostrando solo los bloques visibles para el rol; el acceso a `/notificaciones` se ofrece directo desde la campana en el encabezado (`NotificacionesBell.tsx`).
 
 ### 3. Convocatorias v2, Biblioteca unificada y Favoritos
 
@@ -219,7 +228,8 @@ AUTOR sube v1 ──► PENDIENTE (DDI)
 - **Biblioteca Virtual (`/api/biblioteca` y `/api/library-resources`):** `/biblioteca` muestra en un mismo catálogo los **Artículos publicados** (`GET /api/articulos/publicados`) y los **Documentos institucionales** (`MANUAL`, `PROTOCOLO`, `GUIA`, `NORMATIVA`, `OTRO`), con filtro por categoría y por `?convocatoriaId=`.
 - **Favoritos persistentes (`user_favorites`):** `GET /api/biblioteca/favoritos` y `POST /api/biblioteca/favoritos/toggle` para usuarios autenticados (y respaldo en `localStorage` para invitados), accesibles desde el filtro **"Mis guardados"** en `/biblioteca`, el bloque rápido **"Mis guardados"** en `/dashboard` y el marcador en `/`.
 
-### 4. Dashboard y Notificaciones
+### 4. Dashboard, Notificaciones y Auditoría
 
 - **Dashboard (`/api/dashboard/summary`):** KPIs, distribución de estados y actividad reciente calculados en vivo desde BD y adaptados a `ADMIN`, `EDITOR`, `DDI`, `AUTOR` y `REVISOR` (`COMITE`).
 - **Notificaciones (`/api/notificaciones`):** campana en tiempo real (`NotificacionesBell.tsx`), página completa con redirección automática por `tipo` (`Notificaciones.tsx`) y preferencia `Usuario.recibirNotificaciones`.
+- **Auditoría (`/api/auditoria`, tabla `audit_logs`):** registro centralizado mediante `backend/src/services/auditoria.service.ts` (`registrarAuditoria`) para acciones críticas sobre manuscritos (`MANUSCRITO_ENVIADO`, `MANUSCRITO_VERSION_SUBIDA`, `MANUSCRITO_RECHAZADO_DDI`, `MANUSCRITO_ASIGNADO`, `MANUSCRITO_DICTAMEN`, `MANUSCRITO_CORRECCION_APROBADA`, `MANUSCRITO_PUBLICADO`, `MANUSCRITO_RETIRADO`), convocatorias (`CONVOCATORIA_CREADA`, `CONVOCATORIA_EDITADA`, `CONVOCATORIA_FINALIZADA`), usuarios (`USUARIO_CREADO`, `USUARIO_EDITADO`, `USUARIO_SUSPENDIDO`, `USUARIO_APROBADO`, `USUARIO_RECHAZADO`, `USUARIO_PASSWORD_RESET`) y biblioteca (`RECURSO_BIBLIOTECA_CREADO`, `RECURSO_BIBLIOTECA_ELIMINADO`). Visor solo lectura para `ADMIN` en `/admin/auditoria`.
