@@ -26,6 +26,7 @@ export interface AuthUser {
   last_name: string;
   profile_image: string | null;
   role: RoleName;
+  active: boolean;
   is_author: boolean;
   specialtyId: number | null;
   must_change_password: boolean;

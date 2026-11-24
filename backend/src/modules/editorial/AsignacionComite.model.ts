@@ -4,8 +4,12 @@ import {
   InferAttributes,
   InferCreationAttributes,
   Model,
+  NonAttribute,
   Sequelize,
 } from 'sequelize';
+import type { Articulo } from '../articulos/Articulo.model.js';
+import type { Usuario } from '../usuarios/Usuario.model.js';
+import type { Revision } from './Revision.model.js';
 
 export class AsignacionComite extends Model<
   InferAttributes<AsignacionComite>,
@@ -15,6 +19,9 @@ export class AsignacionComite extends Model<
   declare read_status: boolean;
   declare reviewerId: number;
   declare articleId: number;
+  declare article?: NonAttribute<Articulo>;
+  declare reviewer?: NonAttribute<Usuario>;
+  declare reviews?: NonAttribute<Revision[]>;
 }
 
 export const initializeAsignacionComiteModel = (sequelize: Sequelize): void => {

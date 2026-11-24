@@ -1,9 +1,18 @@
+import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Articulo, initializeArticuloModel } from '../modules/articulos/Articulo.model.js';
 import {
   ArticuloVersion,
   initializeArticuloVersionModel,
 } from '../modules/articulos/ArticuloVersion.model.js';
+import {
+  AuditLog,
+  initializeAuditLogModel,
+} from '../modules/auditoria/AuditLog.model.js';
+import {
+  Favorito,
+  initializeFavoritoModel,
+} from '../modules/biblioteca/Favorito.model.js';
 import {
   RecursoBiblioteca,
   initializeRecursoBibliotecaModel,
@@ -44,6 +53,8 @@ export const setupAssociations = (): void => {
   initializeAsignacionComiteModel(sequelize);
   initializeRevisionModel(sequelize);
   initializeRecursoBibliotecaModel(sequelize);
+  initializeFavoritoModel(sequelize);
+  initializeAuditLogModel(sequelize);
   initializeNotificacionModel(sequelize);
 
   Rol.hasMany(Usuario, { foreignKey: 'roleId', as: 'users' });
@@ -76,14 +87,43 @@ export const setupAssociations = (): void => {
   ArticuloVersion.hasMany(Revision, { foreignKey: 'versionId', as: 'reviews' });
   Revision.belongsTo(ArticuloVersion, { foreignKey: 'versionId', as: 'version' });
 
-  Usuario.hasMany(RecursoBiblioteca, { foreignKey: 'uploadedBy', as: 'uploadedResources' });
-  RecursoBiblioteca.belongsTo(Usuario, { foreignKey: 'uploadedBy', as: 'uploader' });
+  const uploadedByForeignKey = {
+    name: 'uploadedBy',
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  };
+  Usuario.hasMany(RecursoBiblioteca, {
+    foreignKey: uploadedByForeignKey,
+    as: 'uploadedResources',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
+  RecursoBiblioteca.belongsTo(Usuario, {
+    foreignKey: uploadedByForeignKey,
+    as: 'uploader',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
 
   Especialidad.hasMany(RecursoBiblioteca, { foreignKey: 'specialtyId', as: 'libraryResources' });
   RecursoBiblioteca.belongsTo(Especialidad, { foreignKey: 'specialtyId', as: 'specialty' });
 
   Usuario.hasMany(Notificacion, { foreignKey: 'userId', as: 'notifications' });
   Notificacion.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
+
+  Usuario.hasMany(Favorito, {
+    foreignKey: 'userId',
+    as: 'favorites',
+    onDelete: 'CASCADE',
+  });
+  Favorito.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
+
+  Usuario.hasMany(AuditLog, {
+    foreignKey: 'userId',
+    as: 'auditLogs',
+    onDelete: 'SET NULL',
+  });
+  AuditLog.belongsTo(Usuario, { foreignKey: 'userId', as: 'actor' });
 
   associationsConfigured = true;
 };

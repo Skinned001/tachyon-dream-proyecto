@@ -448,11 +448,17 @@ export const Perfil = () => {
                 <dd className="break-all text-right">{user?.email ?? 'No disponible'}</dd>
               </div>
               <div className="flex justify-between gap-4">
+<<<<<<< HEAD
                 <dt className="font-medium text-gray-500">Especialidad</dt>
                 <dd className="text-right">
                   {especialidades.find(
                     (especialidad) => especialidad.id === user?.specialtyId,
                   )?.name ?? 'No asignada'}
+=======
+                <dt className="font-medium text-gray-500">Estado</dt>
+                <dd className={user?.active === false ? 'font-medium text-red-600' : 'font-medium text-green-600'}>
+                  {user?.active === false ? 'Suspendido' : 'Activo'}
+>>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
                 </dd>
               </div>
             </dl>

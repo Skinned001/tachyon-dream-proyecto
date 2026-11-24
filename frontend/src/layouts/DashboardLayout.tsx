@@ -2,6 +2,7 @@ import { ChevronDown, LogOut, User } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NotificacionesBell } from '../features/notificaciones/NotificacionesBell';
 import { getProfileImageUrl } from '../utils/profileImage';
 import { Sidebar } from './Sidebar';
 
@@ -26,10 +27,19 @@ export function DashboardLayout({
   }, [profileImageUrl]);
 
   const getTitle = () => {
+    if (pathname.includes('recursos-biblioteca')) return 'Manuales y Documentos';
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
     if (pathname.includes('articulos')) return 'Mis Manuscritos';
+<<<<<<< HEAD
     if (pathname.includes('revisiones')) return 'Bandeja del Comité';
     if (pathname.includes('editor')) return 'Asignación de Revisores';
+=======
+    if (pathname.includes('mesa-entrada')) return 'Mesa de Entrada (DDI)';
+    if (pathname.includes('revisiones')) return 'Panel de Revisión';
+    if (pathname.includes('editor')) return 'Panel del Editor';
+    if (pathname.includes('convocatorias')) return 'Convocatorias';
+    if (pathname.includes('admin/auditoria')) return 'Auditoría del Sistema';
+>>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
     if (pathname.includes('admin/especialidades')) return 'Especialidades Médicas';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
@@ -65,6 +75,7 @@ export function DashboardLayout({
               <span>API Conectada</span>
             </div>
             <div className="hidden h-7 w-px bg-[#d5e6df] sm:block" />
+            {user && <NotificacionesBell />}
             <button
               type="button"
               onClick={() => setIsProfileMenuOpen((isOpen) => !isOpen)}

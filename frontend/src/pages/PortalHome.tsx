@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowDown,
   ArrowRight,
+  BookMarked,
   BookOpen,
   CalendarDays,
   Download,
@@ -13,6 +14,10 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { articulosApi, type PublishedArticle } from '../api/articulos.api';
+import {
+  getFavoritosBiblioteca,
+  toggleFavoritoBiblioteca,
+} from '../api/biblioteca.api';
 import { Modal } from '../components/ui/Modal';
 import {
   getConvocatoriasPublicas,
@@ -47,6 +52,7 @@ export function PortalHome() {
   const [convocatoriaError, setConvocatoriaError] = useState('');
   const [convocatoriaParaParticipar, setConvocatoriaParaParticipar] =
     useState<Convocatoria | null>(null);
+  const [savedArticleIds, setSavedArticleIds] = useState<number[]>([]);
   const { user, isLoading: isAuthLoading } = useAuth();
 
   async function loadArticles() {
@@ -94,6 +100,49 @@ export function PortalHome() {
     void loadConvocatorias();
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setSavedArticleIds([]);
+      return;
+    }
+    let active = true;
+    getFavoritosBiblioteca()
+      .then((items) => {
+        if (active) {
+          setSavedArticleIds(
+            items
+              .filter((item) => item.targetType === 'ARTICULO')
+              .map((item) => item.targetId),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) setSavedArticleIds([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  async function handleToggleArticleFavorite(articleId: number) {
+    if (!user) return;
+    const wasSaved = savedArticleIds.includes(articleId);
+    setSavedArticleIds((current) =>
+      wasSaved
+        ? current.filter((id) => id !== articleId)
+        : [...current, articleId],
+    );
+    try {
+      await toggleFavoritoBiblioteca('ARTICULO', articleId);
+    } catch {
+      setSavedArticleIds((current) =>
+        wasSaved
+          ? [...current, articleId]
+          : current.filter((id) => id !== articleId),
+      );
+    }
+  }
+
   const years = useMemo(
     () => [...new Set(articles.map((article) => new Date(article.createdAt).getFullYear()))]
       .filter(Number.isFinite)
@@ -109,7 +158,10 @@ export function PortalHome() {
       const searchableText = [
         article.title,
         article.summary,
+        article.authorName,
         article.specialty?.name,
+        article.editionNumber,
+        article.doi,
         ...(article.keywords ?? []),
         ...(article.coauthors ?? []),
       ].filter(Boolean).join(' ').toLocaleLowerCase('es');
@@ -474,7 +526,7 @@ export function PortalHome() {
                 <article key={article.id} className="flex flex-col rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 transition hover:border-[#9bcfbb] hover:shadow-[0_12px_30px_rgba(23,61,59,.06)] md:p-6">
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f5ee] px-3 py-1.5 text-[10px] font-semibold text-[#07584f]">
-                      <CalendarDays size={12} /> {new Date(article.createdAt).getFullYear()}
+                      <CalendarDays size={12} /> {new Date(article.publishedAt || article.createdAt).getFullYear()}
                     </span>
                     {article.specialty?.name && (
                       <span className="truncate text-[10px] font-medium text-[#58786f]">{article.specialty.name}</span>
@@ -482,8 +534,15 @@ export function PortalHome() {
                   </div>
                   <h3 className="font-editorial mt-5 text-[24px] leading-tight text-[#173d3b]">{article.title}</h3>
                   {article.summary && <p className="mt-3 line-clamp-3 text-[12px] leading-6 text-[#526e68]">{article.summary}</p>}
-                  {article.coauthors && article.coauthors.length > 0 && (
-                    <p className="mt-3 text-[11px] text-[#58786f]">{article.coauthors.join(' · ')}</p>
+                  {(article.authorName || (article.coauthors && article.coauthors.length > 0)) && (
+                    <p className="mt-3 text-[11px] text-[#58786f]">
+                      {[article.authorName, ...(article.coauthors ?? [])].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {(article.editionNumber || article.doi) && (
+                    <p className="font-data mt-2 text-[10px] text-[#718a81]">
+                      {[article.editionNumber, article.doi ? `DOI: ${article.doi}` : null].filter(Boolean).join(' · ')}
+                    </p>
                   )}
                   {article.keywords && article.keywords.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -492,7 +551,7 @@ export function PortalHome() {
                       ))}
                     </div>
                   )}
-                  <div className="mt-auto border-t border-[#e3eee9] pt-5">
+                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#e3eee9] pt-5">
                     {article.pdfAvailable ? (
                       <a
                         href={`${apiBaseUrl}/articulos/publicados/${article.id}/pdf`}
@@ -502,6 +561,36 @@ export function PortalHome() {
                       </a>
                     ) : (
                       <span className="text-[11px] text-[#718a81]">PDF no disponible</span>
+                    )}
+                    {user && (
+                      <button
+                        type="button"
+                        aria-label={
+                          savedArticleIds.includes(article.id)
+                            ? 'Quitar de guardados'
+                            : 'Guardar en favoritos'
+                        }
+                        title={
+                          savedArticleIds.includes(article.id)
+                            ? 'Quitar de guardados'
+                            : 'Guardar en favoritos'
+                        }
+                        onClick={() => void handleToggleArticleFavorite(article.id)}
+                        className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                          savedArticleIds.includes(article.id)
+                            ? 'bg-[#bce8d8] text-[#07584f]'
+                            : 'text-[#52766d] hover:bg-[#dff2e9] hover:text-[#07584f]'
+                        }`}
+                      >
+                        <BookMarked
+                          size={16}
+                          fill={
+                            savedArticleIds.includes(article.id)
+                              ? 'currentColor'
+                              : 'none'
+                          }
+                        />
+                      </button>
                     )}
                   </div>
                 </article>

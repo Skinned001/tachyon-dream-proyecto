@@ -4,6 +4,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { sendApprovalEmail } from '../../config/email.js';
 import { uploadsDirectory } from '../../config/uploads.js';
+import { registrarAuditoria } from '../../services/auditoria.service.js';
 import type { ApiResponse } from '../auth/auth.dto.js';
 import { UsuariosService } from './usuarios.service.js';
 
@@ -170,6 +171,15 @@ export class UsuariosController {
         console.error('No se pudo enviar el correo de aprobación:', error);
       }
 
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'USUARIO_APROBADO',
+        entityType: 'USUARIO',
+        entityId: id,
+        summary: `Aprobó la solicitud de registro de ${recipient.firstName} ${recipient.lastName} (${recipient.email}).`,
+      });
+
       res.status(200).json({
         success: true,
         data: {
@@ -215,6 +225,15 @@ export class UsuariosController {
         }
       }
 
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'USUARIO_RECHAZADO',
+        entityType: 'USUARIO',
+        entityId: id,
+        summary: `Rechazó y eliminó la solicitud de registro #${id}.`,
+      });
+
       res.status(200).json({
         success: true,
         data: {
@@ -243,6 +262,18 @@ export class UsuariosController {
 
     try {
       const created = await this.usuariosService.create(parsedBody.data);
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'USUARIO_CREADO',
+        entityType: 'USUARIO',
+        entityId: created.user.id,
+        summary: `Creó la cuenta de ${created.user.first_name} ${created.user.last_name} (${created.user.email}) con rol ${created.user.role}.`,
+        details: {
+          role: created.user.role,
+          is_author: created.user.is_author,
+        },
+      });
       res.status(201).json({
         success: true,
         data: {
@@ -292,6 +323,19 @@ export class UsuariosController {
         parsedBody.data,
         req.user.id,
       );
+      await registrarAuditoria({
+        userId: req.user.id,
+        actorRole: req.user.role,
+        action: 'USUARIO_EDITADO',
+        entityType: 'USUARIO',
+        entityId: user.id,
+        summary: `Actualizó los datos/permisos del usuario ${user.first_name} ${user.last_name} (${user.email}).`,
+        details: {
+          role: user.role,
+          active: user.active,
+          is_author: user.is_author,
+        },
+      });
       res.status(200).json({ success: true, data: user });
     } catch (error: unknown) {
       next(error);
@@ -321,6 +365,14 @@ export class UsuariosController {
 
     try {
       await this.usuariosService.suspend(id, req.user.id);
+      await registrarAuditoria({
+        userId: req.user.id,
+        actorRole: req.user.role,
+        action: 'USUARIO_SUSPENDIDO',
+        entityType: 'USUARIO',
+        entityId: id,
+        summary: `Suspendió (baja lógica) al usuario #${id}.`,
+      });
       res.status(200).json({ success: true, data: {} });
     } catch (error: unknown) {
       next(error);
@@ -343,6 +395,14 @@ export class UsuariosController {
 
     try {
       const { temporaryPassword } = await this.usuariosService.resetPassword(id);
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'USUARIO_PASSWORD_RESET',
+        entityType: 'USUARIO',
+        entityId: id,
+        summary: `Restableció la contraseña temporal del usuario #${id}.`,
+      });
       res.status(200).json({
         success: true,
         data: { temporaryPassword },
