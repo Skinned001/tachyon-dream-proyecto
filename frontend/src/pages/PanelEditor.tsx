@@ -6,6 +6,10 @@ import {
   getEspecialistas,
   type ArticuloPendiente,
 } from '../api/editorial.api';
+import {
+  getEspecialidades,
+  type Especialidad,
+} from '../api/especialidades.api';
 import type { User } from '../types/user.types';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -14,6 +18,7 @@ import { formatDateTime } from '../utils/formatDate';
 export const PanelEditor = () => {
   const [articulos, setArticulos] = useState<ArticuloPendiente[]>([]);
   const [especialistas, setEspecialistas] = useState<User[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState<number | null>(null);
   const [selectedReviewer, setSelectedReviewer] = useState<
@@ -26,12 +31,14 @@ export const PanelEditor = () => {
     setIsLoading(true);
     setError('');
     try {
-      const [pendingArticles, reviewers] = await Promise.all([
+      const [pendingArticles, reviewers, specialties] = await Promise.all([
         getArticulosPendientes(),
         getEspecialistas(),
+        getEspecialidades(),
       ]);
       setArticulos(pendingArticles);
       setEspecialistas(reviewers);
+      setEspecialidades(specialties);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -186,8 +193,11 @@ export const PanelEditor = () => {
                     <option value="">Seleccionar especialista...</option>
                     {especialistas.map((especialista) => (
                       <option key={especialista.id} value={especialista.id}>
-                        {especialista.first_name} {especialista.last_name} (
-                        {especialista.role})
+                        {especialista.first_name} {especialista.last_name} -{' '}
+                        {especialidades.find(
+                          (especialidad) =>
+                            especialidad.id === especialista.specialtyId,
+                        )?.name ?? 'Sin especialidad'}
                       </option>
                     ))}
                   </select>

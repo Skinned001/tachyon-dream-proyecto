@@ -139,7 +139,10 @@ const toUsuarioPendienteDTO = (usuario: Usuario): UsuarioPendienteDTO => ({
 export class UsuariosService {
   async findReviewers(): Promise<UsuarioDTO[]> {
     const usuarios = await Usuario.findAll({
-      where: { active: true },
+      where: {
+        active: true,
+        specialtyId: { [Op.ne]: null },
+      },
       attributes: { exclude: ['password'] },
       include: [
         {

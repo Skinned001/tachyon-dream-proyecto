@@ -1,12 +1,6 @@
 import axiosClient from "./axiosClient";
 import { getMisArticulos, type Articulo } from "./articulos.api";
 
-export const especialistasMock = [
-  { id: 101, nombre: "Dr. Roberto Fernández", especialidad: "Cardiología" },
-  { id: 102, nombre: "Dra. Alicia Torres", especialidad: "Neurología" },
-  { id: 103, nombre: "Dr. Carlos Mendoza", especialidad: "Salud Pública" },
-];
-
 export const getArticulosGenerales = async (): Promise<Articulo[]> => {
   return getMisArticulos();
 };

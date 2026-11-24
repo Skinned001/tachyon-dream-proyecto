@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { FileText, Inbox, Users, CheckCircle2, AlertCircle, Loader2, ArrowRight, X } from 'lucide-react';
-import { getArticulosGenerales, asignarRevisores, especialistasMock } from '../api/comite.api';
+import { getArticulosGenerales } from '../api/comite.api';
+import { getEspecialistas } from '../api/editorial.api';
+import { getEspecialidades, type Especialidad } from '../api/especialidades.api';
 import { type Articulo } from '../api/articulos.api';
+import type { User } from '../types/user.types';
 
 export const Revisiones = () => {
   const [articulos, setArticulos] = useState<Articulo[]>([]);
+  const [especialistas, setEspecialistas] = useState<User[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Ahora guardamos un array de strings (IDs) por cada artículo
@@ -19,8 +24,14 @@ export const Revisiones = () => {
   const cargarBandeja = async () => {
     try {
       setLoading(true);
-      const data = await getArticulosGenerales();
-      setArticulos(Array.isArray(data) ? data : []);
+      const [data, reviewers, specialties] = await Promise.all([
+        getArticulosGenerales(),
+        getEspecialistas(),
+        getEspecialidades(),
+      ]);
+      setArticulos(data);
+      setEspecialistas(reviewers);
+      setEspecialidades(specialties);
     } catch (err) {
       console.error('Error al cargar la bandeja del comité:', err);
     } finally {
@@ -126,10 +137,15 @@ export const Revisiones = () => {
                     {revisoresSeleccionados.length > 0 && (
                       <div className="mb-3 flex flex-wrap gap-1.5">
                         {revisoresSeleccionados.map(id => {
-                          const doc = especialistasMock.find(e => e.id.toString() === id);
+                          const reviewer = especialistas.find(e => e.id.toString() === id);
+                          const specialtyName = especialidades.find(
+                            (especialidad) => especialidad.id === reviewer?.specialtyId,
+                          )?.name;
                           return (
                             <span key={id} className="flex items-center gap-1 rounded-md bg-[#e1f3eb] px-2 py-1 text-[10px] font-semibold text-[#087366]">
-                              {doc?.nombre}
+                              {reviewer
+                                ? `${reviewer.first_name} ${reviewer.last_name}${specialtyName ? ` · ${specialtyName}` : ''}`
+                                : 'Especialista no disponible'}
                               <button onClick={() => handleRemoveRevisor(safeId, id)} disabled={isProcessing} className="ml-0.5 text-[#52766d] hover:text-[#a3342d] disabled:opacity-50">
                                 <X size={11} strokeWidth={3} />
                               </button>
@@ -145,10 +161,10 @@ export const Revisiones = () => {
                       onChange={(e) => handleAddRevisor(safeId, e.target.value)}
                       disabled={isProcessing}
                     >
-                      <option value="" disabled>+ Agregar especialista...</option>
-                      {especialistasMock.map(esp => (
+                      <option value="" disabled>Seleccione un revisor...</option>
+                      {especialistas.map(esp => (
                         <option key={esp.id} value={esp.id} disabled={revisoresSeleccionados.includes(esp.id.toString())}>
-                          {esp.nombre} ({esp.especialidad})
+                          {esp.first_name} {esp.last_name} - {especialidades.find((especialidad) => especialidad.id === esp.specialtyId)?.name ?? 'Sin especialidad'}
                         </option>
                       ))}
                     </select>

@@ -8418,20 +8418,23 @@ Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
 # Tarea 84: Ocultar el encabezado del Layout en la vista de Perfil
 
 ## Contexto
+
 En la captura de pantalla se ve que la vista de Perfil tiene un encabezado superior (Navbar) que dice "Hospital Interdistrital Evita - Cuenta personal", y justo debajo el título de la página "Mi Perfil". Esto es redundante y visualmente desordenado para esta sección en particular.
 
 ## Objetivo
+
 Ocultar el encabezado superior (la barra blanca que tiene el título del sistema) **solo cuando el usuario está en la ruta `/perfil`**, dejando la pantalla del perfil más limpia.
 
 ## Lo que debés hacer
 
 ### 1. Modificar `src/layouts/DashboardLayout.tsx`
+
 - Asegurarse de tener importado `useLocation` de `react-router-dom`.
 - Buscar el `<header>` (la barra superior blanca donde está el título "Hospital Interdistrital Evita" y las notificaciones/perfil).
 - Envolver ese `<header>` en una condición para que no se renderice si estamos en `/perfil`.
 
 ```tsx
-import { useLocation } from 'react-router-dom';
+import { useLocation } from "react-router-dom";
 
 export const DashboardLayout = () => {
   const location = useLocation();
@@ -8441,11 +8444,10 @@ export const DashboardLayout = () => {
     <div className="flex h-screen bg-gray-50">
       <aside>...</aside>
       <div className="flex-1 flex flex-col">
-        
         {/* OCULTAR EL HEADER EN LA RUTA /perfil */}
-        {location.pathname !== '/perfil' && (
+        {location.pathname !== "/perfil" && (
           <header className="...">
-             {/* Todo el código que ya tenías en el header */}
+            {/* Todo el código que ya tenías en el header */}
           </header>
         )}
 
@@ -8459,8 +8461,262 @@ export const DashboardLayout = () => {
 ```
 
 ### 2. Verificación
+
 - Correr `npm run build`.
 - Entrar a `/perfil` y confirmar que la barra blanca superior desapareció, dejando más espacio para la tarjeta del perfil.
 
 ## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 85 (Backend): Endpoint para obtener revisores válidos
+
+## Contexto
+
+El frontend necesita mostrar una lista de especialistas disponibles para asignar un artículo. Solo deben aparecer los usuarios que tengan el rol `COMITE` o `DDI`, que estén activos y que tengan una especialidad asignada.
+
+## Objetivo
+
+Crear la ruta `GET /api/usuarios/especialistas` en el backend.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/usuarios/usuarios.controller.ts`
+
+Agregar la función `getEspecialistas`:
+
+```typescript
+import { Op } from "sequelize";
+
+export const getEspecialistas = async (req: Request, res: Response) => {
+  try {
+    const especialistas = await Usuario.findAll({
+      where: {
+        role: { [Op.in]: ["COMITE", "DDI"] },
+        active: true,
+        specialtyId: { [Op.ne]: null }, // Que no sea nulo
+      },
+      attributes: { exclude: ["password"] },
+      include: [{ model: Rol, as: "role" }], // Ajusta según tu asociación
+    });
+
+    res.status(200).json({ success: true, data: especialistas });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ success: false, error: "Error al obtener especialistas" });
+  }
+};
+```
+
+### 2. Modificar `src/modules/usuarios/usuarios.routes.ts`
+
+Agregar la ruta (importante: debe ir antes de la ruta `/:id` para que no la confunda con un ID):
+
+```typescript
+import { getUsuarios, getEspecialistas /*...*/ } from "./usuarios.controller";
+
+// ...
+router.get(
+  "/especialistas",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "DDI"]),
+  getEspecialistas,
+);
+// ...
+```
+
+### 3. Verificación
+
+- Correr `npm run build` y reiniciar el backend.
+
+# Tarea 86 (Frontend): Limpiar input de especialidad y conectar revisores reales
+
+## Contexto
+
+1. En `AdminUsuarios.tsx`, el `<select>` de especialidades tiene una opción para "Agregar nueva especialidad" que no debería estar ahí.
+2. En `PanelEditor.tsx`, la lista de revisores está hardcodeada (mock). Necesitamos consumir el nuevo endpoint de especialistas.
+
+## Lo que debés hacer
+
+### 1. Limpiar el `<select>` en `AdminUsuarios.tsx`
+
+Buscar el `<select>` donde se elige la especialidad en el modal de crear/editar usuario.
+Si tiene una opción como `<option value="new">+ Agregar nueva...</option>`, **eliminarla**. Dejar solo las opciones que vienen del `map` de especialidades.
+
+### 2. Actualizar la API en `src/api/editorial.api.ts`
+
+Asegurarse de tener las funciones para traer especialistas (o crearlas si el agente anterior no las puso):
+
+```typescript
+import { axiosClient } from "./axiosClient";
+import type { ApiResponse } from "../types/api.types";
+import type { User } from "../types/user.types";
+
+export const getEspecialistas = async (): Promise<User[]> => {
+  const { data } = await axiosClient.get<ApiResponse<User[]>>(
+    "/usuarios/especialistas",
+  );
+  return data.success && data.data ? data.data : [];
+};
+
+export const asignarRevisor = async (
+  articleId: number,
+  reviewerId: number,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    `/editorial/${articleId}/asignar`,
+    { reviewerId },
+  );
+  if (!data.success) throw new Error(data.error || "Error al asignar revisor");
+};
+```
+
+### 3. Conectar `PanelEditor.tsx`
+
+- Usar `useEffect` para llamar a `getEspecialistas()` y guardar los datos en un estado (`setEspecialistas`).
+- Asegurarse de que el `<select>` que se usa para asignar un artículo itere sobre `especialistas` (los reales) y no sobre un array estático.
+
+```tsx
+// Ejemplo de cómo debe verse el select:
+<select
+  onChange={(e) =>
+    setSelectedReviewer({
+      ...selectedReviewer,
+      [art.id]: Number(e.target.value),
+    })
+  }
+  className="..."
+>
+  <option value="">Seleccionar Especialista...</option>
+  {especialistas.map((esp) => (
+    <option key={esp.id} value={esp.id}>
+      {esp.first_name} {esp.last_name} -{" "}
+      {esp.specialty?.name || "Sin especialidad"}
+    </option>
+  ))}
+</select>
+```
+
+### 4. Verificación
+
+- Correr `npm run build`.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 87: Conectar especialistas reales en PanelEditor y limpiar UI
+
+## Contexto
+
+El componente `PanelEditor.tsx` sigue mostrando especialistas mock (Roberto Fernández, etc.) en lugar de los usuarios reales de la base de datos. Además, el `<select>` tiene una opción "+ Agregar especialista..." que no debería estar ahí. También hay un error en consola sobre atributos `width`/`height` inválidos.
+
+## Objetivo
+
+1. Conectar el componente con el endpoint `/api/usuarios/especialistas`.
+2. Eliminar la opción de "+ Agregar..." del select.
+3. Corregir cualquier error de atributos en los íconos.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/PanelEditor.tsx`
+
+Asegurate de que el archivo esté usando la función `getEspecialistas` de la API y no un array estático (MOCK_REVIEWERS).
+
+```tsx
+// src/pages/PanelEditor.tsx
+import { useEffect, useState } from "react";
+import {
+  getArticulosPendientes,
+  getEspecialistas,
+  asignarRevisor,
+} from "../api/editorial.api"; // Asumiendo que están aquí
+import type { User } from "../types/user.types";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Loader2, UserCheck } from "lucide-react";
+
+export const PanelEditor = () => {
+  const [articulos, setArticulos] = useState<any[]>([]);
+  const [especialistas, setEspecialistas] = useState<User[]>([]); // Estado para especialistas reales
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedReviewer, setSelectedReviewer] = useState<{
+    [key: number]: number;
+  }>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [arts, esp] = await Promise.all([
+          getArticulosPendientes(),
+          getEspecialistas(), // LLAMADA REAL AL BACKEND
+        ]);
+        setArticulos(arts);
+        setEspecialistas(esp);
+      } catch (error) {
+        console.error("Error al cargar panel", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // ... handleAsignar ...
+
+  return (
+    <div className="...">
+      {/* ... */}
+      <select
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        value={selectedReviewer[art.id] || ""}
+        onChange={(e) =>
+          setSelectedReviewer({
+            ...selectedReviewer,
+            [art.id]: Number(e.target.value),
+          })
+        }
+      >
+        <option value="" disabled>
+          Seleccione un revisor...
+        </option>
+        {/* ELIMINAMOS EL "+ Agregar especialista" Y USAMOS LOS DATOS REALES */}
+        {especialistas.map((esp) => (
+          <option key={esp.id} value={esp.id}>
+            {esp.first_name} {esp.last_name} ({esp.role})
+          </option>
+        ))}
+      </select>
+      {/* ... */}
+    </div>
+  );
+};
+```
+
+### 2. Revisar `src/api/editorial.api.ts`
+
+Asegurarse de que la función `getEspecialistas` esté apuntando a la ruta correcta:
+
+```typescript
+export const getEspecialistas = async (): Promise<User[]> => {
+  const { data } = await axiosClient.get<ApiResponse<User[]>>(
+    "/usuarios/especialistas",
+  );
+  return data.success && data.data ? data.data : [];
+};
+```
+
+### 3. Corregir error de íconos (width/height)
+
+Si en la consola aparece `Valor no esperado {15} al interpretar el atributo width`, buscar en el código si algún ícono de Lucide se está llamando incorrectamente (por ejemplo, pasándole un objeto de estilo o un tamaño como prop booleana). Asegurarse de que sea `<Icono className="w-4 h-4" />`.
+
+### 4. Verificación
+
+- Correr `npm run build`.
+- Si la lista sigue mostrando a "Roberto Fernández", verificar en el Backend (`usuarios.controller.ts`) si la ruta `getEspecialistas` está filtrando por el rol correcto (`COMITE` o `DDI`).
+
+## Respuesta esperada
+
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.

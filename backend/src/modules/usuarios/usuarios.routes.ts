@@ -9,7 +9,7 @@ const usuariosController = new UsuariosController();
 router.get(
   '/especialistas',
   authenticateJWT,
-  requireRole(['ADMIN', 'EDITOR', 'DDI']),
+  requireRole(['ADMIN', 'EDITOR', 'DDI', 'COMITE']),
   usuariosController.specialists,
 );
 
