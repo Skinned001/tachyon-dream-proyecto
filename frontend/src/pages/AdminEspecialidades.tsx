@@ -183,17 +183,23 @@ export const AdminEspecialidades = () => {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-gray-200 text-sm text-gray-500">
+                <tr className="border-b border-gray-200 bg-gray-50/50 text-sm text-gray-500">
                   <th scope="col" className="px-4 py-3 font-medium">
                     Nombre
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     Descripción
                   </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
+                  <th
+                    scope="col"
+                    className="whitespace-nowrap px-4 py-3 font-medium"
+                  >
                     Estado
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                  <th
+                    scope="col"
+                    className="whitespace-nowrap px-4 py-3 text-right font-medium"
+                  >
                     Acciones
                   </th>
                 </tr>
@@ -202,9 +208,9 @@ export const AdminEspecialidades = () => {
                 {especialidades.map((especialidad) => (
                   <tr
                     key={especialidad.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
+                    className="border-b border-gray-100 transition-colors hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-800">
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-800">
                       <span className="flex items-center gap-2">
                         <Stethoscope className="h-4 w-4 text-[#087d70]" />
                         {especialidad.name}
@@ -213,9 +219,9 @@ export const AdminEspecialidades = () => {
                     <td className="px-4 py-3 text-sm text-gray-500">
                       {especialidad.description?.trim() || '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                           especialidad.active
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
@@ -224,14 +230,14 @@ export const AdminEspecialidades = () => {
                         {especialidad.active ? 'Activa' : 'Inactiva'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           type="button"
                           variant="ghost"
                           onClick={() => openEdit(especialidad)}
                           disabled={busyId !== null}
-                          className="gap-1"
+                          className="gap-1 whitespace-nowrap"
                           aria-label={`Editar ${especialidad.name}`}
                         >
                           <Edit className="h-4 w-4" />
@@ -239,11 +245,15 @@ export const AdminEspecialidades = () => {
                         </Button>
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant={especialidad.active ? 'ghost' : 'primary'}
                           onClick={() => void toggleActive(especialidad)}
                           isLoading={busyId === especialidad.id}
                           disabled={busyId !== null}
-                          className="text-sm"
+                          className={`w-32 whitespace-nowrap px-2 text-sm ${
+                            especialidad.active
+                              ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                              : ''
+                          }`}
                         >
                           {especialidad.active ? 'Deshabilitar' : 'Habilitar'}
                         </Button>

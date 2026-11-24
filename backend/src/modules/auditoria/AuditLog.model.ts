@@ -13,7 +13,8 @@ export type AuditEntityType =
   | 'ARTICULO'
   | 'CONVOCATORIA'
   | 'USUARIO'
-  | 'RECURSO_BIBLIOTECA';
+  | 'RECURSO_BIBLIOTECA'
+  | 'ESPECIALIDAD';
 
 export class AuditLog extends Model<
   InferAttributes<AuditLog>,

@@ -8,7 +8,13 @@ import {
 
 const querySchema = z.object({
   entityType: z
-    .enum(['ARTICULO', 'CONVOCATORIA', 'USUARIO', 'RECURSO_BIBLIOTECA'])
+    .enum([
+      'ARTICULO',
+      'CONVOCATORIA',
+      'USUARIO',
+      'RECURSO_BIBLIOTECA',
+      'ESPECIALIDAD',
+    ])
     .optional(),
   action: z.string().trim().min(1).max(80).optional(),
   search: z.string().trim().min(1).max(200).optional(),

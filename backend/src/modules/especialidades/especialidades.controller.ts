@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { registrarAuditoria } from "../../services/auditoria.service.js";
 import type { ApiResponse } from "../auth/auth.dto.js";
 import {
   EspecialidadesService,
@@ -58,6 +59,18 @@ export class EspecialidadesController {
       const data = await this.especialidadesService.create({
         name,
         description,
+      });
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'ESPECIALIDAD_CREADA',
+        entityType: 'ESPECIALIDAD',
+        entityId: data.id,
+        summary: `Creó la especialidad "${data.name}".`,
+        details: {
+          description: data.description,
+          active: data.active,
+        },
       });
       res.status(201).json({ success: true, data });
     } catch (error: unknown) {
@@ -136,6 +149,18 @@ export class EspecialidadesController {
         });
         return;
       }
+      await registrarAuditoria({
+        userId: req.user?.id ?? null,
+        actorRole: req.user?.role ?? null,
+        action: 'ESPECIALIDAD_EDITADA',
+        entityType: 'ESPECIALIDAD',
+        entityId: data.id,
+        summary: `Actualizó la especialidad "${data.name}" (${data.active ? 'Activa' : 'Inactiva'}).`,
+        details: {
+          ...updates,
+          active: data.active,
+        },
+      });
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);

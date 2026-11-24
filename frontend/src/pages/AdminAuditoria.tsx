@@ -22,6 +22,7 @@ const entityLabels: Record<AuditEntityType, string> = {
   CONVOCATORIA: 'Convocatoria',
   USUARIO: 'Usuario',
   RECURSO_BIBLIOTECA: 'Biblioteca',
+  ESPECIALIDAD: 'Especialidades',
 };
 
 const actionTone = (action: string): string => {
@@ -121,7 +122,7 @@ export const AdminAuditoria = () => {
             Auditoría del Sistema
           </h2>
           <p className="mt-1 text-[13px] text-[#526e68]">
-            Historial inmutable de acciones críticas sobre manuscritos, convocatorias, usuarios y biblioteca.
+            Historial inmutable de acciones críticas sobre manuscritos, convocatorias, usuarios, biblioteca y especialidades.
           </p>
         </div>
         <button
@@ -166,6 +167,7 @@ export const AdminAuditoria = () => {
           <option value="CONVOCATORIA">Convocatorias</option>
           <option value="USUARIO">Usuarios</option>
           <option value="RECURSO_BIBLIOTECA">Biblioteca</option>
+          <option value="ESPECIALIDAD">Especialidades</option>
         </select>
 
         <input

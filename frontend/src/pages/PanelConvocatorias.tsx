@@ -18,7 +18,12 @@ import {
   type Convocatoria,
   type EstadoConvocatoria,
 } from '../api/convocatorias.api';
+import { CustomDatePicker } from '../components/ui/DatePicker';
 import { ModalEdicionConvocatoria } from '../features/editorial/ModalEdicionConvocatoria';
+import {
+  parseLocalDateTimeValue,
+  toLocalDateTimeValue,
+} from '../utils/formatDate';
 
 interface CreateFormData {
   title: string;
@@ -65,10 +70,7 @@ const formatDateTime = (value: string): string => {
 const toIsoDateTime = (value: string): string => new Date(value).toISOString();
 
 const getLocalDateTimeNow = (): string => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
+  return toLocalDateTimeValue(new Date());
 };
 
 export const PanelConvocatorias = () => {
@@ -262,30 +264,42 @@ export const PanelConvocatorias = () => {
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Fecha y hora de inicio
                 </span>
-                <input
+                <CustomDatePicker
                   required
-                  type="datetime-local"
-                  min={minDateTime}
-                  value={formData.fechaInicio}
-                  onChange={(event) =>
-                    setFormData({ ...formData, fechaInicio: event.target.value })
+                  selected={parseLocalDateTimeValue(formData.fechaInicio)}
+                  minDateTime={new Date(minDateTime)}
+                  onChange={(date) =>
+                    setFormData({
+                      ...formData,
+                      fechaInicio: date ? toLocalDateTimeValue(date) : '',
+                    })
                   }
                   className={inputClassName}
+                  placeholder="Seleccionar fecha y hora de inicio"
                 />
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Fecha y hora de fin
                 </span>
-                <input
+                <CustomDatePicker
                   required
-                  type="datetime-local"
-                  min={formData.fechaInicio > minDateTime ? formData.fechaInicio : minDateTime}
-                  value={formData.fechaFin}
-                  onChange={(event) =>
-                    setFormData({ ...formData, fechaFin: event.target.value })
+                  selected={parseLocalDateTimeValue(formData.fechaFin)}
+                  minDateTime={
+                    new Date(
+                      formData.fechaInicio > minDateTime
+                        ? formData.fechaInicio
+                        : minDateTime,
+                    )
+                  }
+                  onChange={(date) =>
+                    setFormData({
+                      ...formData,
+                      fechaFin: date ? toLocalDateTimeValue(date) : '',
+                    })
                   }
                   className={inputClassName}
+                  placeholder="Seleccionar fecha y hora de fin"
                 />
               </label>
             </div>

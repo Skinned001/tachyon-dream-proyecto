@@ -7,7 +7,12 @@ import {
   type EditarConvocatoriaRequest,
   type EstadoConvocatoria,
 } from '../../api/convocatorias.api';
+import { CustomDatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
+import {
+  parseLocalDateTimeValue,
+  toLocalDateTimeValue,
+} from '../../utils/formatDate';
 
 interface ModalEdicionConvocatoriaProps {
   convocatoria: Convocatoria | null;
@@ -19,10 +24,7 @@ const inputClassName =
   'h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#087d70]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500';
 
 const getLocalDateTimeNow = (): string => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
+  return toLocalDateTimeValue(new Date());
 };
 
 const toLocalDateTimeInput = (isoDate: string): string => {
@@ -86,6 +88,16 @@ export const ModalEdicionConvocatoria = ({
     convocatoria?.estado === 'BORRADOR' ||
     convocatoria?.estado === 'PROGRAMADA';
   const minDateTime = getLocalDateTimeNow();
+  const minFechaInicio =
+    fechaInicio === initialFechaInicio && initialFechaInicio < minDateTime
+      ? initialFechaInicio
+      : minDateTime;
+  const minFechaFin =
+    fechaFin === initialFechaFin && initialFechaFin < minDateTime
+      ? initialFechaFin
+      : canEditLifecycle && fechaInicio > minDateTime
+        ? fechaInicio
+        : minDateTime;
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -187,17 +199,14 @@ export const ModalEdicionConvocatoria = ({
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Fecha y hora de inicio
                 </span>
-                <input
-                  type="datetime-local"
-                  min={
-                    fechaInicio === initialFechaInicio &&
-                    initialFechaInicio < minDateTime
-                      ? initialFechaInicio
-                      : minDateTime
+                <CustomDatePicker
+                  selected={parseLocalDateTimeValue(fechaInicio)}
+                  minDateTime={new Date(minFechaInicio)}
+                  onChange={(date) =>
+                    setFechaInicio(date ? toLocalDateTimeValue(date) : '')
                   }
-                  value={fechaInicio}
-                  onChange={(event) => setFechaInicio(event.target.value)}
                   disabled={!canEditLifecycle}
+                  placeholder="Seleccionar fecha y hora de inicio"
                   className={inputClassName}
                 />
                 {!canEditLifecycle && (
@@ -210,18 +219,14 @@ export const ModalEdicionConvocatoria = ({
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Fecha y hora de fin
                 </span>
-                <input
+                <CustomDatePicker
                   required
-                  type="datetime-local"
-                  min={
-                    fechaFin === initialFechaFin && initialFechaFin < minDateTime
-                      ? initialFechaFin
-                      : canEditLifecycle && fechaInicio > minDateTime
-                        ? fechaInicio
-                        : minDateTime
+                  selected={parseLocalDateTimeValue(fechaFin)}
+                  minDateTime={new Date(minFechaFin)}
+                  onChange={(date) =>
+                    setFechaFin(date ? toLocalDateTimeValue(date) : '')
                   }
-                  value={fechaFin}
-                  onChange={(event) => setFechaFin(event.target.value)}
+                  placeholder="Seleccionar fecha y hora de fin"
                   className={inputClassName}
                 />
               </label>

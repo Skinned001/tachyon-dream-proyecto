@@ -7895,3 +7895,297 @@ export default router;
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 95: Corregir desajuste visual en la tabla de Especialidades
+
+## Contexto
+
+En `src/pages/AdminEspecialidades.tsx`, cuando se cambia el estado de una especialidad (de activa a inactiva), el texto del botón de acción cambia de "Deshabilitar" a "Habilitar". Como las columnas no tienen un ancho definido, la tabla se desajusta y los botones se desalinean.
+
+## Objetivo
+
+1. Fijar la alineación de los botones de acción usando Flexbox.
+2. Evitar que el texto de la tabla se rompa en varias líneas usando `whitespace-nowrap`.
+3. Mejorar el diseño del botón de habilitar/deshabilitar.
+
+## Lo que debés hacer
+
+### 1. Modificar la tabla en `src/pages/AdminEspecialidades.tsx`
+
+Reemplazar la estructura de la tabla (específicamente el `<thead>` y el `<tbody>`) por esta:
+
+```tsx
+<table className="w-full text-left border-collapse">
+  <thead>
+    <tr className="border-b border-gray-200 text-sm text-gray-500 bg-gray-50/50">
+      <th className="py-3 px-4 font-medium">Nombre</th>
+      <th className="py-3 px-4 font-medium">Descripción</th>
+      <th className="py-3 px-4 font-medium whitespace-nowrap">Estado</th>
+      <th className="py-3 px-4 font-medium text-right whitespace-nowrap">
+        Acciones
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {especialidades.map((esp) => (
+      <tr
+        key={esp.id}
+        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+      >
+        <td className="py-3 px-4 font-medium text-gray-800">{esp.name}</td>
+        <td className="py-3 px-4 text-gray-500 text-sm">
+          {esp.description || "-"}
+        </td>
+
+        {/* Columna de Estado con ancho fijo para que no baile */}
+        <td className="py-3 px-4 whitespace-nowrap">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+              esp.active
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {esp.active ? "Activa" : "Inactiva"}
+          </span>
+        </td>
+
+        {/* Columna de Acciones alineada a la derecha con Flexbox */}
+        <td className="py-3 px-4 text-right">
+          <div className="flex justify-end items-center gap-2">
+            <button
+              onClick={() => openEdit(esp)}
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              title="Editar"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+
+            <Button
+              variant={esp.active ? "ghost" : "primary"}
+              onClick={() => toggleActive(esp)}
+              className={`text-sm w-32 ${esp.active ? "text-red-600 hover:text-red-700 hover:bg-red-50" : ""}`}
+            >
+              {esp.active ? "Deshabilitar" : "Habilitar"}
+            </Button>
+          </div>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+```
+
+### 2. Explicación de los cambios
+
+- Agregamos `whitespace-nowrap` a los encabezados y a los `<td>` de Estado para que el texto nunca baje de línea.
+- Envolvimos los botones de acción en un `<div className="flex justify-end items-center gap-2">`.
+- Al botón de Habilitar/Deshabilitar le pusimos `w-32` (ancho fijo) para que, aunque cambie el texto, el botón siempre ocupe el mismo espacio. Si está deshabilitado, el botón es azul (`primary`), si está activo, es transparente con texto rojo (`ghost`).
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Probar habilitar y deshabilitar una especialidad. La tabla no debería moverse ni un milímetro.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 96 (Backend): Registrar en auditoría las acciones de Especialidades
+
+## Contexto
+
+El sistema de auditoría está registrando las acciones de Convocatorias y Usuarios, pero no está guardando un log cuando se crean o editan especialidades médicas.
+
+## Objetivo
+
+Agregar el registro de auditoría en las funciones `createEspecialidad` y `updateEspecialidad`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/especialidades/especialidades.controller.ts`
+
+Importar el servicio o modelo de auditoría que estén usando (ej. `AuditLog` o `registrarAuditoria`) y llamarlo después de crear o actualizar.
+
+```typescript
+import { AuditLog } from "../auditoria/AuditLog.model"; // Ajusta la ruta y el nombre del modelo según tu proyecto
+
+export const createEspecialidad = async (req: Request, res: Response) => {
+  try {
+    // ... código existente de creación
+    const nueva = await Especialidad.create({
+      name,
+      description,
+      active: true,
+    });
+
+    // REGISTRO DE AUDITORÍA
+    await AuditLog.create({
+      usuarioId: (req as any).user.id, // El admin logueado
+      modulo: "Especialidades",
+      accion: "Crear Especialidad",
+      detalle: `Se creó la especialidad "${nueva.name}"`,
+    });
+
+    return res.status(201).json({ success: true, data: nueva });
+  } catch (error) {
+    /*...*/
+  }
+};
+
+export const updateEspecialidad = async (req: Request, res: Response) => {
+  try {
+    // ... código existente de actualización
+    await especialidad.save();
+
+    // REGISTRO DE AUDITORÍA
+    await AuditLog.create({
+      usuarioId: (req as any).user.id,
+      modulo: "Especialidades",
+      accion: "Actualizar Especialidad",
+      detalle: `Se actualizó la especialidad "${especialidad.name}" a estado ${especialidad.active ? "Activa" : "Inactiva"}`,
+    });
+
+    return res.status(200).json({ success: true, data: especialidad });
+  } catch (error) {
+    /*...*/
+  }
+};
+```
+
+_(El agente debe adaptar el modelo de auditoría al que ya tengan implementado en el proyecto)._
+
+## Respuesta esperada
+
+Confirmame que los controladores fueron actualizados y si compila.
+
+# Tarea 97 (Frontend): Implementar un DatePicker personalizado y estilizado
+
+## Contexto
+
+El sistema usa el `<input type="datetime-local">` nativo para fechas (como en Convocatorias). Es incómodo porque no tiene botón de "Guardar" y no se puede estilizar. Vamos a reemplazarlo por un componente personalizado usando la librería `react-datepicker`.
+
+## Objetivo
+
+1. Instalar la librería.
+2. Crear el componente `src/components/ui/DatePicker.tsx` con estilos institucionales.
+3. Reemplazar los inputs de fecha existentes.
+
+## Lo que debés hacer
+
+### 1. Instalar dependencias
+
+Ejecutar en la terminal del frontend:
+
+```bash
+npm install react-datepicker
+npm install -D @types/react-datepicker
+npm install date-fns
+```
+
+### 2. Crear el componente `src/components/ui/DatePicker.tsx`
+
+Este componente usará la librería pero con un diseño limpio y un botón de "Listo".
+
+```tsx
+// src/components/ui/DatePicker.tsx
+import DatePicker, { registerLocale } from "react-datepicker";
+import { es } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
+import { Calendar } from "lucide-react";
+
+registerLocale("es", es);
+
+interface CustomDatePickerProps {
+  selected: Date | null;
+  onChange: (date: Date | null) => void;
+  showTimeSelect?: boolean;
+  placeholder?: string;
+}
+
+export const CustomDatePicker = ({
+  selected,
+  onChange,
+  showTimeSelect = true,
+  placeholder = "Seleccionar fecha",
+}: CustomDatePickerProps) => {
+  return (
+    <div className="relative w-full">
+      <DatePicker
+        selected={selected}
+        onChange={onChange}
+        showTimeSelect={showTimeSelect}
+        timeFormat="HH:mm"
+        timeIntervals={15}
+        dateFormat={showTimeSelect ? "dd/MM/yyyy, HH:mm" : "dd/MM/yyyy"}
+        locale="es"
+        placeholderText={placeholder}
+        className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-institucional-500 text-sm"
+        wrapperClassName="w-full"
+        portalId="root"
+      />
+      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+    </div>
+  );
+};
+```
+
+### 3. Estilizar el calendario en `src/index.css`
+
+Para que el calendario no se vea por defecto y use tus colores, agregar lo siguiente al final de `src/index.css`:
+
+```css
+/* Estilos para react-datepicker */
+.react-datepicker {
+  font-family: inherit !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+.react-datepicker__header {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-top-left-radius: 0.5rem !important;
+  border-top-right-radius: 0.5rem !important;
+}
+.react-datepicker__day--selected,
+.react-datepicker__time-list-item--selected {
+  background-color: #2563eb !important; /* Tu azul institucional */
+  color: white !important;
+}
+.react-datepicker__day:hover,
+.react-datepicker__time-list-item:hover {
+  background-color: #eff6ff !important;
+}
+.react-datepicker__current-month {
+  font-weight: 600 !important;
+  color: #374151 !important;
+}
+```
+
+### 4. Reemplazar el input en las pantallas correspondientes
+
+Buscar en las pantallas donde se use `<input type="datetime-local" ...>` (por ejemplo, en el modal de crear/editar Convocatoria) y reemplazarlo por el nuevo componente:
+
+```tsx
+import { CustomDatePicker } from '../components/ui/DatePicker';
+
+// Cambiar esto:
+<input type="datetime-local" value={fechaInicio} onChange={...} />
+
+// Por esto (controlando la fecha como objeto Date):
+<CustomDatePicker
+  selected={formulario.start_date ? new Date(formulario.start_date) : null}
+  onChange={(date) => setFormulario({...formulario, start_date: date ? date.toISOString() : ''})}
+  placeholder="Fecha de inicio"
+/>
+```
+
+### 5. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal de Convocatorias y probar el nuevo selector. Debería abrir un calendario bonito, en español, y permitir seleccionar fecha y hora haciendo clic en el día y luego en la hora.
+
+## Respuesta esperada
+
+Confirmame que la librería fue instalada y si `npm run build` pasó.
