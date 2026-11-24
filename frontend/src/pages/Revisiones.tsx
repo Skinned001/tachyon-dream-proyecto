@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-import { useEffect, useState } from 'react';
-import { FileText, Inbox, Users, CheckCircle2, AlertCircle, Loader2, ArrowRight, X } from 'lucide-react';
-import { getArticulosGenerales } from '../api/comite.api';
-import { getEspecialistas } from '../api/editorial.api';
-import { getEspecialidades, type Especialidad } from '../api/especialidades.api';
-import { type Articulo } from '../api/articulos.api';
-import type { User } from '../types/user.types';
-=======
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
@@ -32,12 +23,9 @@ import {
   ArticleStateBadge,
   VersionHistoryPanel,
 } from '../features/articulos/ArticleWorkflowMeta';
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
 
 export const Revisiones = () => {
   const [articulos, setArticulos] = useState<Articulo[]>([]);
-  const [especialistas, setEspecialistas] = useState<User[]>([]);
-  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [evaluando, setEvaluando] = useState<Articulo | null>(null);
@@ -57,18 +45,6 @@ export const Revisiones = () => {
   const cargarBandeja = useCallback(async () => {
     try {
       setLoading(true);
-<<<<<<< HEAD
-      const [data, reviewers, specialties] = await Promise.all([
-        getArticulosGenerales(),
-        getEspecialistas(),
-        getEspecialidades(),
-      ]);
-      setArticulos(data);
-      setEspecialistas(reviewers);
-      setEspecialidades(specialties);
-    } catch (err) {
-      console.error('Error al cargar la bandeja del comité:', err);
-=======
       setLoadError('');
       setArticulos(await getArticulos());
     } catch (err: unknown) {
@@ -77,7 +53,6 @@ export const Revisiones = () => {
           ? err.message
           : 'No se pudo cargar tu bandeja de evaluaciones.',
       );
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
     } finally {
       setLoading(false);
     }
@@ -531,57 +506,6 @@ export const Revisiones = () => {
                         ? ` · ${articulo.convocatoriaTitle}`
                         : ''}
                     </p>
-<<<<<<< HEAD
-                    
-                    {/* Lista de etiquetas (chips) de doctores seleccionados */}
-                    {revisoresSeleccionados.length > 0 && (
-                      <div className="mb-3 flex flex-wrap gap-1.5">
-                        {revisoresSeleccionados.map(id => {
-                          const reviewer = especialistas.find(e => e.id.toString() === id);
-                          const specialtyName = especialidades.find(
-                            (especialidad) => especialidad.id === reviewer?.specialtyId,
-                          )?.name;
-                          return (
-                            <span key={id} className="flex items-center gap-1 rounded-md bg-[#e1f3eb] px-2 py-1 text-[10px] font-semibold text-[#087366]">
-                              {reviewer
-                                ? `${reviewer.first_name} ${reviewer.last_name}${specialtyName ? ` · ${specialtyName}` : ''}`
-                                : 'Especialista no disponible'}
-                              <button onClick={() => handleRemoveRevisor(safeId, id)} disabled={isProcessing} className="ml-0.5 text-[#52766d] hover:text-[#a3342d] disabled:opacity-50">
-                                <X size={11} strokeWidth={3} />
-                              </button>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <select 
-                      className="mb-4 h-10 w-full rounded-lg border border-[#d5e6df] bg-[#fcfefd] px-3 text-[12px] text-[#173d3b] outline-none focus:border-[#087d70]"
-                      value=""
-                      onChange={(e) => handleAddRevisor(safeId, e.target.value)}
-                      disabled={isProcessing}
-                    >
-                      <option value="" disabled>Seleccione un revisor...</option>
-                      {especialistas.map(esp => (
-                        <option key={esp.id} value={esp.id} disabled={revisoresSeleccionados.includes(esp.id.toString())}>
-                          {esp.first_name} {esp.last_name} - {especialidades.find((especialidad) => especialidad.id === esp.specialtyId)?.name ?? 'Sin especialidad'}
-                        </option>
-                      ))}
-                    </select>
-                    
-                    {feedbackMsg ? (
-                      <div className={`flex items-center justify-center gap-1.5 text-[11px] font-semibold ${feedbackMsg.type === 'success' ? 'text-[#087366]' : 'text-[#a3342d]'}`}>
-                        {feedbackMsg.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                        {feedbackMsg.msg}
-                      </div>
-                    ) : (
-                      <button onClick={() => handleAsignar(safeId)} disabled={revisoresSeleccionados.length === 0 || isProcessing} className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#087d70] px-4 text-[12px] font-semibold text-white transition hover:bg-[#07584f] disabled:opacity-50 disabled:hover:bg-[#087d70]">
-                        {isProcessing ? <Loader2 className="animate-spin" size={14} /> : `Derivar a ${revisoresSeleccionados.length || '...'} Revisor(es)`}
-                        {!isProcessing && <ArrowRight size={14} />}
-                      </button>
-                    )}
-=======
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
                   </div>
 
                   <button

@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import type { ApiResponse } from "../auth/auth.dto.js";
 import { registrarAuditoria } from "../../services/auditoria.service.js";
+import { ArticuloService } from "../articulos/articulo.service.js";
 import { EditorialService, type ConvocatoriaDTO } from "./editorial.service.js";
 
 const estadoSchema = z.enum(["BORRADOR", "PROGRAMADA", "ABIERTA", "CERRADA"]);

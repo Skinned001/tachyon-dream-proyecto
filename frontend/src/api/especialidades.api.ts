@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 import { axiosClient } from './axiosClient';
-=======
-import axiosClient from './axiosClient';
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
 import type { ApiResponse } from '../types/api.types';
 
 export interface Especialidad {
   id: number;
   name: string;
-<<<<<<< HEAD
   description?: string;
   active: boolean;
 }
@@ -51,18 +46,6 @@ export const updateEspecialidad = async (
   );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al actualizar especialidad');
-=======
-  description: string;
-  active: boolean;
-}
-
-export const getEspecialidades = async (): Promise<Especialidad[]> => {
-  const { data } = await axiosClient.get<ApiResponse<Especialidad[]>>(
-    '/especialidades',
-  );
-  if (!data.success || !Array.isArray(data.data)) {
-    throw new Error(data.error ?? 'No se pudieron cargar las especialidades.');
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
   }
   return data.data;
 };

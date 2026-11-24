@@ -15,7 +15,6 @@ import { AsignacionComite } from '../editorial/AsignacionComite.model.js';
 import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Rol } from '../usuarios/Rol.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
-import { AsignacionComite } from '../editorial/AsignacionComite.model.js';
 import { Convocatoria } from '../editorial/Convocatoria.model.js';
 import { Revision } from '../editorial/Revision.model.js';
 import type {
@@ -411,7 +410,7 @@ export class ArticuloService {
       include: articleIncludes,
       order: [['createdAt', 'ASC']],
     });
-    return articles.map(toArticleDTO);
+    return articles.map((article) => toArticleDTO(article));
   }
 
   async asignarRevisor(

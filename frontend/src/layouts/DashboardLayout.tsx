@@ -30,20 +30,15 @@ export function DashboardLayout({
     if (pathname.includes('recursos-biblioteca')) return 'Manuales y Documentos';
     if (pathname.includes('biblioteca')) return 'Biblioteca Virtual';
     if (pathname.includes('articulos')) return 'Mis Manuscritos';
-<<<<<<< HEAD
-    if (pathname.includes('revisiones')) return 'Bandeja del Comité';
-    if (pathname.includes('editor')) return 'Asignación de Revisores';
-=======
     if (pathname.includes('mesa-entrada')) return 'Mesa de Entrada (DDI)';
     if (pathname.includes('revisiones')) return 'Panel de Revisión';
     if (pathname.includes('editor')) return 'Panel del Editor';
     if (pathname.includes('convocatorias')) return 'Convocatorias';
     if (pathname.includes('admin/auditoria')) return 'Auditoría del Sistema';
->>>>>>> cdb5e53e838edcb56febd5aad3e51d1aa29df9d0
     if (pathname.includes('admin/usuarios')) return 'Manejo de Usuarios';
     if (pathname.includes('admin/especialidades')) return 'Especialidades Médicas';
     if (pathname.includes('notificaciones')) return 'Notificaciones';
-    if (pathname.includes('perfil')) return 'Cuenta personal';
+    if (pathname.includes('perfil')) return 'Mi Perfil';
     return 'Resumen de Investigación';
   };
 
