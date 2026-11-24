@@ -23,7 +23,14 @@ const updateProfileSchema = z
     first_name: z.string().trim().min(1).max(255).optional(),
     last_name: z.string().trim().min(1).max(255).optional(),
     username: z.string().trim().min(1).max(255).optional(),
-    profile_image: z.string().trim().max(255).nullable().optional(),
+    profile_image: z
+      .string()
+      .regex(
+        /^\/uploads\/avatars\/[0-9a-f-]+\.(jpg|png|webp)$/i,
+        'La ruta de la foto de perfil debe ser relativa',
+      )
+      .nullable()
+      .optional(),
     specialtyId: z.preprocess(
       (value) => {
         if (value === '') return null;

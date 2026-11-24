@@ -7,12 +7,18 @@ export const getProfileImageUrl = (
   if (!image) return null;
 
   try {
-    const url = new URL(image, apiBaseUrl);
+    const normalizedImage = image.trim().replace(/\\/g, '/');
+    const match = normalizedImage.match(
+      /(?:^|\/)(uploads\/(?:avatars|profiles)\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp))(?:[?#].*)?$/i,
+    );
+    if (!match) return null;
+
+    const url = new URL(`/${match[1]}`, apiBaseUrl);
     if (cacheBuster !== undefined) {
       url.searchParams.set('t', String(cacheBuster));
     }
     return url.toString();
   } catch {
-    return image;
+    return null;
   }
 };

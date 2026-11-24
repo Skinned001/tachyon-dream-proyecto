@@ -18,18 +18,22 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 dotenv.config();
 
 const app = express();
+const corsOptions = {
+  origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
+  credentials: true,
+};
+const uploadsCors = cors(corsOptions);
+const uploadsPath = path.resolve(uploadsDirectory);
 
-app.use(
-  cors({
-    origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
-    credentials: true,
-  }),
-);
+console.log(`Serving uploaded files from: ${uploadsPath}`);
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   '/uploads/profiles',
-  express.static(path.join(uploadsDirectory, 'profiles'), {
+  uploadsCors,
+  express.static(path.join(uploadsPath, 'profiles'), {
     setHeaders: (res) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
@@ -37,7 +41,8 @@ app.use(
 );
 app.use(
   '/uploads/avatars',
-  express.static(path.join(uploadsDirectory, 'avatars'), {
+  uploadsCors,
+  express.static(path.join(uploadsPath, 'avatars'), {
     setHeaders: (res) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
@@ -45,7 +50,12 @@ app.use(
 );
 app.use(
   '/uploads/library',
-  express.static(path.join(uploadsDirectory, 'library')),
+  uploadsCors,
+  express.static(path.join(uploadsPath, 'library'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
 );
 
 app.get("/health", (_req, res) => {

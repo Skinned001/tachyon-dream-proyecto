@@ -361,6 +361,7 @@ export const Perfil = () => {
               <img
                 src={imageUrl}
                 alt="Foto de perfil"
+                crossOrigin="anonymous"
                 className="mb-4 h-32 w-32 rounded-full border-4 border-[#d7f2e6] object-cover"
               />
             ) : (

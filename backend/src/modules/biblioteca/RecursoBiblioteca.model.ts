@@ -52,9 +52,6 @@ export const initializeRecursoBibliotecaModel = (sequelize: Sequelize): void => 
       uploadedBy: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE',
       },
       specialtyId: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
       createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },

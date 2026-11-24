@@ -533,6 +533,7 @@ export const AdminUsuarios = () => {
                             <img
                               src={profileImageUrl}
                               alt="Perfil"
+                              crossOrigin="anonymous"
                               className="h-10 w-10 rounded-full border border-gray-200 object-cover"
                             />
                           ) : (

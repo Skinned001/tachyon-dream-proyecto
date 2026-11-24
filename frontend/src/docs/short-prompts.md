@@ -7500,3 +7500,398 @@ Si el error persiste, significa que el backend no está enviando el campo `creat
 ## Respuesta esperada
 
 Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 89: Solucionar error de llave foránea en library_resources
+
+## Contexto
+
+El servidor backend no puede iniciar debido al error `Column 'uploadedBy' cannot be NOT NULL: needed in a foreign key constraint ... ON DELETE SET NULL`.
+Esto ocurre porque el modelo `RecursoBiblioteca` tiene el campo `uploadedBy` como obligatorio, pero la asociación en Sequelize está configurada para hacer `SET NULL` al borrar un usuario.
+
+## Objetivo
+
+1. Modificar el modelo para permitir valores nulos en `uploadedBy`.
+2. Corregir la asociación (si es necesario).
+3. Dar instrucciones para limpiar la tabla conflictiva en la base de datos.
+
+## Lo que debés hacer
+
+### 1. Modificar el modelo `src/modules/biblioteca/RecursoBiblioteca.model.ts`
+
+Buscar el campo `uploadedBy` y agregar `allowNull: true`:
+
+```typescript
+  uploadedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // 👈 Agregar esto para que coincida con el ON DELETE SET NULL
+    // ...
+  },
+```
+
+### 2. Revisar `src/database/associations.ts`
+
+Buscar la asociación entre `Usuario` y `RecursoBiblioteca`. Asegurarse de que esté configurada así:
+
+```typescript
+Usuario.hasMany(RecursoBiblioteca, {
+  foreignKey: "uploadedBy",
+  onDelete: "SET NULL",
+});
+RecursoBiblioteca.belongsTo(Usuario, { foreignKey: "uploadedBy" });
+```
+
+### 3. Limpiar la base de datos (Instrucción para el usuario)
+
+Como la tabla ya se creó con la restricción incorrecta, Sequelize no puede alterarla automáticamente. Se debe eliminar la tabla para que Sequelize la vuelva a crear desde cero.
+
+_El usuario deberá ejecutar esto en su gestor de base de datos (phpMyAdmin, DBeaver, etc.) o en la terminal de MySQL:_
+
+```sql
+DROP TABLE library_resources;
+```
+
+_(Después de borrar la tabla, al iniciar el backend, Sequelize la creará de nuevo con la estructura correcta)._
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si el backend compila sin errores de TypeScript.
+
+# Tarea 90: Arreglar CORS de imágenes y sanitizar rutas en la base de datos
+
+## Contexto
+
+El frontend está bloqueando las imágenes (`OpaqueResponseBlocking`) y lanzando un error de seguridad `file:///`. Esto pasa porque:
+
+1. Express no está enviando los headers de CORS correctos para la carpeta `uploads`.
+2. Es posible que en la base de datos se hayan guardado rutas absolutas locales (ej. `file:///C:/...`) en lugar de rutas relativas (ej. `/uploads/avatars/archivo.jpg`).
+
+## Lo que debés hacer
+
+### 1. Configurar Express para permitir imágenes desde otros puertos
+
+En `src/app.ts`, modificar la configuración de archivos estáticos:
+
+```typescript
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.join(__dirname, "../uploads")),
+);
+```
+
+### 2. Arreglar la subida de imágenes en `src/modules/auth/auth.controller.ts`
+
+Asegurarse de que cuando se guarda `profile_image`, solo se guarde la ruta relativa (NO la ruta completa del sistema operativo).
+
+```typescript
+if (req.file) {
+  // Guardar SOLO la ruta relativa
+  usuario.profile_image = `/uploads/avatars/${req.file.filename}`;
+}
+```
+
+### 3. Script de limpieza en la Base de Datos
+
+Si en la tabla `users` ya hay registros con `file:///`, el backend debe limpiarlos. Escribir un script rápido o avisar al usuario para que ejecute esto en SQL:
+
+```sql
+UPDATE users
+SET profile_image = REPLACE(profile_image, 'file:///C:/Users/short/Instituto/PP-III/short2/tachyon-dream-proyecto/backend/', '/')
+WHERE profile_image LIKE 'file:///%';
+```
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 91: Prevenir carga de rutas file:/// en el Frontend
+
+## Contexto
+
+Hay imágenes que se intentan cargar desde `file:///`, lo que genera un error de seguridad. Vamos a asegurarnos de que las rutas de las imágenes siempre apunten al servidor web.
+
+## Lo que debés hacer
+
+### 1. Revisar `src/pages/Login.tsx` y `src/layouts/DashboardLayout.tsx`
+
+Buscar cualquier etiqueta `<img>` (especialmente las que cargan `user.profile_image` o un logo). Asegurarse de que la URL se construya correctamente:
+
+```tsx
+// En lugar de esto:
+<img src={user.profile_image} />
+
+// Hacer esto:
+<img src={`http://localhost:3000${user.profile_image.startsWith('/') ? '' : '/'}${user.profile_image}`} />
+```
+
+### 2. (Opcional) Configurar un Proxy en Vite
+
+Para evitar problemas de CORS en el futuro, podemos configurar Vite para que redirija las peticiones de `/uploads` al backend.
+En `vite.config.ts`:
+
+```typescript
+export default defineConfig({
+  // ...
+  server: {
+    proxy: {
+      "/uploads": "http://localhost:3000",
+    },
+  },
+});
+```
+
+_(Si el agente hace esto, avisale que en el frontend deben quitar el `http://localhost:3000` de las imágenes y dejar solo `/uploads/...`)_.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados.
+
+<# Tarea 92: Arreglar CORS de imágenes y ruta de especialidades de admin
+
+## Contexto
+
+1. Las imágenes siguen bloqueadas por `OpaqueResponseBlocking` en Firefox. El backend necesita enviar headers CORS explícitos para los archivos estáticos.
+2. El frontend está llamando a `GET /api/especialidades/admin` (que da 404), cuando debería llamar a `GET /api/especialidades` para obtener todas.
+
+## Objetivo
+
+1. Configurar CORS para la carpeta `/uploads`.
+2. Corregir la llamada a la API en el frontend.
+
+## Lo que debés hacer
+
+### 1. Backend - Configurar CORS para archivos estáticos
+
+En `src/app.ts`, reemplazar la configuración actual de la carpeta estática por esta:
+
+```typescript
+import express from "express";
+import path from "path";
+import cors from "cors";
+
+const app = express();
+
+// ... tus otros middlewares (express.json, etc.)
+
+// Configuración mejorada para servir las imágenes
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    next();
+  },
+  express.static(path.join(__dirname, "../uploads")),
+);
+```
+
+### 2. Backend - Asegurar la ruta base de especialidades
+
+En `src/modules/especialidades/especialidades.routes.ts`, asegurarse de que la ruta raíz `GET /` devuelva TODAS las especialidades (activas e inactivas) si el que consulta es un Admin, o solo las activas si es público.
+
+```typescript
+// Si el backend tiene un middleware opcional de auth, usarlo aquí.
+// Si no, simplemente devolver todas las especialidades en el GET.
+router.get("/", getEspecialidades);
+```
+
+### 3. Frontend - Corregir la ruta en `src/api/especialidades.api.ts`
+
+El frontend está apuntando a `/especialidades/admin`. Hay que cambiarlo a `/especialidades`.
+
+```typescript
+export const getEspecialidades = async (
+  soloActivas: boolean = true,
+): Promise<Especialidad[]> => {
+  // CAMBIAR '/especialidades/admin' POR '/especialidades'
+  const { data } =
+    await axiosClient.get<ApiResponse<Especialidad[]>>("/especialidades");
+
+  const especialidades = data.success && data.data ? data.data : [];
+  return soloActivas ? especialidades.filter((e) => e.active) : especialidades;
+};
+```
+
+### 4. Frontend - Corregir la imagen en el Navbar y AdminUsuarios
+
+Para evitar el bloqueo de Firefox, si el frontend está usando una URL absoluta para las imágenes (`http://localhost:3000/...`), va a seguir fallando si el navegador es estricto.
+
+Asegurarse de que el atributo `crossOrigin` esté presente en las etiquetas `<img>`:
+
+```tsx
+<img
+  src={`http://localhost:3000${user.profile_image}`}
+  crossOrigin="anonymous"
+  alt="Perfil"
+  className="..."
+/>
+```
+
+### 5. Verificación
+
+- Correr `npm run build` en ambos proyectos.
+- Reiniciar el backend y recargar el frontend.
+  >
+
+# Tarea 93: Corregir la ruta de la carpeta uploads en Express
+
+## Contexto
+
+Las imágenes de perfil ahora devuelven un error `404 Not Found`. Sabemos que la ruta `/uploads/avatars/...` es correcta, pero Express no encuentra los archivos. Esto suele pasar porque `__dirname` cambia dependiendo de si se corre con `ts-node`/`tsx` o compilado, y termina apuntando a `dist/uploads` o `src/uploads` en lugar de la raíz.
+
+## Objetivo
+
+Modificar `src/app.ts` para que la ruta de `express.static` sea absoluta y apunte siempre a la carpeta `uploads` en la raíz del backend.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/app.ts`
+
+Buscar donde se configura `express.static` y cambiarlo por esto:
+
+```typescript
+import express from "express";
+import path from "path";
+
+const app = express();
+
+// Usar process.cwd() apunta a la raíz del backend (donde está el package.json)
+const uploadsPath = path.join(process.cwd(), "uploads");
+
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    next();
+  },
+  express.static(uploadsPath),
+);
+```
+
+### 2. (Opcional) Debug
+
+Agregar un `console.log` para verificar la ruta real en la consola al iniciar el servidor:
+
+```typescript
+console.log(`📂 Sirviendo archivos estáticos desde: ${uploadsPath}`);
+```
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 94: Implementar rutas POST y PUT para Especialidades
+
+## Contexto
+
+El frontend está intentando crear una especialidad con `POST /api/especialidades` y editar con `PUT /api/especialidades/:id`, pero ambas rutas devuelven 404 porque no están implementadas en el backend.
+
+## Objetivo
+
+1. Implementar las funciones `createEspecialidad` y `updateEspecialidad` en el controlador.
+2. Agregar las rutas protegidas para ADMIN en el archivo de rutas.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/modules/especialidades/especialidades.controller.ts`
+
+Agregar las funciones de creación y actualización:
+
+```typescript
+export const createEspecialidad = async (req: Request, res: Response) => {
+  try {
+    const { name, description } = req.body;
+
+    if (!name) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El nombre es obligatorio" });
+    }
+
+    const nueva = await Especialidad.create({
+      name,
+      description,
+      active: true,
+    });
+    return res.status(201).json({ success: true, data: nueva });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al crear la especialidad" });
+  }
+};
+
+export const updateEspecialidad = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, active } = req.body;
+
+    const especialidad = await Especialidad.findByPk(id);
+    if (!especialidad) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Especialidad no encontrada" });
+    }
+
+    if (name) especialidad.name = name;
+    if (description !== undefined) especialidad.description = description;
+    if (active !== undefined) especialidad.active = active;
+
+    await especialidad.save();
+    return res.status(200).json({ success: true, data: especialidad });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Error al actualizar la especialidad" });
+  }
+};
+```
+
+### 2. Modificar `src/modules/especialidades/especialidades.routes.ts`
+
+Agregar las rutas para que solo el ADMIN pueda usarlas:
+
+```typescript
+import { Router } from "express";
+import {
+  getEspecialidades,
+  createEspecialidad,
+  updateEspecialidad,
+} from "./especialidades.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { roleMiddleware } from "../../middlewares/role.middleware"; // Ajusta el nombre si es distinto
+
+const router = Router();
+
+// Público
+router.get("/", getEspecialidades);
+
+// Solo Admin
+router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), createEspecialidad);
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  updateEspecialidad,
+);
+
+export default router;
+```
+
+### 3. Verificación
+
+- Correr `npm run build` en el backend.
+- Reiniciar el servidor backend.
+- Probar crear una especialidad nuevamente desde el frontend.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.

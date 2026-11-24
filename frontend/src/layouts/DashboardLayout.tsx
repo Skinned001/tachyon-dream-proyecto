@@ -83,6 +83,7 @@ export function DashboardLayout({
                   <img
                     src={profileImageUrl}
                     alt="Perfil"
+                    crossOrigin="anonymous"
                     className="h-full w-full object-cover"
                     onError={() => setProfileImageError(true)}
                   />

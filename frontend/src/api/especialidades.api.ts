@@ -12,7 +12,7 @@ export const getEspecialidades = async (
   soloActivas = true,
 ): Promise<Especialidad[]> => {
   const { data } = await axiosClient.get<ApiResponse<Especialidad[]>>(
-    soloActivas ? '/especialidades' : '/especialidades/admin',
+    '/especialidades',
   );
   if (!data.success || !Array.isArray(data.data)) {
     throw new Error(data.error || 'Error al obtener especialidades');
