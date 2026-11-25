@@ -14,6 +14,8 @@ export interface InstitutionalLibraryResourceDTO {
   fileName: string | null;
   uploadedBy: number | null;
   uploader?: LibraryResourceUploaderDTO;
+  specialtyId: number | null;
+  specialty?: { id: number; name: string } | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -22,6 +24,7 @@ export interface CreateInstitutionalLibraryResourceInput {
   title: string;
   description?: string;
   category: string;
+  specialtyId?: number | null;
 }
 
 export interface InstitutionalLibraryResourceFilters {

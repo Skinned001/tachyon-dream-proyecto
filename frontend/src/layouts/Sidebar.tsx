@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart3,
   BookOpen,
   CheckSquare,
   ChevronLeft,
@@ -91,7 +92,7 @@ const sections: SidebarSection[] = [
       },
       {
         to: '/recursos-biblioteca',
-        label: 'Manuales',
+        label: 'Documentos',
         icon: FolderOpen,
         allowedRoles: ['ADMIN', 'EDITOR'],
       },
@@ -111,6 +112,12 @@ const sections: SidebarSection[] = [
         label: 'Auditoría',
         icon: ShieldCheck,
         allowedRoles: ['ADMIN'],
+      },
+      {
+        to: '/admin/metricas',
+        label: 'Métricas',
+        icon: BarChart3,
+        allowedRoles: ['ADMIN', 'EDITOR'],
       },
       {
         to: '/admin/especialidades',

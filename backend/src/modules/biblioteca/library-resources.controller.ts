@@ -10,6 +10,15 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(255),
   description: z.string().trim().max(5000).optional(),
   category: z.string().trim().min(1).max(64),
+  specialtyId: z
+    .preprocess(
+      (value) =>
+        value === '' || value === undefined || value === null
+          ? null
+          : Number(value),
+      z.number().int().positive().nullable(),
+    )
+    .optional(),
 });
 
 const listQuerySchema = z.object({

@@ -12,6 +12,7 @@ import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import editorialRoutes from "./modules/editorial/editorial.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import auditoriaRoutes from "./modules/auditoria/auditoria.routes.js";
+import metricasRoutes from "./modules/metricas/metricas.routes.js";
 import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -72,6 +73,7 @@ app.use("/api/usuarios", usuariosRoutes);
 app.use("/api/convocatorias", editorialRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/auditoria", auditoriaRoutes);
+app.use("/api/metricas", metricasRoutes);
 
 app.use(errorMiddleware);
 

@@ -65,6 +65,10 @@ export const AdminUsuarios = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    id: number;
+    type: 'suspend' | 'reactivate' | 'reset';
+  } | null>(null);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -311,12 +315,9 @@ export const AdminUsuarios = () => {
   }, [openMenuId]);
 
   const handleSuspend = async (id: number) => {
-    if (!window.confirm('¿Deshabilitar esta cuenta?')) {
-      setOpenMenuId(null);
-      return;
-    }
-
+    setConfirmAction(null);
     setOpenMenuId(null);
+    setError('');
     setBusyUserId(id);
     try {
       await updateUsuario(id, { active: false });
@@ -326,7 +327,7 @@ export const AdminUsuarios = () => {
         ),
       );
     } catch (err: unknown) {
-      alert(
+      setError(
         err instanceof Error ? err.message : 'Error al deshabilitar usuario',
       );
     } finally {
@@ -335,12 +336,9 @@ export const AdminUsuarios = () => {
   };
 
   const handleReactivate = async (id: number) => {
-    if (!window.confirm('¿Reactivar esta cuenta?')) {
-      setOpenMenuId(null);
-      return;
-    }
-
+    setConfirmAction(null);
     setOpenMenuId(null);
+    setError('');
     setBusyUserId(id);
     try {
       await updateUsuario(id, { active: true });
@@ -350,7 +348,7 @@ export const AdminUsuarios = () => {
         ),
       );
     } catch (err: unknown) {
-      alert(
+      setError(
         err instanceof Error ? err.message : 'Error al reactivar usuario',
       );
     } finally {
@@ -359,12 +357,9 @@ export const AdminUsuarios = () => {
   };
 
   const handleResetPassword = async (id: number) => {
-    if (!window.confirm('¿Generar nueva contraseña temporal para este usuario?')) {
-      setOpenMenuId(null);
-      return;
-    }
-
+    setConfirmAction(null);
     setOpenMenuId(null);
+    setError('');
     setBusyUserId(id);
     try {
       const newPassword = await resetPassword(id);
@@ -377,7 +372,7 @@ export const AdminUsuarios = () => {
       setCopyError('');
       setIsModalOpen(true);
     } catch (err: unknown) {
-      alert(
+      setError(
         err instanceof Error
           ? err.message
           : 'Error al reiniciar la contraseña',
@@ -638,30 +633,124 @@ export const AdminUsuarios = () => {
                                 <Edit className="h-4 w-4 text-blue-500" />
                                 Editar
                               </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={() => void handleResetPassword(usuario.id)}
-                                className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              >
-                                <Key className="h-4 w-4 text-blue-500" />
-                                Reiniciar contraseña
-                              </button>
-                              {usuario.active ? (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => void handleSuspend(usuario.id)}
-                                  className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                  Deshabilitar cuenta
-                                </button>
+                              {confirmAction?.id === usuario.id &&
+                              confirmAction.type === 'reset' ? (
+                                <div className="flex items-center justify-between gap-1.5 bg-blue-50 px-3 py-2 text-xs">
+                                  <span className="font-medium text-blue-800">
+                                    ¿Reiniciar?
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleResetPassword(usuario.id)
+                                      }
+                                      className="rounded bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-blue-700"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmAction(null)}
+                                      className="rounded px-2 py-1 text-gray-600 hover:bg-gray-200"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
                                 <button
                                   type="button"
                                   role="menuitem"
-                                  onClick={() => void handleReactivate(usuario.id)}
+                                  onClick={() =>
+                                    setConfirmAction({
+                                      id: usuario.id,
+                                      type: 'reset',
+                                    })
+                                  }
+                                  className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <Key className="h-4 w-4 text-blue-500" />
+                                  Reiniciar contraseña
+                                </button>
+                              )}
+                              {usuario.active ? (
+                                confirmAction?.id === usuario.id &&
+                                confirmAction.type === 'suspend' ? (
+                                  <div className="flex items-center justify-between gap-1.5 bg-red-50 px-3 py-2 text-xs">
+                                    <span className="font-medium text-red-800">
+                                      ¿Deshabilitar?
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleSuspend(usuario.id)
+                                        }
+                                        className="rounded bg-red-600 px-2 py-1 font-semibold text-white hover:bg-red-700"
+                                      >
+                                        Sí
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmAction(null)}
+                                        className="rounded px-2 py-1 text-gray-600 hover:bg-gray-200"
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() =>
+                                      setConfirmAction({
+                                        id: usuario.id,
+                                        type: 'suspend',
+                                      })
+                                    }
+                                    className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    Deshabilitar cuenta
+                                  </button>
+                                )
+                              ) : confirmAction?.id === usuario.id &&
+                                confirmAction.type === 'reactivate' ? (
+                                <div className="flex items-center justify-between gap-1.5 bg-green-50 px-3 py-2 text-xs">
+                                  <span className="font-medium text-green-800">
+                                    ¿Habilitar?
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleReactivate(usuario.id)
+                                      }
+                                      className="rounded bg-green-700 px-2 py-1 font-semibold text-white hover:bg-green-800"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmAction(null)}
+                                      className="rounded px-2 py-1 text-gray-600 hover:bg-gray-200"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() =>
+                                    setConfirmAction({
+                                      id: usuario.id,
+                                      type: 'reactivate',
+                                    })
+                                  }
                                   className="flex w-full items-center gap-2 whitespace-nowrap px-4 py-2 text-sm text-green-700 hover:bg-green-50"
                                 >
                                   <UserCheck className="h-4 w-4" />

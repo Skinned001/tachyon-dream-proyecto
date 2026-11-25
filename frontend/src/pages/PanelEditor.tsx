@@ -61,6 +61,7 @@ export const PanelEditor = () => {
   const [withdrawPassword, setWithdrawPassword] = useState('');
   const [withdrawError, setWithdrawError] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [confirmingApproveId, setConfirmingApproveId] = useState<number | null>(null);
 
   const cargarBandeja = useCallback(async () => {
     try {
@@ -195,11 +196,7 @@ export const PanelEditor = () => {
   };
 
   const handleAprobarCorreccion = async (articulo: Articulo) => {
-    const confirmed = window.confirm(
-      `¿Confirmar que las correcciones de "${articulo.title}" están resueltas y pasarlo a APROBADO para publicación?`,
-    );
-    if (!confirmed) return;
-
+    setConfirmingApproveId(null);
     try {
       setApprovingId(articulo.id);
       setFeedback(null);
@@ -616,19 +613,45 @@ export const PanelEditor = () => {
                             <ChevronDown size={14} />
                           )}
                         </button>
-                        <button
-                          type="button"
-                          disabled={approvingId === articulo.id}
-                          onClick={() => void handleAprobarCorreccion(articulo)}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#087d70] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#07584f] disabled:opacity-50"
-                        >
-                          {approvingId === articulo.id ? (
-                            <Loader2 className="animate-spin" size={14} />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          Aprobar versión corregida
-                        </button>
+                        {confirmingApproveId === articulo.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={approvingId === articulo.id}
+                              onClick={() => void handleAprobarCorreccion(articulo)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-[#087d70] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#07584f] disabled:opacity-50"
+                            >
+                              {approvingId === articulo.id ? (
+                                <Loader2 className="animate-spin" size={14} />
+                              ) : (
+                                <CheckCircle2 size={14} />
+                              )}
+                              Confirmar aprobación
+                            </button>
+                            <button
+                              type="button"
+                              disabled={approvingId === articulo.id}
+                              onClick={() => setConfirmingApproveId(null)}
+                              className="rounded-xl border border-[#dcebe5] bg-white px-3 py-2 text-xs font-semibold text-[#526e68] hover:bg-[#f2f7f4]"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={approvingId === articulo.id}
+                            onClick={() => setConfirmingApproveId(articulo.id)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#087d70] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#07584f] disabled:opacity-50"
+                          >
+                            {approvingId === articulo.id ? (
+                              <Loader2 className="animate-spin" size={14} />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+                            Aprobar versión corregida
+                          </button>
+                        )}
                       </div>
                     </div>
                     {isExpanded && (

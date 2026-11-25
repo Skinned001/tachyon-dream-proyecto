@@ -4,6 +4,7 @@ import { PanelEditor } from "../pages/PanelEditor";
 import { BibliotecaRoute } from "./BibliotecaRoute";
 import { DashboardHome } from "../pages/DashboardHome";
 import { AdminAuditoria } from "../pages/AdminAuditoria";
+import { AdminMetricas } from "../pages/AdminMetricas";
 import { AdminUsuarios } from "../pages/AdminUsuarios";
 import { AdminEspecialidades } from "../pages/AdminEspecialidades";
 import { Login } from "../pages/Login";
@@ -64,6 +65,7 @@ export function AppRoutes() {
             path="recursos-biblioteca"
             element={<RecursosBibliotecaAdmin />}
           />
+          <Route path="admin/metricas" element={<AdminMetricas />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

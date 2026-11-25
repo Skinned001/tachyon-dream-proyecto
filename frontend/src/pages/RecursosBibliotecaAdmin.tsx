@@ -8,6 +8,10 @@ import {
   type LibraryResource,
   type LibraryResourceCategory,
 } from '../api/library-resources.api';
+import {
+  getEspecialidades,
+  type Especialidad,
+} from '../api/especialidades.api';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { formatDateTime } from '../utils/formatDate';
@@ -32,11 +36,14 @@ export function RecursosBibliotecaAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null);
   const [listError, setListError] = useState('');
   const [formError, setFormError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<LibraryResourceCategory>('MANUAL');
+  const [specialtyId, setSpecialtyId] = useState('');
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +64,9 @@ export function RecursosBibliotecaAdmin() {
 
   useEffect(() => {
     void loadResources();
+    void getEspecialidades()
+      .then(setEspecialidades)
+      .catch(() => setEspecialidades([]));
   }, [loadResources]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -86,11 +96,13 @@ export function RecursosBibliotecaAdmin() {
       await createLibraryResource({
         title: title.trim(),
         category,
+        specialtyId: specialtyId ? Number(specialtyId) : null,
         description: description.trim(),
         file,
       });
       setTitle('');
       setCategory('MANUAL');
+      setSpecialtyId('');
       setDescription('');
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -106,11 +118,7 @@ export function RecursosBibliotecaAdmin() {
   };
 
   const handleDelete = async (resource: LibraryResource) => {
-    const confirmed = window.confirm(
-      `¿Querés eliminar "${resource.title}"? Esta acción no se puede deshacer.`,
-    );
-    if (!confirmed) return;
-
+    setConfirmingDeleteId(null);
     setDeletingId(resource.id);
     setFeedback('');
     setListError('');
@@ -134,7 +142,7 @@ export function RecursosBibliotecaAdmin() {
           Gestión institucional
         </p>
         <h2 className="mt-1 font-editorial text-[30px] leading-tight tracking-[-.03em] text-[#173d3b]">
-          Manuales y Documentos
+          Documentos Institucionales
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#526e68]">
           Cargá manuales, protocolos, guías clínicas y normativas para su
@@ -144,7 +152,7 @@ export function RecursosBibliotecaAdmin() {
 
       <Card title="Cargar un documento">
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-5 md:grid-cols-3">
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-[#244f47]">
                 Título <span className="text-red-600">*</span>
@@ -155,7 +163,7 @@ export function RecursosBibliotecaAdmin() {
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={255}
                 required
-                placeholder="Ej. Manual de procedimientos"
+                placeholder="Ej. Protocolo de procedimientos"
               />
             </label>
 
@@ -173,6 +181,24 @@ export function RecursosBibliotecaAdmin() {
                 {categories.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-[#244f47]">
+                Especialidad <span className="font-normal text-[#78918a]">(opcional)</span>
+              </span>
+              <select
+                className={fieldClassName}
+                value={specialtyId}
+                onChange={(event) => setSpecialtyId(event.target.value)}
+              >
+                <option value="">General / Transversal</option>
+                {especialidades.map((especialidad) => (
+                  <option key={especialidad.id} value={especialidad.id}>
+                    {especialidad.name}
                   </option>
                 ))}
               </select>
@@ -306,6 +332,11 @@ export function RecursosBibliotecaAdmin() {
                         <span className="rounded-full bg-[#e8f4ee] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#176451]">
                           {resource.category}
                         </span>
+                        {resource.specialty && (
+                          <span className="rounded-full border border-[#cfe4dc] bg-[#f7fbf9] px-2.5 py-1 text-[10px] font-semibold text-[#244f47]">
+                            {resource.specialty.name}
+                          </span>
+                        )}
                         <span className="text-xs text-[#78918a]">
                           Cargado el {formatDateTime(resource.createdAt)}
                         </span>
@@ -328,17 +359,42 @@ export function RecursosBibliotecaAdmin() {
                       Ver PDF
                       <ExternalLink size={14} />
                     </a>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      disabled={deletingId !== null}
-                      isLoading={deletingId === resource.id}
-                      onClick={() => void handleDelete(resource)}
-                      className="gap-1.5 rounded-xl px-3 py-2 text-xs"
-                    >
-                      <Trash2 size={14} />
-                      Eliminar
-                    </Button>
+                    {confirmingDeleteId === resource.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="danger"
+                          disabled={deletingId !== null}
+                          isLoading={deletingId === resource.id}
+                          onClick={() => void handleDelete(resource)}
+                          className="gap-1.5 rounded-xl px-3 py-2 text-xs"
+                        >
+                          <Trash2 size={14} />
+                          Confirmar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={deletingId !== null}
+                          onClick={() => setConfirmingDeleteId(null)}
+                          className="rounded-xl px-2.5 py-2 text-xs text-[#526e68]"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={deletingId !== null}
+                        isLoading={deletingId === resource.id}
+                        onClick={() => setConfirmingDeleteId(resource.id)}
+                        className="gap-1.5 rounded-xl px-3 py-2 text-xs"
+                      >
+                        <Trash2 size={14} />
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </article>
               ))}

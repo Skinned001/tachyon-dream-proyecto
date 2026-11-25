@@ -15,7 +15,6 @@ import {
   type AuditEntityType,
   type AuditLogItem,
 } from '../api/auditoria.api';
-import { CustomDatePicker } from '../components/ui/DatePicker';
 import { formatDateTime } from '../utils/formatDate';
 
 const entityLabels: Record<AuditEntityType, string> = {
@@ -63,8 +62,8 @@ export const AdminAuditoria = () => {
 
   const [entityType, setEntityType] = useState<AuditEntityType | ''>('');
   const [search, setSearch] = useState('');
-  const [from, setFrom] = useState<Date | null>(null);
-  const [to, setTo] = useState<Date | null>(null);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -77,8 +76,8 @@ export const AdminAuditoria = () => {
       const result = await getAuditLogs({
         entityType,
         search,
-        from: from?.toISOString(),
-        to: to?.toISOString(),
+        from,
+        to,
         page,
         limit,
       });
@@ -104,8 +103,8 @@ export const AdminAuditoria = () => {
   const clearFilters = () => {
     setEntityType('');
     setSearch('');
-    setFrom(null);
-    setTo(null);
+    setFrom('');
+    setTo('');
     setPage(1);
   };
 
@@ -135,7 +134,7 @@ export const AdminAuditoria = () => {
         </button>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_190px_190px_auto]">
+      <section className="grid items-end gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_160px_160px_auto]">
         <label className="relative block">
           <span className="sr-only">Buscar en auditoría</span>
           <Search
@@ -172,29 +171,33 @@ export const AdminAuditoria = () => {
         </select>
 
         <label className="block">
-          <span className="sr-only">Desde</span>
-          <CustomDatePicker
-            selected={from}
-            onChange={(date) => {
-              setFrom(date);
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
+            Desde
+          </span>
+          <input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => {
+              setFrom(e.target.value);
               setPage(1);
             }}
-            showTimeSelect={false}
-            placeholder="Desde..."
             className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
           />
         </label>
 
         <label className="block">
-          <span className="sr-only">Hasta</span>
-          <CustomDatePicker
-            selected={to}
-            onChange={(date) => {
-              setTo(date);
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
+            Hasta
+          </span>
+          <input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => {
+              setTo(e.target.value);
               setPage(1);
             }}
-            showTimeSelect={false}
-            placeholder="Hasta..."
             className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
           />
         </label>
