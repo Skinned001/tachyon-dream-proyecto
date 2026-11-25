@@ -71,6 +71,8 @@ export const CustomDatePicker = ({
         wrapperClassName="w-full"
         calendarContainer={calendarContainer}
         shouldCloseOnSelect={false}
+        withPortal
+        popperPlacement="bottom-start"
         minDate={minDateTime}
         filterTime={(time) =>
           !minDateTime || time.getTime() >= minDateTime.getTime()

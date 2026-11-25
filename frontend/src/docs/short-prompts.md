@@ -8189,3 +8189,248 @@ import { CustomDatePicker } from '../components/ui/DatePicker';
 ## Respuesta esperada
 
 Confirmame que la librería fue instalada y si `npm run build` pasó.
+
+# Tarea 98: Corregir UI del DatePicker y aplicarlo en Auditoría
+
+## Contexto
+
+1. El `CustomDatePicker` en el modal de Convocatorias se corta (la pestaña "Time" no se ve bien) porque el modal oculta el desborde.
+2. La pantalla de `AdminAuditoria.tsx` sigue usando los inputs nativos de fecha (`<input type="date">`), lo que rompe la consistencia visual.
+
+## Objetivo
+
+1. Ajustar el `CustomDatePicker` para que la hora se vea bien.
+2. Reemplazar los inputs de fecha en la pantalla de Auditoría.
+
+## Lo que debés hacer
+
+### 1. Arreglar estilos de `react-datepicker` en `src/index.css`
+
+Agregar estas reglas al final del archivo para asegurar que el calendario flote por encima de todo y que la hora no se corte:
+
+```css
+/* Forzar que el calendario flote por encima de los modales */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+/* Arreglar el ancho del panel de tiempo */
+.react-datepicker__time-container {
+  border-left: 1px solid #e5e7eb !important;
+}
+
+.react-datepicker__time-list-item {
+  padding: 5px 10px !important;
+  font-size: 0.875rem !important;
+}
+```
+
+### 2. Actualizar `CustomDatePicker.tsx`
+
+Para evitar que se corte en el modal, agregar la propiedad `portalId="root"` (si no la tiene) y un ancho mínimo.
+
+```tsx
+// src/components/ui/DatePicker.tsx
+// ...
+<DatePicker
+  // ... props anteriores
+  portalId="root" // Esto hace que el calendario se dibuje al final del body, evitando que el modal lo corte
+  popperPlacement="bottom-start"
+/>
+// ...
+```
+
+### 3. Modificar `src/pages/AdminAuditoria.tsx` (o el componente de filtros)
+
+Importar el nuevo componente y reemplazar los inputs viejos:
+
+```tsx
+import { CustomDatePicker } from "../components/ui/DatePicker";
+
+// ... dentro del componente
+const [fechaInicio, setFechaInicio] = useState<Date | null>(null);
+const [fechaFin, setFechaFin] = useState<Date | null>(null);
+
+// Reemplazar los <input type="date"> por:
+<div className="flex gap-4">
+  <div className="w-48">
+    <CustomDatePicker
+      selected={fechaInicio}
+      onChange={(date) => setFechaInicio(date)}
+      showTimeSelect={false}
+      placeholder="Desde..."
+    />
+  </div>
+  <div className="w-48">
+    <CustomDatePicker
+      selected={fechaFin}
+      onChange={(date) => setFechaFin(date)}
+      showTimeSelect={false}
+      placeholder="Hasta..."
+    />
+  </div>
+</div>;
+```
+
+_(Nota: Asegurate de que al hacer clic en "Actualizar" o "Buscar", el componente envíe las fechas formateadas correctamente al backend usando `.toISOString()`)_.
+
+### 4. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal de Convocatorias y verificar que la hora se vea completa.
+- Ir a Auditoría y ver los nuevos calendarios.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 99: Rediseñar el CustomDatePicker para unificar diseño y botón de Listo
+
+## Contexto
+
+El `react-datepicker` actual tiene problemas visuales: el botón "Listo" tapa las flechas de navegación de los meses, y la columna de horas queda desalineada a la derecha. Necesitamos reescribir el componente usando un contenedor personalizado (`calendarContainer`) y ajustar el CSS para que se vea como un calendario moderno.
+
+## Lo que debés hacer
+
+### 1. Sobrescribir `src/components/ui/DatePicker.tsx`
+
+Vamos a usar la propiedad `calendarContainer` de `react-datepicker` para inyectar un pie de página (footer) con el botón de "Listo" en la esquina inferior derecha.
+
+```tsx
+// src/components/ui/DatePicker.tsx
+import { useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { es } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
+import { Calendar, Check } from "lucide-react";
+
+registerLocale("es", es);
+
+interface CustomDatePickerProps {
+  selected: Date | null;
+  onChange: (date: Date | null) => void;
+  showTimeSelect?: boolean;
+  placeholder?: string;
+}
+
+export const CustomDatePicker = ({
+  selected,
+  onChange,
+  showTimeSelect = true,
+  placeholder = "Seleccionar fecha",
+}: CustomDatePickerProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Contenedor personalizado para agregar el botón "Listo" abajo
+  const CustomContainer = ({ className, children }: any) => (
+    <div className={className}>
+      {children}
+      <div className="flex justify-end p-2 border-t border-gray-200 bg-gray-50 rounded-b-md">
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          className="px-4 py-1.5 bg-institucional-600 text-white text-sm font-medium rounded hover:bg-institucional-700 transition-colors"
+        >
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="relative w-full">
+      <DatePicker
+        selected={selected}
+        onChange={onChange}
+        showTimeSelect={showTimeSelect}
+        timeFormat="HH:mm"
+        timeIntervals={15}
+        dateFormat={showTimeSelect ? "dd/MM/yyyy, HH:mm" : "dd/MM/yyyy"}
+        locale="es"
+        placeholderText={placeholder}
+        className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-institucional-500 text-sm"
+        wrapperClassName="w-full"
+        portalId="root"
+        open={isOpen}
+        onInputClick={() => setIsOpen(true)}
+        onClickOutside={() => setIsOpen(false)}
+        calendarContainer={CustomContainer} // Inyectamos el botón
+        popperPlacement="bottom-start"
+      />
+      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+    </div>
+  );
+};
+```
+
+### 2. Arreglar los estilos en `src/index.css`
+
+Reemplazar o agregar estas reglas para solucionar el choque de las flechas y la columna de tiempo:
+
+```css
+/* --- ESTILOS REACT DATEPICKER --- */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.react-datepicker {
+  font-family: inherit !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+/* El header de los meses (arreglar el choque de las flechas) */
+.react-datepicker__header {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  padding-top: 10px !important;
+  position: relative;
+}
+
+.react-datepicker__navigation {
+  top: 10px !important;
+}
+
+/* Columna de horas a la derecha, con su propio scroll */
+.react-datepicker__time-container {
+  border-left: 1px solid #e5e7eb !important;
+  width: 85px !important;
+}
+
+.react-datepicker__time-list {
+  height: 200px !important; /* Altura fija para el scroll de horas */
+  overflow-y: auto !important;
+}
+
+.react-datepicker__time-list-item {
+  padding: 8px 10px !important;
+  font-size: 0.875rem !important;
+  height: auto !important;
+}
+
+/* Colores de selección */
+.react-datepicker__day--selected,
+.react-datepicker__time-list-item--selected {
+  background-color: #2563eb !important; /* Azul institucional */
+  color: white !important;
+}
+.react-datepicker__day:hover,
+.react-datepicker__time-list-item:hover {
+  background-color: #eff6ff !important;
+}
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Abrir el selector de fecha.
+- Verificar que las flechas de los meses ( < y > ) se pueden hacer clic sin problemas.
+- Verificar que las horas se puedan scrollear en su columna derecha.
+- Hacer clic en el botón "Listo" (que ahora está abajo a la derecha) para cerrar el calendario.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
