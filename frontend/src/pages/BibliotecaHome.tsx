@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownToLine, BookMarked, BookOpen, FileText, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDownToLine, BookMarked, BookOpen, Eye, FileText, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import {
   getFavoriteKey,
@@ -12,6 +12,11 @@ import {
   type RecursoBiblioteca,
 } from '../api/biblioteca.api';
 import { getConvocatoriasPublicas } from '../api/convocatorias.api';
+import {
+  trackBibliotecaVisit,
+  trackDocumentDownload,
+  trackDocumentView,
+} from '../api/metricas.api';
 import { useAuth } from '../context/AuthContext';
 
 const FAVORITES_FILTER = '__GUARDADOS__';
@@ -33,6 +38,48 @@ export const BibliotecaHome = () => {
   const [recursos, setRecursos] = useState<RecursoBiblioteca[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    void trackBibliotecaVisit();
+  }, []);
+
+  const handleDownload = async (resource: RecursoBiblioteca) => {
+    if (!resource.archivoUrl) return;
+    const key = `${resource.source}-${resource.id}`;
+    setDownloadingKey(key);
+    try {
+      const response = await fetch(resource.archivoUrl, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('No se pudo descargar el archivo.');
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (resource.titulo || `documento-${resource.id}`)
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .trim();
+      link.href = objectUrl;
+      link.download = safeName.toLowerCase().endsWith('.pdf')
+        ? safeName
+        : `${safeName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      trackDocumentDownload(
+        resource.source === 'articulo' ? 'ARTICULO' : 'RECURSO_BIBLIOTECA',
+        resource.id,
+      );
+    } catch {
+      window.open(resource.archivoUrl, '_blank', 'noreferrer');
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
   const [category, setCategory] = useState(() =>
     searchParams.get('guardados') === '1'
       ? FAVORITES_FILTER
@@ -369,39 +416,74 @@ export const BibliotecaHome = () => {
                 );
 
                 return (
-                  <article key={`${resource.source}-${resource.id}`} className="group rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 transition hover:-translate-y-0.5 hover:border-[#82c4a9] hover:shadow-[0_8px_24px_rgba(7,88,79,.09)]">
+                  <article key={`${resource.source}-${resource.id}`} className="group rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-6 transition hover:-translate-y-0.5 hover:border-[#82c4a9] hover:shadow-[0_8px_24px_rgba(7,88,79,.09)]">
                     <div className="flex items-start justify-between gap-3">
-                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold tracking-wide ${visual.color === 'sage' ? 'bg-[#d7f2e6] text-[#08745e]' : visual.color === 'sand' ? 'bg-[#fff0cf] text-[#85500b]' : visual.color === 'blue' ? 'bg-[#dcecf4] text-[#28677c]' : 'bg-[#ffe3dc] text-[#9a4939]'}`}>{visual.initials}</div>
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold tracking-wide ${visual.color === 'sage' ? 'bg-[#d7f2e6] text-[#08745e]' : visual.color === 'sand' ? 'bg-[#fff0cf] text-[#85500b]' : visual.color === 'blue' ? 'bg-[#dcecf4] text-[#28677c]' : 'bg-[#ffe3dc] text-[#9a4939]'}`}>{visual.initials}</div>
                       <button
                         type="button"
                         aria-label={isSaved ? 'Quitar de guardados' : 'Guardar en favoritos'}
                         title={isSaved ? 'Quitar de guardados' : 'Guardar en favoritos'}
                         onClick={() => void toggleSaved(resource)}
-                        className={`flex h-8 w-8 items-center justify-center rounded-full transition ${isSaved ? 'bg-[#bce8d8] text-[#07584f]' : 'text-[#52766d] hover:bg-[#dff2e9] hover:text-[#07584f]'}`}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition ${
+                          isSaved
+                            ? 'border-[#7bc9ad] bg-[#d4f2e6] text-[#07584f]'
+                            : 'border-[#cfe4dc] bg-[#f4fbf8] text-[#173d3b] hover:border-[#82c4a9] hover:bg-[#dff2e9] hover:text-[#07584f]'
+                        }`}
                       >
-                        <BookMarked fill={isSaved ? 'currentColor' : 'none'} size={15} />
+                        <BookMarked fill={isSaved ? 'currentColor' : 'none'} size={16} />
+                        {isSaved ? 'Guardado' : 'Guardar'}
                       </button>
                     </div>
                     <div className="mt-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#e1f3eb] px-2 py-1 text-[9px] font-semibold text-[#17624f]">{getCategoryLabel(resource.tipo || 'General')}</span>
-                        <span className="text-[9px] text-[#52766d]">{resource.area || 'Sin área'}</span>
-                        <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${resource.visibilidad === 'PUBLICO' ? 'bg-slate-100 text-slate-600' : resource.visibilidad === 'INTERNO' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{resource.visibilidad || 'PÚBLICO'}</span>
+                        <span className="rounded-full bg-[#e1f3eb] px-3 py-1 text-xs font-semibold text-[#134e3f]">{getCategoryLabel(resource.tipo || 'General')}</span>
+                        <span className="text-xs font-medium text-[#2d584f]">{resource.area || 'Sin área'}</span>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${resource.visibilidad === 'PUBLICO' ? 'bg-slate-100 text-slate-700' : resource.visibilidad === 'INTERNO' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>{resource.visibilidad || 'PÚBLICO'}</span>
                       </div>
-                      <h4 className="mt-3 text-[13px] font-semibold leading-5 text-[#244f47]">{safeTitulo}</h4>
+                      <h4 className="mt-3 text-lg font-bold leading-snug text-[#102f2d]">{safeTitulo}</h4>
                       {resource.autor && (
-                        <p className="mt-1 text-[10px] font-medium text-[#52766d]">{resource.autor}</p>
+                        <p className="mt-1 text-sm font-medium text-[#2d584f]">{resource.autor}</p>
                       )}
-                      <p className="mt-1.5 min-h-[34px] text-[10px] leading-[1.7] text-[#526e68] line-clamp-2">{resource.descripcion || 'Sin descripción'}</p>
+                      <p className="mt-2 min-h-[44px] text-sm leading-relaxed text-[#35534d] line-clamp-2">{resource.descripcion || 'Sin descripción'}</p>
                     </div>
-                    <div className="mt-4 flex items-center justify-between border-t border-[#e3eee9] pt-3">
-                      <div className="flex items-center gap-1.5 text-[9px] text-[#52766d]"><FileText size={12} />PDF</div>
+                    <div className="mt-5 flex items-center justify-between border-t border-[#e3eee9] pt-4">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-[#35534d]"><FileText size={15} />PDF</div>
                       {resource.archivoUrl ? (
-                        <a href={resource.archivoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-semibold text-[#087366] hover:underline">
-                          <ArrowDownToLine size={13} /> Descargar
-                        </a>
+                        <div className="flex items-center gap-2.5">
+                          <a
+                            href={resource.archivoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() =>
+                              trackDocumentView(
+                                resource.source === 'articulo'
+                                  ? 'ARTICULO'
+                                  : 'RECURSO_BIBLIOTECA',
+                                resource.id,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#b9d8ca] bg-white px-3.5 py-2 text-sm font-semibold text-[#102f2d] transition hover:border-[#087d70] hover:bg-[#edf6f2]"
+                          >
+                            <Eye size={16} /> Ver
+                          </a>
+                          <button
+                            type="button"
+                            disabled={
+                              downloadingKey ===
+                              `${resource.source}-${resource.id}`
+                            }
+                            onClick={() => void handleDownload(resource)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#087d70] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#07584f] disabled:opacity-50"
+                          >
+                            <ArrowDownToLine size={16} />
+                            {downloadingKey ===
+                            `${resource.source}-${resource.id}`
+                              ? 'Descargando...'
+                              : 'Descargar'}
+                          </button>
+                        </div>
                       ) : (
-                        <span className="text-[10px] text-[#718a81]">PDF no disponible</span>
+                        <span className="text-sm text-[#526e68]">PDF no disponible</span>
                       )}
                     </div>
                   </article>

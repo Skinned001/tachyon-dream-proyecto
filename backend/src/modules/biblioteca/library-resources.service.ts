@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { Op, type WhereOptions } from 'sequelize';
 import { uploadsDirectory } from '../../config/uploads.js';
+import { Especialidad } from '../especialidades/Especialidad.model.js';
 import { Usuario } from '../usuarios/Usuario.model.js';
 import { RecursoBiblioteca } from './RecursoBiblioteca.model.js';
 import type {
@@ -16,6 +17,13 @@ const uploaderInclude = {
   attributes: ['id', 'username', 'first_name', 'last_name'],
 };
 
+const specialtyInclude = {
+  model: Especialidad,
+  as: 'specialty',
+  attributes: ['id', 'name'],
+  required: false,
+};
+
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -25,6 +33,7 @@ const formatFileSize = (bytes: number): string => {
 const toDTO = (
   resource: RecursoBiblioteca,
   uploader = resource.uploader,
+  specialty = resource.specialty,
 ): InstitutionalLibraryResourceDTO => ({
   id: resource.id,
   title: resource.title,
@@ -47,6 +56,8 @@ const toDTO = (
         },
       }
     : {}),
+  specialtyId: resource.specialtyId ?? null,
+  specialty: specialty ? { id: specialty.id, name: specialty.name } : null,
   createdAt: resource.createdAt.toISOString(),
   updatedAt: resource.updatedAt?.toISOString() ?? null,
 });
@@ -116,7 +127,7 @@ export class LibraryResourcesService {
 
     const resources = await RecursoBiblioteca.findAll({
       where,
-      include: [uploaderInclude],
+      include: [uploaderInclude, specialtyInclude],
       order: [
         ['createdAt', 'DESC'],
         ['id', 'DESC'],
@@ -135,6 +146,16 @@ export class LibraryResourcesService {
       throw new LibraryResourcesError(404, 'No se encontró el usuario que sube el recurso.');
     }
 
+    let specialty: Especialidad | null = null;
+    if (input.specialtyId) {
+      specialty = await Especialidad.findByPk(input.specialtyId, {
+        attributes: ['id', 'name'],
+      });
+      if (!specialty) {
+        throw new LibraryResourcesError(400, 'La especialidad seleccionada no existe.');
+      }
+    }
+
     const fileUrl = `/uploads/library/${path.basename(file.path)}`;
     const resource = await RecursoBiblioteca.create({
       title: input.title,
@@ -146,9 +167,9 @@ export class LibraryResourcesService {
       fileName: file.originalname,
       visibility: 'PUBLICO',
       uploadedBy,
-      specialtyId: null,
+      specialtyId: specialty?.id ?? null,
     });
-    return toDTO(resource, uploader);
+    return toDTO(resource, uploader, specialty ?? undefined);
   }
 
   async delete(id: number): Promise<void> {

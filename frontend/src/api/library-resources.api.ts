@@ -22,6 +22,8 @@ export interface LibraryResource {
     first_name: string;
     last_name: string;
   };
+  specialtyId: number | null;
+  specialty?: { id: number; name: string } | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -35,6 +37,7 @@ export interface CreateLibraryResourceInput {
   title: string;
   description?: string;
   category: LibraryResourceCategory;
+  specialtyId?: number | null;
   file: File;
 }
 
@@ -58,6 +61,9 @@ export const createLibraryResource = async (
   formData.append('file', input.file);
   formData.append('title', input.title);
   formData.append('category', input.category);
+  if (input.specialtyId) {
+    formData.append('specialtyId', String(input.specialtyId));
+  }
   if (input.description) {
     formData.append('description', input.description);
   }

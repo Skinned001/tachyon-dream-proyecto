@@ -25,6 +25,7 @@ import {
   type ConvocatoriaCerrada,
 } from '../api/convocatorias.api';
 import { useAuth } from '../context/AuthContext';
+import { trackPortalVisit } from '../api/metricas.api';
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
 const formatDate = (value: string): string => {
@@ -54,6 +55,10 @@ export function PortalHome() {
     useState<Convocatoria | null>(null);
   const [savedArticleIds, setSavedArticleIds] = useState<number[]>([]);
   const { user, isLoading: isAuthLoading } = useAuth();
+
+  useEffect(() => {
+    void trackPortalVisit();
+  }, []);
 
   async function loadArticles() {
     setLoading(true);

@@ -33,6 +33,10 @@ import {
   Notificacion,
   initializeNotificacionModel,
 } from '../modules/notificaciones/Notificacion.model.js';
+import {
+  MetricEvent,
+  initializeMetricEventModel,
+} from '../modules/metricas/MetricEvent.model.js';
 import { Rol, initializeRolModel } from '../modules/usuarios/Rol.model.js';
 import { Usuario, initializeUsuarioModel } from '../modules/usuarios/Usuario.model.js';
 
@@ -55,6 +59,7 @@ export const setupAssociations = (): void => {
   initializeFavoritoModel(sequelize);
   initializeAuditLogModel(sequelize);
   initializeNotificacionModel(sequelize);
+  initializeMetricEventModel(sequelize);
 
   Rol.hasMany(Usuario, { foreignKey: 'roleId', as: 'users' });
   Usuario.belongsTo(Rol, { foreignKey: 'roleId', as: 'role' });
@@ -118,6 +123,17 @@ export const setupAssociations = (): void => {
     onDelete: 'SET NULL',
   });
   AuditLog.belongsTo(Usuario, { foreignKey: 'userId', as: 'actor' });
+
+  Especialidad.hasMany(MetricEvent, {
+    foreignKey: 'specialtyId',
+    as: 'metricEvents',
+    onDelete: 'SET NULL',
+  });
+  MetricEvent.belongsTo(Especialidad, {
+    foreignKey: 'specialtyId',
+    as: 'specialty',
+    onDelete: 'SET NULL',
+  });
 
   associationsConfigured = true;
 };
