@@ -66,6 +66,11 @@ export const CustomDatePicker = ({
         timeIntervals={15}
         dateFormat={showTimeSelect ? 'dd/MM/yyyy, HH:mm' : 'dd/MM/yyyy'}
         locale="es"
+        name="date_picker_field"
+        autoComplete="off"
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.preventDefault();
+        }}
         placeholderText={placeholder}
         className={`${className ?? 'w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-[#087d70] focus:ring-4 focus:ring-[#087d70]/10'} !pl-10`}
         wrapperClassName="w-full"

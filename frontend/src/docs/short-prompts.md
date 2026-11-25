@@ -8434,3 +8434,624 @@ Reemplazar o agregar estas reglas para solucionar el choque de las flechas y la 
 ## Respuesta esperada
 
 Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 101: Quitar campo de contraseña de la Edición de Convocatorias
+
+## Contexto
+
+El agente anterior quitó la contraseña de la "Finalización anticipada", pero la dejó en el flujo normal de "Guardar cambios". Esto hace que el navegador siga mostrando el cartel de autocompletar contraseñas y es una mala experiencia de usuario (el Admin ya está logueado, no necesita re-confirmar su contraseña para editar una convocatoria).
+
+## Objetivo
+
+1. **Frontend:** Eliminar el input de "Contraseña actual" del formulario de edición de convocatorias.
+2. **Backend:** Eliminar la validación de contraseña del endpoint de actualización de convocatorias.
+
+## Lo que debés hacer
+
+### 1. Frontend - Limpiar `AdminConvocatorias.tsx`
+
+- Buscar el bloque de código que renderiza el input de contraseña (donde dice `label="Contraseña actual"` o `type="password"`) y **eliminarlo completamente**.
+- En el estado del formulario (`useForm` o `useState`), eliminar la propiedad `password` o `currentPassword`.
+- En la función `handleSubmit`, al armar el objeto que se envía a la API, quitar la propiedad de la contraseña.
+
+### 2. Backend - Limpiar `editorial.controller.ts` y `editorial.service.ts`
+
+- En la función que actualiza la convocatoria (ej. `updateConvocatoria`), eliminar cualquier código que valide la contraseña del usuario.
+- Simplemente debe recibir los datos (título, fechas, estado) y actualizar la base de datos.
+
+### 3. Frontend - Prevenir Autocompletado en DatePicker (Refuerzo)
+
+Aunque al quitar el input de contraseña el navegador ya no debería molestar, vamos a blindar el DatePicker para que Chrome/Firefox no lo detecten como un campo de login. En `src/components/ui/DatePicker.tsx`, agregar `name` y `autoComplete`:
+
+```tsx
+<DatePicker
+  // ... props existentes
+  name="fecha_convocatoria" // Un nombre que no parezca de login
+  autoComplete="off"
+/>
+```
+
+### 4. Verificación
+
+- Correr `npm run build` en ambos proyectos.
+- Recargar el frontend.
+- Abrir el modal de Convocatorias: el campo de contraseña debe haber desaparecido.
+- Hacer clic en el calendario: el cartel de "Administrar contraseñas" ya no debería aparecer.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 102: Restaurar campo de contraseña y desactivar el autocompletado del navegador
+
+## Contexto
+
+Hubo un malentendido en la tarea anterior. **NO queremos eliminar el campo de contraseña** en la edición de convocatorias, ya que es una capa de seguridad necesaria. Lo que queremos es evitar que el navegador lo autocomplete o muestre el cartel de "Administrar contraseñas".
+
+## Objetivo
+
+1. Restaurar el campo de contraseña en el frontend y la validación en el backend.
+2. Aplicar trucos de HTML (`autoComplete` y nombres de campos) para que el navegador ignore el campo.
+
+## Lo que debés hacer
+
+### 1. Frontend - Restaurar el input en `AdminConvocatorias.tsx`
+
+Volver a agregar el input de contraseña, pero con estos atributos específicos para engañar al navegador:
+
+```tsx
+<div className="flex flex-col gap-1.5 w-full">
+  <label className="text-sm font-medium text-gray-700">
+    Confirma tu contraseña de administrador
+  </label>
+  <input
+    type="password"
+    name="admin_confirmation_code" // Un nombre que no sea "password"
+    autoComplete="new-password" // Le dice al navegador que no guarde ni autocomplete
+    value={formulario.password}
+    onChange={handleChange}
+    className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-institucional-500"
+    placeholder="••••••••"
+  />
+</div>
+```
+
+### 2. Frontend - Prevenir autocompletado en el `DatePicker.tsx`
+
+Asegurarse de que el input del calendario tenga estas propiedades para que el navegador no lo asocie con contraseñas:
+
+```tsx
+<DatePicker
+  // ... otras props
+  autoComplete="off"
+  name="fecha_seleccionada"
+/>
+```
+
+### 3. Backend - Restaurar la validación
+
+Volver a agregar la lógica en `editorial.controller.ts` para que, al intentar guardar cambios o finalizar, se verifique que la contraseña enviada sea correcta (comparando con `bcrypt`).
+
+### 4. Verificación
+
+- Correr `npm run build`.
+- Probar abrir el calendario: ya no debería salir el cartel de contraseñas.
+- Escribir la contraseña a mano: el formulario debería guardar correctamente.
+
+## Respuesta esperada
+
+Confirmame que el campo fue restaurado con los atributos `autoComplete` y si `npm run build` pasó.
+
+# Tarea 103: Bloquear definitivamente el autocompletado del navegador
+
+## Contexto
+
+El navegador sigue mostrando el popup de "Administrar contraseñas" al interactuar con el formulario y el `DatePicker`. El atributo `autoComplete="new-password"` no es suficiente porque el navegador detecta el formulario completo.
+
+## Objetivo
+
+Aplicar el "truco de los inputs fantasma" (phantom inputs) y bloquear el autocompletado en el DatePicker.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/pages/AdminConvocatorias.tsx`
+
+Buscar el `<form onSubmit={...}>` (o el contenedor principal del modal) y agregar estos dos inputs ocultos **al principio de todo**, antes de cualquier otro campo. Esto engaña al navegador:
+
+```tsx
+<form onSubmit={handleSubmit} autoComplete="off">
+  {/* INPUTS FANTASMA: Engañan al navegador para que no autocomplete el campo real */}
+  <input
+    type="text"
+    name="fakeusernameremembered"
+    style={{ display: "none" }}
+  />
+  <input
+    type="password"
+    name="fakepasswordremembered"
+    style={{ display: "none" }}
+  />
+
+  {/* ... resto de tus campos (Título, Fechas, etc.) ... */}
+</form>
+```
+
+### 2. Modificar `src/components/ui/DatePicker.tsx`
+
+Asegurarnos de que el input del calendario no dispare eventos de teclado que el navegador confunda con un login.
+
+```tsx
+<DatePicker
+  // ... props existentes
+  autoComplete="off"
+  name="date_picker_field"
+  // Evita que al presionar 'Enter' se envíe el formulario por accidente
+  onKeyDown={(e) => {
+    if (e.key === "Enter") e.preventDefault();
+  }}
+/>
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Recargar la página.
+- Hacer clic en el calendario y seleccionar una fecha.
+- El cartel de "Administrar contraseñas" ya no debería aparecer nunca más.
+
+## Respuesta esperada
+
+Confirmame que los archivos fueron actualizados y si `npm run build` pasó.
+
+# Tarea 104: Evitar el popup de contraseñas usando un input enmascarado
+
+## Contexto
+
+El navegador sigue mostrando el popup de "Administrar contraseñas" a pesar de los inputs fantasma. Esto ocurre porque el navegador detecta el atributo `type="password"` en el formulario. La forma definitiva de evitar esto es no usar `type="password"` nativo, sino usar nuestro componente personalizado `InputPassword` (que usa `type="text"` y oculta los caracteres visualmente con un ícono de "ojo").
+
+## Lo que debés hacer
+
+### 1. Modificar `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+- Importar el componente `InputPassword` (si no está importado):
+  `import { InputPassword } from '../../components/ui/InputPassword';` (Ajusta la ruta según tu estructura).
+
+- Buscar el `<input type="password" ...>` que se usa para confirmar la contraseña en el modal y reemplazarlo por el componente `InputPassword`.
+
+```tsx
+// ELIMINAR ESTO:
+<input
+  type="password"
+  name="admin_confirmation_code"
+  value={formulario.password}
+  onChange={handleChange}
+  // ...
+/>
+
+// REEMPLAZAR POR ESTO:
+<InputPassword
+  label="Contraseña de administrador"
+  name="admin_confirmation_code"
+  value={formulario.password}
+  onChange={handleChange}
+  placeholder="••••••••"
+/>
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Probar de nuevo en el navegador: como el componente `InputPassword` usa `type="text"` internamente, el navegador **dejará de detectar** que hay un campo de contraseña y el cartel de "Administrar contraseñas" desaparecerá por completo.
+
+## Respuesta esperada
+
+Confirmame que el input fue reemplazado por el componente `InputPassword` y si `npm run build` pasó.
+
+# Tarea 106: Desactivar autocompletado en el campo de contraseña de Convocatorias
+
+## Contexto
+
+Aunque el cartel sobre el `DatePicker` desapareció, el campo de contraseña en `ModalEdicionConvocatoria.tsx` sigue activando el autocompletado del navegador o mostrando el cartel. Queremos que el usuario escriba la contraseña manualmente sin que el navegador interfiera.
+
+## Lo que debés hacer
+
+### 1. Reemplazar el input en `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+Buscar el bloque donde está el `<input type="password" ... />` y reemplazarlo por nuestro componente `InputPassword` (que ya usamos en el perfil).
+
+Asegurate de importarlo correctamente:
+`import { InputPassword } from '../../components/ui/InputPassword';` (ajusta la ruta si es necesario).
+
+El código debe quedar así:
+
+```tsx
+{
+  /* Reemplazar el input nativo por el componente */
+}
+<InputPassword
+  label="Confirma tu contraseña de administrador"
+  name="password"
+  value={formulario.password}
+  onChange={handleChange}
+  // El atributo 'new-password' es el truco definitivo para que Chrome no autocomplete
+  autoComplete="new-password"
+/>;
+```
+
+_(Nota: Si el componente `InputPassword` no acepta la prop `autoComplete` directamente, asegurate de que la pase internamente al `<input>`)._
+
+### 2. Refuerzo en el componente `src/components/ui/InputPassword.tsx` (Opcional)
+
+Si el navegador sigue de terco, podemos hacer que el input empiece como `type="text"` y solo cambie a `type="password"` visualmente. Pero con `autoComplete="new-password"` suele ser suficiente.
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal de Convocatorias.
+- Hacer clic en el campo de contraseña.
+- El navegador ya no debería sugerir contraseñas guardadas ni mostrar el cartel de "Administrar contraseñas".
+
+## Respuesta esperada
+
+Confirmame que el campo fue reemplazado y si `npm run build` pasó.
+
+# Tarea 107: Solución definitiva para desactivar el gestor de contraseñas
+
+## Contexto
+
+El navegador sigue mostrando el cartel de "Administrar contraseñas" porque el componente `InputPassword` sigue renderizando un `<input type="password">` en el DOM. Para evitar esto de forma definitiva, cambiaremos el tipo de input a `text` y ocultaremos los caracteres usando la propiedad CSS `-webkit-text-security`.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/components/ui/InputPassword.tsx`
+
+Cambiar la etiqueta `<input>` para que **siempre** sea `type="text"`, y aplicar el estilo condicional para ocultar los caracteres cuando `show` sea `false`.
+
+```tsx
+// src/components/ui/InputPassword.tsx
+import { useState, forwardRef, type InputHTMLAttributes } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+// ... interface ...
+
+export const InputPassword = forwardRef<HTMLInputElement, InputPasswordProps>(
+  ({ label, error, className = "", id, ...props }, ref) => {
+    const [show, setShow] = useState(false);
+    const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <div className="relative">
+          <input
+            id={inputId}
+            ref={ref}
+            // TRUCO: Siempre es type="text" para que el navegador no lo detecte como password
+            type="text"
+            // TRUCO: Si no se muestra, ocultamos los caracteres con CSS
+            style={
+              {
+                WebkitTextSecurity: show ? "none" : "disc",
+              } as React.CSSProperties
+            }
+            className={`w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${className}`}
+            {...props}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {show ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {error && <span className="text-sm text-red-500">{error}</span>}
+      </div>
+    );
+  },
+);
+InputPassword.displayName = "InputPassword";
+```
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal de Convocatorias.
+- Hacer clic en el campo de contraseña.
+- **El navegador ya no reconocerá el campo como una contraseña**, por lo que el cartel de "Administrar contraseñas" y las sugerencias de usuarios desaparecerán por completo.
+- Verificar que el botón del "ojito" siga funcionando para mostrar/ocultar el texto.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado y si `npm run build` pasó.
+
+# Tarea 108: Aislar el formulario de contraseña en el Modal de Convocatorias
+
+## Contexto
+
+Tienes toda la razón: no debemos modificar el componente `InputPassword` compartido con propiedades no estándar (CSS hack) porque podría exponer la contraseña en navegadores no compatibles. Mantendremos el `type="password"` seguro.
+
+Sin embargo, necesitamos detener el popup de "Administrar contraseñas" en el Modal de Convocatorias. Lo haremos aislando el formulario y engañando la heurística del navegador de forma segura.
+
+## Lo que debés hacer
+
+### 1. Revertir `src/components/ui/InputPassword.tsx`
+
+Si lo modificaste con el CSS hack en la tarea anterior, **devuélvelo a su estado original** (`type="password"` estándar). No queremos romper la seguridad en el resto de la app.
+
+### 2. Modificar `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+Para que Chrome/Firefox ignoren el campo, aplicaremos el aislamiento estructural dentro de este archivo específico:
+
+**A. El botón de guardar NO debe estar en un `<form>`**. Cambiar el `<form>` por un `<div>`.
+**B. Agregar los inputs "señuelo"** justo antes de la contraseña, para que el navegador los empareje a ellos y no al DatePicker.
+
+```tsx
+// En ModalEdicionConvocatoria.tsx
+// Cambiar el <form> por <div> (o quitar la etiqueta form si no es necesaria)
+<div className="flex flex-col gap-4">
+  {/* ... Título, Fechas, etc. ... */}
+
+  {/* EL TRUCO SEGURO: Inputs señuelo ocultos */}
+  <div style={{ display: "none" }} aria-hidden="true">
+    <input
+      type="text"
+      name="fake_username_for_chrome"
+      autoComplete="username"
+    />
+  </div>
+
+  {/* El input de contraseña (usando el InputPassword seguro) */}
+  <InputPassword
+    label="Confirma tu contraseña de administrador"
+    name="admin_password_confirmation" // Un nombre único
+    value={formulario.password}
+    onChange={handleChange}
+    autoComplete="new-password" // Indica que es una validación, no un login nuevo
+  />
+
+  <div className="flex justify-end gap-3 mt-4">
+    <button type="button" onClick={onClose} className="...">
+      Cancelar
+    </button>
+    {/* El botón ahora es type="button" y llama a handleSubmit directamente */}
+    <button type="button" onClick={handleSubmit} className="...">
+      Guardar
+    </button>
+  </div>
+</div>
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal en Chrome. El gestor de contraseñas ya no debería saltar, y la contraseña seguirá estando 100% protegida de forma estándar.
+
+## Respuesta esperada
+
+Confirmame que revertiste el componente compartido y aplicaste el aislamiento en el modal.
+
+# Tarea 109: Implementar truco de Readonly en el input de contraseña de Convocatorias
+
+## Contexto
+
+Vamos a aplicar las mejores prácticas recomendadas para evitar el gestor de contraseñas del navegador sin usar hacks de CSS (que son inseguros). Usaremos la combinación de `autocomplete="new-password"` y el truco de `readonly` al cargar.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+Vamos a manejar un estado para el input de contraseña.
+
+```tsx
+// Al inicio del componente, agregar un estado:
+const [isPasswordEditable, setIsPasswordEditable] = useState(false);
+
+// Luego, donde se renderiza el InputPassword, pasarle las nuevas props:
+<InputPassword
+  label="Confirma tu contraseña de administrador"
+  name="password"
+  value={formulario.password}
+  onChange={handleChange}
+  autoComplete="new-password" // Opción 1 de Gemini
+  readOnly={!isPasswordEditable} // Opción 3: Bloqueado al inicio
+  onFocus={() => setIsPasswordEditable(true)} // Opción 3: Se desbloquea al hacer clic
+/>;
+```
+
+_(Nota: Asegurate de que al cerrar el modal o al guardar exitosamente, vuelvas a setear `setIsPasswordEditable(false)` para que la próxima vez que se abra, vuelva a estar bloqueado)._
+
+### 2. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal de Convocatorias.
+- Verificar que el navegador ya NO muestra el cartel de contraseñas.
+- Hacer clic en el campo de contraseña (esto dispara el `onFocus`, se quita el `readOnly` y podés escribir).
+- Escribir la contraseña y guardar.
+
+## Respuesta esperada
+
+Confirmame que el archivo fue actualizado con el truco de `readOnly` y si `npm run build` pasó.
+
+# Tarea 110: InputPassword con detección de navegador (Anti-Gestor)
+
+## Contexto
+
+El truco del `readonly` falló porque al quitarse, Chrome detecta el campo y lanza el gestor. Para evitar esto definitivamente sin sacrificar la seguridad, vamos a crear una lógica en el componente `InputPassword` que detecte si el navegador es Chrome/Edge (basado en Chromium) y use el truco del CSS (`type="text"` + `-webkit-text-security`). Para Firefox (que no soporta ese CSS), mantendrá el `type="password"` seguro.
+
+## Lo que debés hacer
+
+### 1. Modificar `src/components/ui/InputPassword.tsx`
+
+Agregar una propiedad opcional `disableManager?: boolean`. Si está activa, aplicaremos la lógica de detección.
+
+```tsx
+// src/components/ui/InputPassword.tsx
+import { useState, forwardRef, type InputHTMLAttributes } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+interface InputPasswordProps extends InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  error?: string;
+  disableManager?: boolean; // NUEVA PROP
+}
+
+export const InputPassword = forwardRef<HTMLInputElement, InputPasswordProps>(
+  (
+    { label, error, className = "", id, disableManager = false, ...props },
+    ref,
+  ) => {
+    const [show, setShow] = useState(false);
+    const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
+
+    // Detectar si es un navegador basado en Chromium (Chrome, Edge, Opera, Brave)
+    const isChromium =
+      typeof window !== "undefined" &&
+      /Chrome|Chromium|Edg/.test(navigator.userAgent);
+
+    // Si queremos desactivar el manager Y es Chromium, usamos el truco del texto.
+    // Si es Firefox, usamos password normal para que sea seguro.
+    const useTextHack = disableManager && isChromium;
+
+    const inputType = useTextHack ? "text" : "password";
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <div className="relative">
+          <input
+            id={inputId}
+            ref={ref}
+            type={inputType}
+            style={
+              useTextHack && !show
+                ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                : {}
+            }
+            className={`w-full px-3 py-2 bg-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${className}`}
+            {...props}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {show ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {error && <span className="text-sm text-red-500">{error}</span>}
+      </div>
+    );
+  },
+);
+InputPassword.displayName = "InputPassword";
+```
+
+### 2. Modificar `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+Volver a la versión simple del campo, pero activando la nueva propiedad `disableManager`.
+
+```tsx
+<InputPassword
+  label="Confirma tu contraseña de administrador"
+  name="password"
+  value={formulario.password}
+  onChange={handleChange}
+  disableManager={true} // 👈 Activamos el bloqueo
+/>
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal en Chrome y en Firefox.
+- Hacer clic varias veces en el campo de contraseña.
+- El cartel de "Administrar contraseñas" ya no debería aparecer en Chrome, y en Firefox la contraseña seguirá estando 100% oculta.
+
+## Respuesta esperada
+
+Confirmame que el componente fue actualizado con la lógica de detección y si `npm run build` pasó.
+
+# Tarea 112: Solución definitiva (Bypass total al gestor de Chrome)
+
+## Contexto
+
+El cartel de "Administrar contraseñas" sigue apareciendo. Vamos a aplicar la técnica de "Honeypot + Sin Formulario + Sin Ojito", que es el estándar de la industria para bloquear gestores de contraseñas en modales de administración.
+
+## Lo que debés hacer
+
+### 1. Revertir el componente `InputPassword.tsx` a su estado original
+
+Como el truco del CSS no funcionó, quita la propiedad `disableManager` y cualquier lógica de `-webkit-text-security`. Deja el componente tal como estaba para el Login y el Perfil.
+
+### 2. Modificar `src/features/editorial/ModalEdicionConvocatoria.tsx`
+
+Vamos a hacer 3 cambios drásticos en este archivo:
+
+**A. Eliminar el `<form>`:**
+Si hay una etiqueta `<form>` que envuelve todo el contenido del modal, cámbiala por un `<div>`. (Chrome solo busca credenciales dentro de etiquetas `<form>`).
+
+**B. Usar un input nativo sin "ojito":**
+Reemplaza el `<InputPassword>` por este código exacto:
+
+```tsx
+{
+  /* Inputs trampa (Honeypot) para capturar la heurística de Chrome */
+}
+<div style={{ display: "none" }} aria-hidden="true">
+  <input type="text" name="fake_username" autoComplete="username" />
+  <input type="password" name="fake_password" autoComplete="current-password" />
+</div>;
+
+{
+  /* El input real, sin el botón del ojito para no alertar a Chrome */
+}
+<div className="flex flex-col gap-1.5 w-full mt-4">
+  <label className="text-sm font-medium text-gray-700">
+    Confirma tu contraseña de administrador
+  </label>
+  <input
+    type="password"
+    name="confirmacion_manual"
+    autoComplete="new-password"
+    value={formulario.password}
+    onChange={handleChange}
+    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-institucional-500"
+    placeholder="••••••••"
+  />
+</div>;
+```
+
+**C. Asegurar que el botón de guardar sea `type="button"`:**
+
+```tsx
+<button type="button" onClick={handleSubmit} className="...">
+  Guardar cambios
+</button>
+```
+
+### 3. Verificación
+
+- Correr `npm run build`.
+- Abrir el modal, hacer clic en la contraseña y en el calendario.
+- El cartel ya NO debe aparecer.
+
+## Respuesta esperada
+
+Confirmame que aplicaste los 3 cambios y si `npm run build` pasó.

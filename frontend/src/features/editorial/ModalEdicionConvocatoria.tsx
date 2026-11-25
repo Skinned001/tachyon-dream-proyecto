@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { AlertCircle, Loader2, LockKeyhole, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, Loader2, Save } from 'lucide-react';
 import {
   editarConvocatoria,
   finalizarConvocatoria,
@@ -36,11 +36,9 @@ const toLocalDateTimeInput = (isoDate: string): string => {
 };
 
 const getErrorMessage = (error: unknown): string => {
-  const message =
-    error instanceof Error ? error.message : 'No se pudo completar la acción.';
-  return /contraseñ|password/i.test(message)
-    ? 'La contraseña actual es incorrecta.'
-    : message;
+  return error instanceof Error
+    ? error.message
+    : 'No se pudo completar la acción.';
 };
 
 const editableStates: EstadoConvocatoria[] = [
@@ -99,8 +97,7 @@ export const ModalEdicionConvocatoria = ({
         ? fechaInicio
         : minDateTime;
 
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSave = async () => {
     if (!convocatoria || !password) return;
 
     const dateStart = canEditLifecycle ? new Date(fechaInicio) : null;
@@ -181,7 +178,7 @@ export const ModalEdicionConvocatoria = ({
     >
       {convocatoria && (
         <div className="max-h-[80vh] space-y-6 overflow-y-auto">
-          <form onSubmit={handleSave} className="space-y-5">
+          <div className="space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Título
@@ -265,22 +262,36 @@ export const ModalEdicionConvocatoria = ({
               </span>
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                Contraseña actual
-              </span>
+            <div style={{ display: 'none' }} aria-hidden="true">
               <input
-                required
+                type="text"
+                name="fake_username"
+                autoComplete="username"
+              />
+              <input
                 type="password"
+                name="fake_password"
                 autoComplete="current-password"
+              />
+            </div>
+            <div className="flex w-full flex-col gap-1.5 mt-4">
+              <label className="text-sm font-medium text-gray-700">
+                Confirma tu contraseña de administrador
+              </label>
+              <input
+                type="password"
+                name="confirmacion_manual"
+                autoComplete="new-password"
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
                   setError('');
                 }}
                 className={inputClassName}
+                placeholder="••••••••"
+                required
               />
-            </label>
+            </div>
 
             {error && (
               <div
@@ -293,8 +304,11 @@ export const ModalEdicionConvocatoria = ({
             )}
 
             <button
-              type="submit"
-              disabled={isSaving || isFinalizing || !password || !title.trim()}
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={
+                isSaving || isFinalizing || !title.trim() || !password
+              }
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#087d70] px-5 text-sm font-semibold text-white transition hover:bg-[#06665c] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? (
@@ -304,7 +318,7 @@ export const ModalEdicionConvocatoria = ({
               )}
               {isSaving ? 'Guardando…' : 'Guardar cambios'}
             </button>
-          </form>
+          </div>
 
           {convocatoria.estado === 'ABIERTA' && (
             <section className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
@@ -316,31 +330,44 @@ export const ModalEdicionConvocatoria = ({
                   Cerrará la convocatoria inmediatamente y detendrá los envíos.
                 </p>
               </div>
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Confirma con tu contraseña actual
-                </span>
+              <div style={{ display: 'none' }} aria-hidden="true">
+                <input
+                  type="text"
+                  name="fake_username_finalize"
+                  autoComplete="username"
+                />
                 <input
                   type="password"
+                  name="fake_password_finalize"
                   autoComplete="current-password"
+                />
+              </div>
+              <div className="flex w-full flex-col gap-1.5 mt-4">
+                <label className="text-sm font-medium text-gray-700">
+                  Contraseña para finalizar
+                </label>
+                <input
+                  type="password"
+                  name="confirmacion_finalizacion"
+                  autoComplete="new-password"
                   value={finalizePassword}
                   onChange={(event) => {
                     setFinalizePassword(event.target.value);
                     setError('');
                   }}
                   className={inputClassName}
+                  placeholder="••••••••"
+                  required
                 />
-              </label>
+              </div>
               <button
                 type="button"
                 onClick={() => void handleFinalize()}
                 disabled={isSaving || isFinalizing || !finalizePassword}
                 className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isFinalizing ? (
+                {isFinalizing && (
                   <Loader2 className="animate-spin" size={16} />
-                ) : (
-                  <LockKeyhole size={16} />
                 )}
                 {isFinalizing ? 'Finalizando…' : 'Finalizar ahora'}
               </button>
