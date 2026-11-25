@@ -134,7 +134,7 @@ export const AdminAuditoria = () => {
         </button>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_155px_155px_auto]">
+      <section className="grid items-end gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_160px_160px_auto]">
         <label className="relative block">
           <span className="sr-only">Buscar en auditoría</span>
           <Search
@@ -170,27 +170,37 @@ export const AdminAuditoria = () => {
           <option value="ESPECIALIDAD">Especialidades</option>
         </select>
 
-        <input
-          type="date"
-          aria-label="Desde"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setPage(1);
-          }}
-          className="h-10 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
-        />
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
+            Desde
+          </span>
+          <input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
+          />
+        </label>
 
-        <input
-          type="date"
-          aria-label="Hasta"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            setPage(1);
-          }}
-          className="h-10 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
-        />
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
+            Hasta
+          </span>
+          <input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
+          />
+        </label>
 
         {hasFilters && (
           <button

@@ -66,6 +66,7 @@ export const ModalEdicionConvocatoria = ({
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [confirmingFinalize, setConfirmingFinalize] = useState(false);
 
   useEffect(() => {
     if (!convocatoria) return;
@@ -80,6 +81,7 @@ export const ModalEdicionConvocatoria = ({
     setVisibleEnLanding(convocatoria.visibleEnLanding);
     setPassword('');
     setFinalizePassword('');
+    setConfirmingFinalize(false);
     setError('');
   }, [convocatoria]);
 
@@ -155,11 +157,7 @@ export const ModalEdicionConvocatoria = ({
 
   const handleFinalize = async () => {
     if (!convocatoria || !finalizePassword) return;
-    const confirmed = window.confirm(
-      `¿Finalizar ahora la convocatoria "${convocatoria.title}"? Esta acción detendrá los envíos.`,
-    );
-    if (!confirmed) return;
-
+    setConfirmingFinalize(false);
     setIsFinalizing(true);
     setError('');
     try {
@@ -178,9 +176,10 @@ export const ModalEdicionConvocatoria = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Editar convocatoria"
+      maxWidthClass="max-w-2xl"
     >
       {convocatoria && (
-        <div className="max-h-[80vh] space-y-6 overflow-y-auto">
+        <div className="space-y-6">
           <form onSubmit={handleSave} className="space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
@@ -331,19 +330,41 @@ export const ModalEdicionConvocatoria = ({
                   className={inputClassName}
                 />
               </label>
-              <button
-                type="button"
-                onClick={() => void handleFinalize()}
-                disabled={isSaving || isFinalizing || !finalizePassword}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isFinalizing ? (
-                  <Loader2 className="animate-spin" size={16} />
-                ) : (
+              {confirmingFinalize ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleFinalize()}
+                    disabled={isSaving || isFinalizing || !finalizePassword}
+                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isFinalizing ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <LockKeyhole size={16} />
+                    )}
+                    {isFinalizing ? 'Finalizando…' : 'Confirmar finalización'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingFinalize(false)}
+                    disabled={isFinalizing}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingFinalize(true)}
+                  disabled={isSaving || isFinalizing || !finalizePassword}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                   <LockKeyhole size={16} />
-                )}
-                {isFinalizing ? 'Finalizando…' : 'Finalizar ahora'}
-              </button>
+                  Finalizar ahora
+                </button>
+              )}
             </section>
           )}
         </div>

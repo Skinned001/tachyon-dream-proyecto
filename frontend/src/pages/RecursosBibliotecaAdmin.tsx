@@ -32,6 +32,7 @@ export function RecursosBibliotecaAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null);
   const [listError, setListError] = useState('');
   const [formError, setFormError] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -106,11 +107,7 @@ export function RecursosBibliotecaAdmin() {
   };
 
   const handleDelete = async (resource: LibraryResource) => {
-    const confirmed = window.confirm(
-      `¿Querés eliminar "${resource.title}"? Esta acción no se puede deshacer.`,
-    );
-    if (!confirmed) return;
-
+    setConfirmingDeleteId(null);
     setDeletingId(resource.id);
     setFeedback('');
     setListError('');
@@ -328,17 +325,42 @@ export function RecursosBibliotecaAdmin() {
                       Ver PDF
                       <ExternalLink size={14} />
                     </a>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      disabled={deletingId !== null}
-                      isLoading={deletingId === resource.id}
-                      onClick={() => void handleDelete(resource)}
-                      className="gap-1.5 rounded-xl px-3 py-2 text-xs"
-                    >
-                      <Trash2 size={14} />
-                      Eliminar
-                    </Button>
+                    {confirmingDeleteId === resource.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="danger"
+                          disabled={deletingId !== null}
+                          isLoading={deletingId === resource.id}
+                          onClick={() => void handleDelete(resource)}
+                          className="gap-1.5 rounded-xl px-3 py-2 text-xs"
+                        >
+                          <Trash2 size={14} />
+                          Confirmar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={deletingId !== null}
+                          onClick={() => setConfirmingDeleteId(null)}
+                          className="rounded-xl px-2.5 py-2 text-xs text-[#526e68]"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        disabled={deletingId !== null}
+                        isLoading={deletingId === resource.id}
+                        onClick={() => setConfirmingDeleteId(resource.id)}
+                        className="gap-1.5 rounded-xl px-3 py-2 text-xs"
+                      >
+                        <Trash2 size={14} />
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </article>
               ))}

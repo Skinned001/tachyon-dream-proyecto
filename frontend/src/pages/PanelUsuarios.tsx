@@ -32,6 +32,7 @@ export const PanelUsuarios = ({
   const [feedback, setFeedback] = useState('');
   const [isWarning, setIsWarning] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [confirmingRejectId, setConfirmingRejectId] = useState<number | null>(null);
 
   const cargarUsuarios = async () => {
     setLoading(true);
@@ -78,14 +79,7 @@ export const PanelUsuarios = ({
   };
 
   const handleRechazar = async (id: number) => {
-    if (
-      !window.confirm(
-        '¿Está seguro de rechazar y eliminar esta solicitud de registro?',
-      )
-    ) {
-      return;
-    }
-
+    setConfirmingRejectId(null);
     setProcessingId(id);
     setError('');
     setFeedback('');
@@ -241,19 +235,45 @@ export const PanelUsuarios = ({
                     )}
 
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleRechazar(usuario.id)}
-                        disabled={processingId !== null}
-                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {processingId === usuario.id ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          <XCircle size={16} />
-                        )}
-                        Rechazar
-                      </button>
+                      {confirmingRejectId === usuario.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => void handleRechazar(usuario.id)}
+                            disabled={processingId !== null}
+                            className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-red-600 px-3.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {processingId === usuario.id ? (
+                              <Loader2 className="animate-spin" size={16} />
+                            ) : (
+                              <XCircle size={16} />
+                            )}
+                            Confirmar rechazo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingRejectId(null)}
+                            disabled={processingId !== null}
+                            className="flex h-10 items-center justify-center rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs font-semibold text-[#526e68] hover:bg-[#f2f7f4]"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingRejectId(usuario.id)}
+                          disabled={processingId !== null}
+                          className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {processingId === usuario.id ? (
+                            <Loader2 className="animate-spin" size={16} />
+                          ) : (
+                            <XCircle size={16} />
+                          )}
+                          Rechazar
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => void handleAprobar(usuario.id)}

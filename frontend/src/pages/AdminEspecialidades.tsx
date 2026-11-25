@@ -26,6 +26,7 @@ export const AdminEspecialidades = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [pageError, setPageError] = useState('');
   const [formError, setFormError] = useState('');
   const { formulario, handleChange, resetForm, setFormulario } =
@@ -107,15 +108,7 @@ export const AdminEspecialidades = () => {
   };
 
   const toggleActive = async (especialidad: Especialidad) => {
-    const action = especialidad.active ? 'deshabilitar' : 'habilitar';
-    if (
-      !window.confirm(
-        `¿Seguro que deseas ${action} la especialidad "${especialidad.name}"?`,
-      )
-    ) {
-      return;
-    }
-
+    setConfirmingId(null);
     setBusyId(especialidad.id);
     setPageError('');
     try {
@@ -243,20 +236,44 @@ export const AdminEspecialidades = () => {
                           <Edit className="h-4 w-4" />
                           Editar
                         </Button>
-                        <Button
-                          type="button"
-                          variant={especialidad.active ? 'ghost' : 'primary'}
-                          onClick={() => void toggleActive(especialidad)}
-                          isLoading={busyId === especialidad.id}
-                          disabled={busyId !== null}
-                          className={`w-32 whitespace-nowrap px-2 text-sm ${
-                            especialidad.active
-                              ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-                              : ''
-                          }`}
-                        >
-                          {especialidad.active ? 'Deshabilitar' : 'Habilitar'}
-                        </Button>
+                        {confirmingId === especialidad.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant={especialidad.active ? 'danger' : 'primary'}
+                              onClick={() => void toggleActive(especialidad)}
+                              isLoading={busyId === especialidad.id}
+                              disabled={busyId !== null}
+                              className="whitespace-nowrap px-2.5 text-xs"
+                            >
+                              {especialidad.active ? 'Confirmar' : 'Confirmar'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => setConfirmingId(null)}
+                              disabled={busyId !== null}
+                              className="whitespace-nowrap px-2 text-xs text-gray-600"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant={especialidad.active ? 'ghost' : 'primary'}
+                            onClick={() => setConfirmingId(especialidad.id)}
+                            isLoading={busyId === especialidad.id}
+                            disabled={busyId !== null}
+                            className={`w-32 whitespace-nowrap px-2 text-sm ${
+                              especialidad.active
+                                ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                                : ''
+                            }`}
+                          >
+                            {especialidad.active ? 'Deshabilitar' : 'Habilitar'}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -13,7 +13,10 @@ export const getProfileImageUrl = (
     );
     if (!match) return null;
 
-    const url = new URL(`/${match[1]}`, apiBaseUrl);
+    const baseUrl = apiBaseUrl.startsWith('/')
+      ? window.location.origin
+      : apiBaseUrl;
+    const url = new URL(`/${match[1]}`, baseUrl);
     if (cacheBuster !== undefined) {
       url.searchParams.set('t', String(cacheBuster));
     }

@@ -11,10 +11,15 @@ import {
 import { AuthService, type UpdateProfileData } from './auth.service.js';
 
 const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+const isCookieSecure =
+  process.env.COOKIE_SECURE !== undefined
+    ? process.env.COOKIE_SECURE === 'true'
+    : process.env.NODE_ENV === 'production';
+
 const sessionCookieOptions = {
   httpOnly: true,
   sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
+  secure: isCookieSecure,
   path: '/',
 };
 
