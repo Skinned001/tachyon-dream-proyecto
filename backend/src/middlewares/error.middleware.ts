@@ -52,6 +52,9 @@ export const errorMiddleware = (
         : 400
       : undefined;
   const status = statusCode && statusCode >= 400 && statusCode <= 599 ? statusCode : 500;
+  if (status >= 500) {
+    console.error('[API 500]', err);
+  }
 
   res.status(status).json({ success: false, error: message });
 };

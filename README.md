@@ -117,6 +117,12 @@ Para enviar el correo al aprobar una cuenta, configurar `SMTP_HOST`,
 opcional. Si el envío falla, la cuenta queda aprobada y la respuesta indica
 explícitamente que no se pudo enviar el correo.
 
+Para avisar por correo cuando un administrador habilita una cuenta desde la
+administración de usuarios, configurar `EMAIL_HOST`, `EMAIL_PORT`,
+`EMAIL_USER` y `EMAIL_PASS` en `backend/.env`. Gmail requiere una contraseña de
+aplicación con la verificación en dos pasos habilitada. Si el envío falla, la
+cuenta permanece habilitada y la respuesta incluye una advertencia.
+
 Pendiente: configurar las credenciales SMTP del entorno y agregar una acción
 para reenviar el correo a cuentas que ya fueron aprobadas cuando falló la
 notificación inicial.

@@ -1,12 +1,14 @@
 import dotenv from 'dotenv';
 import { sequelize } from './config/database.js';
 import { setupAssociations } from './database/associations.js';
+import { cleanupDuplicateUserDniIndexes } from './database/cleanupIndexes.js';
 import { synchronizeRoles } from './database/roles.js';
 import app from './app.js';
 import {
   iniciarCronConvocatorias,
   sincronizarEstadosConvocatorias,
 } from './modules/editorial/convocatoria-cron.service.js';
+import { UsuariosService } from './modules/usuarios/usuarios.service.js';
 
 dotenv.config();
 
@@ -15,7 +17,9 @@ const port = Number(process.env.PORT ?? 3000);
 const startServer = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
+  await cleanupDuplicateUserDniIndexes();
   await sequelize.sync({ alter: true });
+  await new UsuariosService().backfillApprovalDates();
   await synchronizeRoles();
   await sincronizarEstadosConvocatorias();
   iniciarCronConvocatorias();

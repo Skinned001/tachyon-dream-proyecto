@@ -4,6 +4,7 @@ import { Especialidad } from '../modules/especialidades/Especialidad.model.js';
 import { Rol } from '../modules/usuarios/Rol.model.js';
 import { Usuario } from '../modules/usuarios/Usuario.model.js';
 import { setupAssociations } from './associations.js';
+import { cleanupDuplicateUserDniIndexes } from './cleanupIndexes.js';
 import { synchronizeRoles } from './roles.js';
 
 const specialties = [
@@ -81,6 +82,7 @@ const seedUsers = [
 const seedDatabase = async (): Promise<void> => {
   setupAssociations();
   await sequelize.authenticate();
+  await cleanupDuplicateUserDniIndexes();
   await sequelize.sync({ alter: true });
   await synchronizeRoles();
 

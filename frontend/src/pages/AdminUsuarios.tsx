@@ -64,6 +64,10 @@ export const AdminUsuarios = () => {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'TODOS'>('TODOS');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState<{
+    kind: 'success' | 'warning';
+    message: string;
+  } | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     id: number;
@@ -318,13 +322,24 @@ export const AdminUsuarios = () => {
     setConfirmAction(null);
     setOpenMenuId(null);
     setError('');
+    setActionFeedback(null);
     setBusyUserId(id);
     try {
-      await updateUsuario(id, { active: false });
+      const { warning, ...updatedUser } = await updateUsuario(id, {
+        active: false,
+      });
       setUsuarios((current) =>
         current.map((usuario) =>
-          usuario.id === id ? { ...usuario, active: false } : usuario,
+          usuario.id === id ? { ...usuario, ...updatedUser } : usuario,
         ),
+      );
+      setActionFeedback(
+        warning
+          ? { kind: 'warning', message: warning }
+          : {
+              kind: 'success',
+              message: 'Cuenta deshabilitada y correo de notificación enviado.',
+            },
       );
     } catch (err: unknown) {
       setError(
@@ -339,13 +354,24 @@ export const AdminUsuarios = () => {
     setConfirmAction(null);
     setOpenMenuId(null);
     setError('');
+    setActionFeedback(null);
     setBusyUserId(id);
     try {
-      await updateUsuario(id, { active: true });
+      const { warning, ...updatedUser } = await updateUsuario(id, {
+        active: true,
+      });
       setUsuarios((current) =>
         current.map((usuario) =>
-          usuario.id === id ? { ...usuario, active: true } : usuario,
+          usuario.id === id ? { ...usuario, ...updatedUser } : usuario,
         ),
+      );
+      setActionFeedback(
+        warning
+          ? { kind: 'warning', message: warning }
+          : {
+              kind: 'success',
+              message: 'Cuenta habilitada y correo de notificación enviado.',
+            },
       );
     } catch (err: unknown) {
       setError(
@@ -472,6 +498,26 @@ export const AdminUsuarios = () => {
         aria-labelledby="usuarios-tab"
         hidden={activeTab !== 'gestion'}
       >
+      {actionFeedback && (
+        <div
+          role="status"
+          className={`mb-4 rounded-md border p-4 text-sm ${
+            actionFeedback.kind === 'warning'
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          {actionFeedback.message}
+        </div>
+      )}
+      {error && usuarios.length > 0 && (
+        <div
+          className="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
       <Card>
         {isLoading ? (
           <div
@@ -481,7 +527,7 @@ export const AdminUsuarios = () => {
           >
             <Loader2 className="h-8 w-8 animate-spin text-[#087d70]" />
           </div>
-        ) : error ? (
+        ) : error && usuarios.length === 0 ? (
           <div
             className="rounded-md border border-red-200 bg-red-50 p-4 text-red-600"
             role="alert"
@@ -514,7 +560,10 @@ export const AdminUsuarios = () => {
                 {usuariosFiltrados.map((usuario, index) => {
                   const isNearBottom = index >= usuariosFiltrados.length - 2;
                   const isPendingApproval =
-                    !usuario.active && usuario.is_guest && usuario.is_author;
+                    !usuario.active &&
+                    usuario.is_guest &&
+                    usuario.is_author &&
+                    !usuario.approvedAt;
                   const profileImageUrl = getProfileImageUrl(usuario.profile_image);
 
                   return (
@@ -592,30 +641,36 @@ export const AdminUsuarios = () => {
                           className="relative inline-block"
                           ref={openMenuId === usuario.id ? menuRef : null}
                         >
-                          <button
-                            type="button"
-                            aria-label={`Acciones para ${usuario.first_name} ${usuario.last_name}`}
-                            aria-haspopup="menu"
-                            aria-expanded={openMenuId === usuario.id}
-                            disabled={busyUserId === usuario.id}
-                            onClick={() => {
-                              setOpenMenuId((current) =>
-                                current === usuario.id ? null : usuario.id,
-                              );
-                            }}
-                            className="rounded-md border border-[#cfe4dc] bg-[#e6f5ee] p-1.5 text-[#087d70] transition-colors hover:bg-[#d5eee4] hover:text-[#07584f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087d70] focus-visible:ring-offset-2 disabled:opacity-50"
-                          >
-                            {busyUserId === usuario.id ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : isPendingApproval ? (
-                              <span className="block px-4 py-2 text-sm text-amber-800">
-                                Pendiente de aprobación
-                              </span>
-                            ) : (
-                              <MoreVertical className="h-5 w-5" />
-                            )}
-                          </button>
-                          {openMenuId === usuario.id && (
+                          {isPendingApproval ? (
+                            <button
+                              type="button"
+                              onClick={() => selectTab('solicitudes')}
+                              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100"
+                            >
+                              Revisar solicitud
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Acciones para ${usuario.first_name} ${usuario.last_name}`}
+                              aria-haspopup="menu"
+                              aria-expanded={openMenuId === usuario.id}
+                              disabled={busyUserId === usuario.id}
+                              onClick={() => {
+                                setOpenMenuId((current) =>
+                                  current === usuario.id ? null : usuario.id,
+                                );
+                              }}
+                              className="rounded-md border border-[#cfe4dc] bg-[#e6f5ee] p-1.5 text-[#087d70] transition-colors hover:bg-[#d5eee4] hover:text-[#07584f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#087d70] focus-visible:ring-offset-2 disabled:opacity-50"
+                            >
+                              {busyUserId === usuario.id ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <MoreVertical className="h-5 w-5" />
+                              )}
+                            </button>
+                          )}
+                          {!isPendingApproval && openMenuId === usuario.id && (
                             <div
                               role="menu"
                               className={`absolute right-8 z-10 w-56 rounded-md border border-gray-200 bg-white py-1 text-left shadow-lg ${
@@ -800,6 +855,7 @@ export const AdminUsuarios = () => {
         <PanelUsuarios
           embedded
           onPendingCountChange={handlePendingCountChange}
+          onRequestProcessed={() => void fetchUsuarios()}
         />
       </div>
       {especialidadesError && activeTab === 'gestion' && (
