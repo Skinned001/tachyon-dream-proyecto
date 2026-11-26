@@ -381,8 +381,7 @@ export function GestionPortal() {
                   <input
                     ref={pdfInputRef}
                     type="file"
-                    accept="application/pdf"
-                    required
+                    accept="application/pdf,.pdf"
                     onChange={(e) => setPdfFile(e.currentTarget.files?.[0] ?? null)}
                     className="block w-full cursor-pointer rounded-xl border border-dashed border-[#a9cbbd] bg-[#f7fbf9] px-4 py-3 text-sm text-[#385f56] file:mr-3 file:rounded-lg file:border-0 file:bg-[#dff2e9] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#07584f]"
                   />
@@ -421,6 +420,12 @@ export function GestionPortal() {
                   Visible al público inmediatamente
                 </label>
               </div>
+
+              {error && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <Button

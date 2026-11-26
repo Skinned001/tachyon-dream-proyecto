@@ -9,16 +9,36 @@ fs.mkdirSync(portalUploadsDirectory, { recursive: true });
 
 const allowedImageMimeTypes = new Set([
   'image/jpeg',
+  'image/jpg',
   'image/png',
   'image/webp',
+  'image/gif',
+  'image/avif',
 ]);
 
 const extensionByMime: Record<string, string> = {
   'application/pdf': '.pdf',
+  'application/x-pdf': '.pdf',
   'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
   'image/png': '.png',
   'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/avif': '.avif',
 };
+
+const isPdfFile = (file: Express.Multer.File): boolean =>
+  file.mimetype === 'application/pdf' ||
+  file.mimetype === 'application/x-pdf' ||
+  path.extname(file.originalname).toLowerCase() === '.pdf';
+
+const isImageFile = (file: Express.Multer.File): boolean =>
+  allowedImageMimeTypes.has(file.mimetype) ||
+  /\.(jpe?g|png|webp|gif|avif)$/i.test(file.originalname);
+
+class PortalUploadError extends Error {
+  readonly statusCode = 400;
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => {
@@ -36,25 +56,29 @@ const storage = multer.diskStorage({
 
 export const uploadRevistaFiles = multer({
   storage,
-  limits: { fileSize: 40 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
     if (file.fieldname === 'pdf') {
-      if (file.mimetype !== 'application/pdf') {
-        callback(new Error('La revista debe adjuntarse en formato PDF.'));
+      if (!isPdfFile(file)) {
+        callback(
+          new PortalUploadError('La revista debe adjuntarse en formato PDF.'),
+        );
         return;
       }
       callback(null, true);
       return;
     }
     if (file.fieldname === 'cover') {
-      if (!allowedImageMimeTypes.has(file.mimetype)) {
-        callback(new Error('La portada debe ser JPG, PNG o WebP.'));
+      if (!isImageFile(file)) {
+        callback(
+          new PortalUploadError('La portada debe ser JPG, PNG o WebP.'),
+        );
         return;
       }
       callback(null, true);
       return;
     }
-    callback(new Error('Campo de archivo no permitido.'));
+    callback(new PortalUploadError('Campo de archivo no permitido.'));
   },
 }).fields([
   { name: 'pdf', maxCount: 1 },
@@ -63,25 +87,29 @@ export const uploadRevistaFiles = multer({
 
 export const uploadNovedadFiles = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
     if (file.fieldname === 'image') {
-      if (!allowedImageMimeTypes.has(file.mimetype)) {
-        callback(new Error('La imagen debe ser JPG, PNG o WebP.'));
+      if (!isImageFile(file)) {
+        callback(
+          new PortalUploadError('La imagen debe ser JPG, PNG o WebP.'),
+        );
         return;
       }
       callback(null, true);
       return;
     }
     if (file.fieldname === 'attachment') {
-      if (file.mimetype !== 'application/pdf') {
-        callback(new Error('El adjunto debe ser un archivo PDF.'));
+      if (!isPdfFile(file)) {
+        callback(
+          new PortalUploadError('El adjunto debe ser un archivo PDF.'),
+        );
         return;
       }
       callback(null, true);
       return;
     }
-    callback(new Error('Campo de archivo no permitido.'));
+    callback(new PortalUploadError('Campo de archivo no permitido.'));
   },
 }).fields([
   { name: 'image', maxCount: 1 },

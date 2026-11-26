@@ -21,10 +21,18 @@ const parseBoolean = (fallback: boolean) =>
     .default(fallback);
 
 const createRevistaSchema = z.object({
-  title: z.string().trim().min(1).max(255),
-  editionLabel: z.string().trim().min(1).max(100),
+  title: z.string().trim().min(1, 'El título es obligatorio.').max(255),
+  editionLabel: z
+    .string()
+    .trim()
+    .min(1, 'El número de edición es obligatorio.')
+    .max(100),
   summary: z.string().trim().max(5000).optional(),
-  publishedDate: z.coerce.date().optional(),
+  publishedDate: z.preprocess(
+    (value) =>
+      value === '' || value === null || value === undefined ? undefined : value,
+    z.coerce.date().optional(),
+  ),
   isFeatured: parseBoolean(true),
   isPublished: parseBoolean(true),
 });
@@ -155,7 +163,9 @@ export class PortalController {
       await cleanupFiles(uploadedFiles);
       res.status(400).json({
         success: false,
-        error: 'Título y número de edición son obligatorios.',
+        error:
+          parsed.error.issues[0]?.message ??
+          'Título y número de edición son obligatorios.',
       });
       return;
     }

@@ -154,7 +154,10 @@ export class PortalService {
     createdBy: number;
   }): Promise<RevistaEdicionDTO> {
     if (input.isFeatured) {
-      await RevistaEdicion.update({ isFeatured: false }, { where: {} });
+      await RevistaEdicion.update(
+        { isFeatured: false },
+        { where: { isFeatured: true } },
+      );
     }
 
     const row = await RevistaEdicion.create({
