@@ -13,6 +13,7 @@ import editorialRoutes from "./modules/editorial/editorial.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import auditoriaRoutes from "./modules/auditoria/auditoria.routes.js";
 import metricasRoutes from "./modules/metricas/metricas.routes.js";
+import portalRoutes from "./modules/portal/portal.routes.js";
 import { uploadsDirectory } from "./config/uploads.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -58,6 +59,15 @@ app.use(
     },
   }),
 );
+app.use(
+  '/uploads/portal',
+  uploadsCors,
+  express.static(path.join(uploadsPath, 'portal'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
+);
 
 app.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });
@@ -74,6 +84,7 @@ app.use("/api/convocatorias", editorialRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/auditoria", auditoriaRoutes);
 app.use("/api/metricas", metricasRoutes);
+app.use("/api/portal", portalRoutes);
 
 app.use(errorMiddleware);
 

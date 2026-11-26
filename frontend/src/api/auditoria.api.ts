@@ -6,7 +6,9 @@ export type AuditEntityType =
   | 'CONVOCATORIA'
   | 'USUARIO'
   | 'RECURSO_BIBLIOTECA'
-  | 'ESPECIALIDAD';
+  | 'ESPECIALIDAD'
+  | 'REVISTA'
+  | 'PORTAL_NOVEDAD';
 
 export interface AuditLogItem {
   id: number;

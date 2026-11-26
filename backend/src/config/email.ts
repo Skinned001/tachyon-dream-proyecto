@@ -44,11 +44,11 @@ export const sendApprovalEmail = async (
   const fullName = `${recipient.firstName} ${recipient.lastName}`;
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? `"Chief Journal HIEF" <${SMTP_USER}>`,
+    from: process.env.SMTP_FROM ?? `"Revista HIEF" <${SMTP_USER}>`,
     to: recipient.email,
-    subject: 'Cuenta aprobada - Chief Journal',
+    subject: 'Cuenta aprobada - Revista HIEF',
     text: `Hola ${fullName}, tu solicitud fue aprobada por el Comité Editorial. Ya puedes iniciar sesión con tus credenciales.`,
-    html: `<h3>¡Bienvenido al Chief Journal, ${escapeHtml(fullName)}!</h3>
+    html: `<h3>¡Bienvenido a Revista HIEF, ${escapeHtml(fullName)}!</h3>
       <p>Su solicitud ha sido aprobada por el Comité Editorial.</p>
       <p>Ya puede iniciar sesión con sus credenciales.</p>`,
   });

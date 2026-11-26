@@ -129,7 +129,7 @@ export const Registro = () => {
         <div className="relative max-w-[540px] pb-10">
           <p className="mb-5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.2em] text-[#d0f2e3]">
             <span className="h-px w-7 bg-[#b3e8d3]" />
-            Chief Journal
+            Revista HIEF
           </p>
           <h1 className="font-editorial text-[clamp(44px,5vw,72px)] leading-[.98] tracking-[-.04em]">
             La ciencia
@@ -171,7 +171,7 @@ export const Registro = () => {
                 HOSPITAL EVITA
               </p>
               <p className="text-[10px] uppercase tracking-[.15em] text-[#52766d]">
-                Chief Journal
+                Revista HIEF
               </p>
             </div>
           </div>

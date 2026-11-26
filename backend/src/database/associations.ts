@@ -37,6 +37,14 @@ import {
   MetricEvent,
   initializeMetricEventModel,
 } from '../modules/metricas/MetricEvent.model.js';
+import {
+  RevistaEdicion,
+  initializeRevistaEdicionModel,
+} from '../modules/portal/RevistaEdicion.model.js';
+import {
+  PortalNovedad,
+  initializePortalNovedadModel,
+} from '../modules/portal/PortalNovedad.model.js';
 import { Rol, initializeRolModel } from '../modules/usuarios/Rol.model.js';
 import { Usuario, initializeUsuarioModel } from '../modules/usuarios/Usuario.model.js';
 
@@ -60,6 +68,8 @@ export const setupAssociations = (): void => {
   initializeAuditLogModel(sequelize);
   initializeNotificacionModel(sequelize);
   initializeMetricEventModel(sequelize);
+  initializeRevistaEdicionModel(sequelize);
+  initializePortalNovedadModel(sequelize);
 
   Rol.hasMany(Usuario, { foreignKey: 'roleId', as: 'users' });
   Usuario.belongsTo(Rol, { foreignKey: 'roleId', as: 'role' });
@@ -132,6 +142,28 @@ export const setupAssociations = (): void => {
   MetricEvent.belongsTo(Especialidad, {
     foreignKey: 'specialtyId',
     as: 'specialty',
+    onDelete: 'SET NULL',
+  });
+
+  Usuario.hasMany(RevistaEdicion, {
+    foreignKey: 'createdBy',
+    as: 'revistaEdiciones',
+    onDelete: 'SET NULL',
+  });
+  RevistaEdicion.belongsTo(Usuario, {
+    foreignKey: 'createdBy',
+    as: 'creator',
+    onDelete: 'SET NULL',
+  });
+
+  Usuario.hasMany(PortalNovedad, {
+    foreignKey: 'createdBy',
+    as: 'portalNovedades',
+    onDelete: 'SET NULL',
+  });
+  PortalNovedad.belongsTo(Usuario, {
+    foreignKey: 'createdBy',
+    as: 'creator',
     onDelete: 'SET NULL',
   });
 

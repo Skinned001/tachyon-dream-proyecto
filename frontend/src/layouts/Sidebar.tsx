@@ -13,6 +13,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Newspaper,
   ShieldCheck,
   Stethoscope,
   Users,
@@ -94,6 +95,12 @@ const sections: SidebarSection[] = [
         to: '/recursos-biblioteca',
         label: 'Documentos',
         icon: FolderOpen,
+        allowedRoles: ['ADMIN', 'EDITOR'],
+      },
+      {
+        to: '/gestion-portal',
+        label: 'Portal y Revista',
+        icon: Newspaper,
         allowedRoles: ['ADMIN', 'EDITOR'],
       },
     ],
@@ -184,7 +191,7 @@ export function Sidebar({
               HOSPITAL EVITA
             </p>
             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[.17em] text-[#52766d]">
-              Chief Journal
+              Revista HIEF
             </p>
           </div>
         </div>

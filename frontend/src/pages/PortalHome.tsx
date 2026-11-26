@@ -5,14 +5,18 @@ import {
   ArrowUpRight,
   BookMarked,
   BookOpen,
+  BookOpenCheck,
   Building2,
   CalendarDays,
   Download,
+  ExternalLink,
   Eye,
   FileText,
   GraduationCap,
   Megaphone,
+  Newspaper,
   Search,
+  Star,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { articulosApi, type PublishedArticle } from '../api/articulos.api';
@@ -32,6 +36,12 @@ import {
   trackDocumentView,
   trackPortalVisit,
 } from '../api/metricas.api';
+import {
+  getPortalFileUrl,
+  getPortalPublicContent,
+  type PortalPublicContent,
+  type RevistaEdicion,
+} from '../api/portal.api';
 
 const apiBaseUrl = (
   import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
@@ -66,6 +76,14 @@ export function PortalHome() {
   const [downloadingArticleId, setDownloadingArticleId] = useState<number | null>(
     null,
   );
+  const [downloadingRevistaId, setDownloadingRevistaId] = useState<number | null>(
+    null,
+  );
+  const [portalContent, setPortalContent] = useState<PortalPublicContent>({
+    featuredEdition: null,
+    pastEditions: [],
+    news: [],
+  });
   const { user, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
@@ -119,6 +137,11 @@ export function PortalHome() {
   useEffect(() => {
     void loadArticles();
     void loadConvocatorias();
+    void getPortalPublicContent()
+      .then(setPortalContent)
+      .catch(() => {
+        // Keep empty fallback if portal content fails
+      });
   }, []);
 
   useEffect(() => {
@@ -195,6 +218,34 @@ export function PortalHome() {
     }
   }
 
+  async function handleDownloadRevista(edition: RevistaEdicion) {
+    const pdfUrl = getPortalFileUrl(edition.pdfUrl);
+    if (!pdfUrl) return;
+    setDownloadingRevistaId(edition.id);
+    try {
+      const response = await fetch(pdfUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error('No se pudo descargar la revista.');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (edition.title || `revista-hief-${edition.id}`)
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .trim();
+      link.href = objectUrl;
+      link.download = safeName.toLowerCase().endsWith('.pdf')
+        ? safeName
+        : `${safeName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(pdfUrl, '_blank', 'noreferrer');
+    } finally {
+      setDownloadingRevistaId(null);
+    }
+  }
+
   const years = useMemo(
     () =>
       [
@@ -234,6 +285,8 @@ export function PortalHome() {
   }, [articles, search, selectedYear]);
 
   const isAuthor = user?.is_author === true || String(user?.role) === 'AUTOR';
+  const canManagePortal =
+    user?.role === 'ADMIN' || user?.role === 'EDITOR';
 
   return (
     <main className="min-h-screen bg-[#f2f7f4] text-[#173d3b]">
@@ -254,7 +307,7 @@ export function PortalHome() {
                 HOSPITAL INTERDISTRITAL EVITA
               </span>
               <span className="mt-0.5 block text-[11px] font-medium uppercase tracking-[.14em] text-[#355d55]">
-                Chief Journal · HIEF
+                Revista Científica · HIEF
               </span>
             </span>
             <span
@@ -454,6 +507,256 @@ export function PortalHome() {
           </div>
         </div>
       </section>
+
+      {(portalContent.featuredEdition || canManagePortal) && (
+        <section
+          id="revista-oficial"
+          className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-14"
+        >
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#087d70]">
+                <Star size={14} fill="currentColor" />
+                Publicación destacada del hospital
+              </p>
+              <h2 className="font-editorial mt-1.5 text-[32px] tracking-[-.03em] text-[#102f2d] md:text-[40px]">
+                Revista Oficial HIEF
+              </h2>
+            </div>
+            {canManagePortal && (
+              <Link
+                to="/gestion-portal"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#b9d8ca] bg-white px-4 text-sm font-semibold text-[#087d70] transition hover:bg-[#edf6f2]"
+              >
+                Gestionar ediciones <ArrowRight size={15} />
+              </Link>
+            )}
+          </div>
+
+          {portalContent.featuredEdition ? (
+            <div className="space-y-6">
+              <article className="overflow-hidden rounded-3xl border border-[#9bcfbb] bg-gradient-to-br from-[#063b3a] via-[#07584f] to-[#087d70] text-white shadow-xl">
+                <div className="grid items-center gap-8 p-6 md:p-10 lg:grid-cols-[280px_1fr]">
+                  <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-2xl">
+                    {portalContent.featuredEdition.coverImageUrl ? (
+                      <img
+                        src={getPortalFileUrl(
+                          portalContent.featuredEdition.coverImageUrl,
+                        )}
+                        alt={`Portada ${portalContent.featuredEdition.title}`}
+                        className="aspect-[3/4] w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-[3/4] flex-col items-center justify-center gap-4 bg-[#052e2d] p-6 text-center">
+                        <img
+                          src="/images/evita_1.jpg"
+                          alt="Hospital Interdistrital Evita"
+                          className="h-16 w-16 rounded-2xl object-cover shadow"
+                        />
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#a8ead5]">
+                            Revista Oficial
+                          </p>
+                          <p className="font-editorial mt-1 text-xl text-white">
+                            {portalContent.featuredEdition.editionLabel}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d7f2e6] px-3.5 py-1 text-xs font-bold uppercase tracking-wide text-[#063b3a]">
+                      <BookOpenCheck size={14} />
+                      {portalContent.featuredEdition.editionLabel}
+                    </span>
+                    <h3 className="font-editorial mt-4 text-3xl leading-tight text-white md:text-4xl">
+                      {portalContent.featuredEdition.title}
+                    </h3>
+                    {portalContent.featuredEdition.summary && (
+                      <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#e3f6ee]">
+                        {portalContent.featuredEdition.summary}
+                      </p>
+                    )}
+                    <div className="mt-7 flex flex-wrap items-center gap-3">
+                      <a
+                        href={getPortalFileUrl(
+                          portalContent.featuredEdition.pdfUrl,
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-12 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#063b3a] shadow-sm transition hover:bg-[#e6f5ee]"
+                      >
+                        <Eye size={17} />
+                        Leer revista online
+                      </a>
+                      <button
+                        type="button"
+                        disabled={
+                          downloadingRevistaId ===
+                          portalContent.featuredEdition.id
+                        }
+                        onClick={() =>
+                          void handleDownloadRevista(
+                            portalContent.featuredEdition!,
+                          )
+                        }
+                        className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#b3e8d3]/60 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 disabled:opacity-60"
+                      >
+                        <Download size={17} />
+                        {downloadingRevistaId ===
+                        portalContent.featuredEdition.id
+                          ? 'Descargando...'
+                          : 'Descargar edición completa'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              {portalContent.pastEditions.length > 0 && (
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[.14em] text-[#355d55]">
+                    Ediciones anteriores
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {portalContent.pastEditions.map((edition) => (
+                      <article
+                        key={edition.id}
+                        className="flex flex-col justify-between rounded-2xl border border-[#cfe4dc] bg-white p-5 shadow-sm"
+                      >
+                        <div>
+                          <span className="rounded-full bg-[#e6f5ee] px-2.5 py-1 text-xs font-semibold text-[#07584f]">
+                            {edition.editionLabel}
+                          </span>
+                          <h4 className="font-editorial mt-3 text-xl leading-snug text-[#102f2d]">
+                            {edition.title}
+                          </h4>
+                          {edition.summary && (
+                            <p className="mt-2 line-clamp-2 text-sm text-[#35534d]">
+                              {edition.summary}
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-4 flex items-center gap-2 border-t border-[#e3eee9] pt-4">
+                          <a
+                            href={getPortalFileUrl(edition.pdfUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#b9d8ca] bg-white px-3 py-1.5 text-xs font-semibold text-[#102f2d] hover:bg-[#edf6f2]"
+                          >
+                            <Eye size={14} /> Ver
+                          </a>
+                          <button
+                            type="button"
+                            disabled={downloadingRevistaId === edition.id}
+                            onClick={() => void handleDownloadRevista(edition)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#087d70] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#07584f]"
+                          >
+                            <Download size={14} /> Descargar
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#a9d2c1] bg-[#f7fbf9] p-8 text-center">
+              <p className="text-base font-semibold text-[#173d3b]">
+                Aún no hay ediciones publicadas de la Revista Oficial HIEF.
+              </p>
+              <Link
+                to="/gestion-portal"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#087d70] px-4 text-sm font-semibold text-white hover:bg-[#07584f]"
+              >
+                Publicar primera edición <ArrowRight size={15} />
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
+
+      {portalContent.news.length > 0 && (
+        <section
+          id="novedades"
+          className="mx-auto max-w-[1240px] px-5 pt-14 md:px-8"
+        >
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[#355d55]">
+                <Newspaper size={14} className="text-[#087d70]" />
+                Actualidad institucional
+              </p>
+              <h2 className="font-editorial mt-1.5 text-[32px] tracking-[-.03em] text-[#102f2d] md:text-[38px]">
+                Novedades y Comunicados
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {portalContent.news.map((item) => (
+              <article
+                key={item.id}
+                className="flex flex-col overflow-hidden rounded-2xl border border-[#cfe4dc] bg-white shadow-sm transition hover:border-[#82c4a9]"
+              >
+                {item.imageUrl && (
+                  <img
+                    src={getPortalFileUrl(item.imageUrl)}
+                    alt={item.title}
+                    className="h-44 w-full object-cover"
+                  />
+                )}
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#e6f5ee] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[#07584f]">
+                      {item.category}
+                    </span>
+                    <span className="text-xs text-[#526e68]">
+                      {new Intl.DateTimeFormat('es-AR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      }).format(new Date(item.createdAt))}
+                    </span>
+                  </div>
+                  <h3 className="font-editorial mt-3 text-xl leading-snug text-[#102f2d]">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2.5 flex-1 text-sm leading-relaxed text-[#35534d]">
+                    {item.summary}
+                  </p>
+                  {(item.attachmentUrl || item.externalLink) && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-[#e3eee9] pt-4">
+                      {item.attachmentUrl && (
+                        <a
+                          href={getPortalFileUrl(item.attachmentUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#087d70] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#07584f]"
+                        >
+                          <FileText size={14} /> Ver documento PDF
+                        </a>
+                      )}
+                      {item.externalLink && (
+                        <a
+                          href={item.externalLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#b9d8ca] px-3 py-1.5 text-xs font-semibold text-[#102f2d] hover:bg-[#edf6f2]"
+                        >
+                          Más información <ExternalLink size={13} />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section
         id="convocatorias-abiertas"
@@ -969,7 +1272,7 @@ export function PortalHome() {
                 Hospital Interdistrital Evita · Instituto Politécnico Formosa
               </p>
               <p className="mt-0.5 text-xs text-[#35534d]">
-                © {new Date().getFullYear()} Chief Journal HIEF · Formosa,
+                © {new Date().getFullYear()} Revista HIEF · Formosa,
                 Argentina
               </p>
             </div>

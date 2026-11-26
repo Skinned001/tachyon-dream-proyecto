@@ -19,7 +19,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
-RUN mkdir -p /app/uploads/articles /app/uploads/avatars /app/uploads/credentials /app/uploads/library /app/uploads/profiles
+RUN mkdir -p /app/uploads/articles /app/uploads/avatars /app/uploads/credentials /app/uploads/library /app/uploads/portal /app/uploads/profiles
 
 EXPOSE 3000
 

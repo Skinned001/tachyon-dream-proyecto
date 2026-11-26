@@ -23,6 +23,8 @@ const entityLabels: Record<AuditEntityType, string> = {
   USUARIO: 'Usuario',
   RECURSO_BIBLIOTECA: 'Biblioteca',
   ESPECIALIDAD: 'Especialidades',
+  REVISTA: 'Revista Oficial',
+  PORTAL_NOVEDAD: 'Portada / Novedades',
 };
 
 const actionTone = (action: string): string => {

@@ -14,6 +14,8 @@ const querySchema = z.object({
       'USUARIO',
       'RECURSO_BIBLIOTECA',
       'ESPECIALIDAD',
+      'REVISTA',
+      'PORTAL_NOVEDAD',
     ])
     .optional(),
   action: z.string().trim().min(1).max(80).optional(),

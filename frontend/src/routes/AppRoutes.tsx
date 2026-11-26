@@ -13,6 +13,7 @@ import { MisArticulos } from "../pages/MisArticulos";
 import { Notificaciones } from "../pages/Notificaciones";
 import { Perfil } from "../pages/Perfil";
 import { RecursosBibliotecaAdmin } from "../pages/RecursosBibliotecaAdmin";
+import { GestionPortal } from "../pages/GestionPortal";
 import { Registro } from "../pages/Registro";
 import { Revisiones } from "../pages/Revisiones";
 import { PrivateRoutes } from "./PrivateRoutes";
@@ -65,6 +66,7 @@ export function AppRoutes() {
             path="recursos-biblioteca"
             element={<RecursosBibliotecaAdmin />}
           />
+          <Route path="gestion-portal" element={<GestionPortal />} />
           <Route path="admin/metricas" element={<AdminMetricas />} />
         </Route>
       </Route>
