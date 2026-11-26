@@ -256,11 +256,16 @@ reales que contengan información sensible.
 - El modo `demo` compara con textos sintéticos incluidos en el servicio.
 - El modo `uploaded` compara el objetivo con hasta cinco PDFs de referencia
   cargados por la persona usuaria.
+- El modo `corpus` compara contra el repositorio interno del HIEF (`PUBLICADO` y
+  biblioteca `PUBLICO`) y/o APIs científicas gratuitas (`OpenAlex`, `Crossref`,
+  `Europe PMC`) mediante frases clave sanitizadas (sin enviar el PDF completo),
+  y mantiene el punto de extensión `OpenWebProvider` (`OPEN_WEB_PROVIDER`) para
+  conectar búsqueda en web abierta en una etapa posterior.
 - El objetivo puede ser texto pegado o un PDF. Los PDFs deben ser legibles y
   contener texto extraíble; OCR no está incluido.
-- La comparación detecta secuencias textuales coincidentes de ocho o más
-  palabras consecutivas. No identifica paráfrasis y no equivale a una búsqueda
-  semántica.
+- La comparación combina coincidencia literal (`>= 8` palabras consecutivas) con
+  similitud léxica híbrida (TF-IDF por palabras, bigramas y 4-gramas) y marca
+  si la fuente figura citada en la bibliografía del manuscrito.
 - La respuesta puede ser `completed` o `not_evaluable`; errores de solicitud,
   formato, tamaño o servicio se expresan como errores HTTP.
 - El resultado solo informa coincidencias en las fuentes comparadas. Nunca
@@ -268,14 +273,16 @@ reales que contengan información sensible.
 
 ### Manejo de datos y límites
 
-- Express mantiene los archivos en memoria durante la solicitud; FastAPI los
-  recibe como carga temporal. No se guardan documentos, texto extraído ni
-  informes en la base de datos.
+- Express mantiene los archivos cargados en memoria durante la solicitud;
+  FastAPI lee el corpus interno del volumen compartido en modo solo lectura
+  (`uploads_data`). No se guardan copias ni informes en la base de datos.
 - El límite por PDF es 10 MB, el total por solicitud es 20 MB y se permiten
-  hasta cinco referencias.
+  hasta cinco referencias en modo `uploaded`.
 - Los hallazgos muestran un fragmento textual y páginas para facilitar la
   revisión; no se registran contenidos documentales en logs.
-- El prototipo no llama a proveedores externos ni busca en internet.
+- En modo `corpus`, solo se envían a APIs científicas externas frases clave
+  breves seleccionadas automáticamente (con filtrado de correos y secuencias
+  numéricas largas).
 - Los límites y el umbral de ocho palabras son parámetros iniciales para
   probar el flujo, no umbrales editoriales validados.
 
@@ -283,6 +290,8 @@ reales que contengan información sensible.
 
 La respuesta exitosa usa el envoltorio estándar `{ "success": true, "data": ... }`.
 `data` contiene `analysisId`, `status`, `sourceMode`, `analyzerVersion`,
-`findings`, `warnings`, `message` y `disclaimer`. Cada hallazgo declara
-`sourceLabel`, `sourcePage`, `targetPage`, `excerpt` y `matchedTokens`. El
-prototipo no devuelve porcentajes de plagio ni similitud global.
+`findings`, `warnings`, `queriedProviders`, `queriesUsed`, `sourcesEvaluated`,
+`openWebStatus`, `message` y `disclaimer`. Cada hallazgo declara
+`sourceLabel`, `sourcePage`, `targetPage`, `excerpt`, `sourceExcerpt`,
+`matchedTokens`, `matchType`, `similarityScore`, `provider`, `sourceUrl`, `doi`,
+`year` e `isCited`. El prototipo no devuelve porcentajes globales de plagio.

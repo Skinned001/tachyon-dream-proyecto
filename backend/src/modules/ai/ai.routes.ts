@@ -11,7 +11,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024,
     files: 6,
-    fields: 2,
+    fields: 10,
   },
 });
 const parseSimilarityFiles = upload.fields([

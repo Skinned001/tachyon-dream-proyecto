@@ -476,14 +476,23 @@ export interface PublishedArticleDTO {
 // 10. MÓDULO IA (/api/ai)
 // ----------------------------------------------------------------------------
 export type SimilarityAnalysisStatus = 'completed' | 'not_evaluable';
-export type SimilaritySourceMode = 'demo' | 'uploaded';
+export type SimilaritySourceMode = 'demo' | 'uploaded' | 'corpus';
+export type SimilarityMatchType = 'exact' | 'lexical';
 
 export interface SimilarityFindingDTO {
   sourceLabel: string;
   sourcePage: number;
   targetPage: number;
   excerpt: string;
+  sourceExcerpt?: string;
   matchedTokens: number;
+  matchType: SimilarityMatchType;
+  similarityScore: number;
+  provider: string;
+  sourceUrl?: string | null;
+  doi?: string | null;
+  year?: number | null;
+  isCited?: boolean;
 }
 
 export interface AIReportDTO {
@@ -493,14 +502,20 @@ export interface AIReportDTO {
   analyzerVersion: string;
   findings: SimilarityFindingDTO[];
   warnings: string[];
+  queriedProviders: string[];
+  queriesUsed: string[];
+  sourcesEvaluated: number;
+  openWebStatus: 'disabled' | 'not_configured' | 'active';
   message: string;
   disclaimer: string;
 }
 
 // POST /ai/similarity/check — requiere autenticación y permiso de autor
-// (is_author = true) o rol DDI, COMITE o ADMIN; multipart con sourceMode,
-// targetText o targetFile opcional y referenceFiles[] cuando
-// sourceMode = "uploaded".
+// (is_author = true) o rol DDI, COMITE o ADMIN; multipart con sourceMode
+// ("demo" | "uploaded" | "corpus"), targetText o targetFile opcional,
+// referenceFiles[] cuando sourceMode = "uploaded", y flags opcionales
+// includeInternalCorpus, includeScientificApis, includeOpenWeb y excludeArticleId
+// cuando sourceMode = "corpus".
 // El informe se devuelve en la respuesta y no se persiste en el prototipo.
 
 // ----------------------------------------------------------------------------

@@ -50,8 +50,11 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       PYTHONUNBUFFERED: "1"
+      UPLOADS_DIR: /app/uploads
+      OPEN_WEB_PROVIDER: ${OPEN_WEB_PROVIDER:-disabled}
     volumes:
       - ./ai-service:/app
+      - uploads_data:/app/uploads:ro
 
   frontend:
     build:

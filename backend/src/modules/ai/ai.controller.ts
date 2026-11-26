@@ -18,7 +18,7 @@ export class AiController {
     if (!parsedRequest.success) {
       res.status(400).json({
         success: false,
-        error: 'El modo de comparación o el texto objetivo no son válidos.',
+        error: 'Los parámetros del análisis de similitud no son válidos.',
       });
       return;
     }
@@ -31,7 +31,14 @@ export class AiController {
       | undefined;
     const targetFile = files?.targetFile?.[0];
     const referenceFiles = files?.referenceFiles ?? [];
-    const { sourceMode, targetText } = parsedRequest.data;
+    const {
+      sourceMode,
+      targetText,
+      includeInternalCorpus,
+      includeScientificApis,
+      includeOpenWeb,
+      excludeArticleId,
+    } = parsedRequest.data;
 
     if (targetFile && targetText !== undefined) {
       res.status(400).json({
@@ -61,7 +68,26 @@ export class AiController {
       });
       return;
     }
-    if (sourceMode === 'uploaded' && !targetFile && targetText === undefined) {
+    if (sourceMode === 'corpus' && referenceFiles.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'El modo de corpus utiliza únicamente las fuentes institucionales y científicas seleccionadas.',
+      });
+      return;
+    }
+    if (
+      sourceMode === 'corpus' &&
+      !includeInternalCorpus &&
+      !includeScientificApis &&
+      !includeOpenWeb
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'Seleccione al menos una fuente de comparación.',
+      });
+      return;
+    }
+    if (sourceMode !== 'demo' && !targetFile && targetText === undefined) {
       res.status(400).json({
         success: false,
         error: 'Adjunte un PDF objetivo o ingrese texto para analizar.',
@@ -84,10 +110,14 @@ export class AiController {
         targetText,
         targetFile,
         referenceFiles,
+        includeInternalCorpus,
+        includeScientificApis,
+        includeOpenWeb,
+        excludeArticleId,
       });
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);
     }
-  }
+  };
 }
