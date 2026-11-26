@@ -16,6 +16,7 @@ export interface User {
   dni?: string | null;
   active: boolean;
   createdAt?: string;
+  approvedAt?: string | null;
 }
 
 export interface CreateUserRequest {

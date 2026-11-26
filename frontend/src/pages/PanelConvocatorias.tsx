@@ -113,6 +113,11 @@ export const PanelConvocatorias = () => {
     event.preventDefault();
     setFormError('');
 
+    if (!formData.fechaInicio || !formData.fechaFin) {
+      setFormError('Debes seleccionar la fecha y hora de inicio y de fin.');
+      return;
+    }
+
     const fechaInicio = new Date(formData.fechaInicio);
     const fechaFin = new Date(formData.fechaFin);
     const ahora = new Date();
@@ -242,7 +247,11 @@ export const PanelConvocatorias = () => {
             </button>
           </div>
 
-          <form onSubmit={handleCreate} className="max-w-3xl space-y-5 p-5 sm:p-7">
+          <form
+            onSubmit={handleCreate}
+            autoComplete="off"
+            className="max-w-3xl space-y-5 p-5 sm:p-7"
+          >
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Título
@@ -250,6 +259,7 @@ export const PanelConvocatorias = () => {
               <input
                 required
                 type="text"
+                autoComplete="off"
                 value={formData.title}
                 onChange={(event) =>
                   setFormData({ ...formData, title: event.target.value })
@@ -274,7 +284,6 @@ export const PanelConvocatorias = () => {
                       fechaInicio: date ? toLocalDateTimeValue(date) : '',
                     })
                   }
-                  className={inputClassName}
                   placeholder="Seleccionar fecha y hora de inicio"
                 />
               </label>
@@ -298,7 +307,6 @@ export const PanelConvocatorias = () => {
                       fechaFin: date ? toLocalDateTimeValue(date) : '',
                     })
                   }
-                  className={inputClassName}
                   placeholder="Seleccionar fecha y hora de fin"
                 />
               </label>

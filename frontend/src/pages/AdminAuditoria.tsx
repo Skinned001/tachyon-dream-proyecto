@@ -15,7 +15,12 @@ import {
   type AuditEntityType,
   type AuditLogItem,
 } from '../api/auditoria.api';
-import { formatDateTime } from '../utils/formatDate';
+import { CustomDatePicker } from '../components/ui/DatePicker';
+import {
+  formatDateTime,
+  parseLocalDateValue,
+  toLocalDateValue,
+} from '../utils/formatDate';
 
 const entityLabels: Record<AuditEntityType, string> = {
   ARTICULO: 'Manuscrito',
@@ -136,7 +141,7 @@ export const AdminAuditoria = () => {
         </button>
       </section>
 
-      <section className="grid items-end gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_160px_160px_auto]">
+      <section className="grid items-end gap-3 rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-4 sm:grid-cols-2 lg:grid-cols-[1.3fr_180px_185px_185px_auto]">
         <label className="relative block">
           <span className="sr-only">Buscar en auditoría</span>
           <Search
@@ -151,7 +156,7 @@ export const AdminAuditoria = () => {
               setPage(1);
             }}
             placeholder="Buscar por usuario, acción o detalle..."
-            className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white pl-10 pr-3 text-xs text-[#173d3b] outline-none focus:border-[#087d70]"
+            className="h-11 w-full rounded-xl border border-[#cfe4dc] bg-white pl-10 pr-3 text-xs text-[#173d3b] outline-none focus:border-[#087d70]"
           />
         </label>
 
@@ -162,7 +167,7 @@ export const AdminAuditoria = () => {
             setEntityType(e.target.value as AuditEntityType | '');
             setPage(1);
           }}
-          className="h-10 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
+          className="h-11 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
         >
           <option value="">Todos los módulos</option>
           <option value="ARTICULO">Manuscritos</option>
@@ -176,15 +181,16 @@ export const AdminAuditoria = () => {
           <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
             Desde
           </span>
-          <input
-            type="date"
-            value={from}
-            max={to || undefined}
-            onChange={(e) => {
-              setFrom(e.target.value);
+          <CustomDatePicker
+            showTimeSelect={false}
+            isClearable
+            selected={parseLocalDateValue(from)}
+            maxDateTime={parseLocalDateValue(to) ?? undefined}
+            onChange={(date) => {
+              setFrom(date ? toLocalDateValue(date) : '');
               setPage(1);
             }}
-            className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
+            placeholder="dd/mm/aaaa"
           />
         </label>
 
@@ -192,15 +198,16 @@ export const AdminAuditoria = () => {
           <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[.08em] text-[#52766d]">
             Hasta
           </span>
-          <input
-            type="date"
-            value={to}
-            min={from || undefined}
-            onChange={(e) => {
-              setTo(e.target.value);
+          <CustomDatePicker
+            showTimeSelect={false}
+            isClearable
+            selected={parseLocalDateValue(to)}
+            minDateTime={parseLocalDateValue(from) ?? undefined}
+            onChange={(date) => {
+              setTo(date ? toLocalDateValue(date) : '');
               setPage(1);
             }}
-            className="h-10 w-full rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs text-[#244f47] outline-none focus:border-[#087d70]"
+            placeholder="dd/mm/aaaa"
           />
         </label>
 
@@ -208,7 +215,7 @@ export const AdminAuditoria = () => {
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs font-semibold text-[#52766d] hover:bg-[#f2f7f4]"
+            className="inline-flex h-11 items-center justify-center gap-1 rounded-xl border border-[#cfe4dc] bg-white px-3 text-xs font-semibold text-[#52766d] hover:bg-[#f2f7f4]"
           >
             <X size={14} /> Limpiar
           </button>

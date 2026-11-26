@@ -23,6 +23,7 @@ export interface UsuarioDTO {
   specialtyId: number | null;
   must_change_password: boolean;
   active: boolean;
+  approvedAt: string | null;
 }
 
 export interface UsuarioPendienteDTO {
@@ -74,6 +75,14 @@ export class UsuariosError extends Error {
 const createTemporaryPassword = (): string =>
   randomBytes(18).toString('base64url');
 
+const toIsoDateOrNull = (
+  value: Date | string | null | undefined,
+): string | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
 const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
   if (!isRoleName(roleName)) {
     throw new Error(`El usuario ${usuario.id} tiene un rol no válido.`);
@@ -93,6 +102,7 @@ const toUsuarioDTO = (usuario: Usuario, roleName: string): UsuarioDTO => {
     specialtyId: usuario.specialtyId,
     must_change_password: usuario.must_change_password,
     active: usuario.active,
+    approvedAt: toIsoDateOrNull(usuario.approvedAt),
   };
 };
 
@@ -115,7 +125,12 @@ const findPendingUsuarioOrThrow = async (
   if (!usuario) {
     throw new UsuariosError(404, 'Solicitud no encontrada');
   }
-  if (usuario.active || !usuario.is_guest || !usuario.is_author) {
+  if (
+    usuario.active ||
+    !usuario.is_guest ||
+    !usuario.is_author ||
+    usuario.approvedAt !== null
+  ) {
     throw new UsuariosError(409, 'La solicitud ya no está pendiente');
   }
   return usuario;
@@ -133,10 +148,44 @@ const toUsuarioPendienteDTO = (usuario: Usuario): UsuarioPendienteDTO => ({
   ...(usuario.credential_filename
     ? { credencialUrl: `/api/usuarios/${usuario.id}/credencial` }
     : {}),
-  createdAt: usuario.createdAt.toISOString(),
+  createdAt: toIsoDateOrNull(usuario.createdAt) ?? new Date(0).toISOString(),
 });
 
 export class UsuariosService {
+  async backfillApprovalDates(): Promise<void> {
+    const notifications = await Notificacion.findAll({
+      where: {
+        title: {
+          [Op.in]: ['Cuenta aprobada', 'Cuenta habilitada', 'Cuenta deshabilitada'],
+        },
+      },
+      attributes: ['userId', 'createdAt'],
+      order: [['createdAt', 'ASC']],
+    });
+    const approvalDates = new Map<number, Date>();
+
+    for (const notification of notifications) {
+      if (!approvalDates.has(notification.userId)) {
+        approvalDates.set(
+          notification.userId,
+          notification.createdAt ?? new Date(0),
+        );
+      }
+    }
+
+    for (const [userId, approvedAt] of approvalDates) {
+      await Usuario.update(
+        { approvedAt },
+        { where: { id: userId, approvedAt: null } },
+      );
+    }
+
+    await Usuario.update(
+      { approvedAt: new Date() },
+      { where: { active: true, approvedAt: null } },
+    );
+  }
+
   async findReviewers(): Promise<UsuarioDTO[]> {
     const usuarios = await Usuario.findAll({
       where: {
@@ -186,7 +235,12 @@ export class UsuariosService {
 
   async findPendingRegistrations(): Promise<UsuarioPendienteDTO[]> {
     const usuarios = await Usuario.findAll({
-      where: { active: false, is_guest: true, is_author: true },
+      where: {
+        active: false,
+        is_guest: true,
+        is_author: true,
+        approvedAt: null,
+      },
       attributes: [
         'id',
         'first_name',
@@ -219,6 +273,7 @@ export class UsuariosService {
     return sequelize.transaction(async (transaction) => {
       const usuario = await findPendingUsuarioOrThrow(id, transaction);
       usuario.active = true;
+      usuario.approvedAt = new Date();
       await usuario.save({ transaction });
       await Notificacion.create(
         {
@@ -300,6 +355,7 @@ export class UsuariosService {
           specialtyId,
           must_change_password: true,
           active: true,
+          approvedAt: new Date(),
         },
         { transaction },
       );
@@ -311,21 +367,23 @@ export class UsuariosService {
     });
   }
 
-  async suspend(id: number, requesterId: number): Promise<void> {
-    const usuario = await findUsuarioOrThrow(id);
-    if (usuario.id === requesterId) {
-      throw new UsuariosError(400, 'No puede suspender su propia cuenta');
-    }
-
-    usuario.active = false;
-    await usuario.save();
+  async suspend(
+    id: number,
+    requesterId: number,
+  ): Promise<{ user: UsuarioDTO; deactivated: boolean }> {
+    const { user, deactivated } = await this.update(
+      id,
+      { active: false },
+      requesterId,
+    );
+    return { user, deactivated };
   }
 
   async update(
     id: number,
     input: UpdateUsuarioData,
     requesterId: number,
-  ): Promise<UsuarioDTO> {
+  ): Promise<{ user: UsuarioDTO; activated: boolean; deactivated: boolean }> {
     return sequelize.transaction(async (transaction) => {
       const usuario = await Usuario.findByPk(id, { transaction });
       if (!usuario) {
@@ -335,6 +393,7 @@ export class UsuariosService {
         !usuario.active &&
         usuario.is_guest &&
         usuario.is_author &&
+        usuario.approvedAt === null &&
         input.active === true
       ) {
         throw new UsuariosError(
@@ -411,6 +470,14 @@ export class UsuariosService {
         usuario.specialtyId = input.specialtyId;
       }
       if (input.active !== undefined) usuario.active = input.active;
+      if (
+        deactivated &&
+        usuario.is_guest &&
+        usuario.is_author &&
+        usuario.approvedAt === null
+      ) {
+        usuario.approvedAt = new Date();
+      }
 
       await usuario.save({ transaction });
 
@@ -424,9 +491,6 @@ export class UsuariosService {
           },
           { transaction },
         );
-        console.info(
-          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido HABILITADA. Ya puedes iniciar sesión.`,
-        );
       } else if (deactivated) {
         await Notificacion.create(
           {
@@ -438,9 +502,6 @@ export class UsuariosService {
           },
           { transaction },
         );
-        console.info(
-          `[EMAIL] Hola ${usuario.first_name}, tu cuenta ha sido DESHABILITADA.`,
-        );
       }
 
       if (!roleName) {
@@ -451,7 +512,7 @@ export class UsuariosService {
         roleName = role.name;
       }
 
-      return toUsuarioDTO(usuario, roleName);
+      return { user: toUsuarioDTO(usuario, roleName), activated, deactivated };
     });
   }
 

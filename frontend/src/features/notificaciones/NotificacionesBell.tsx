@@ -314,13 +314,13 @@ export function NotificacionesBell() {
                 aria-label="Recibir notificaciones de convocatorias"
                 disabled={isSavingPreference}
                 onClick={() => void handlePreferenceChange()}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#78bda5] focus:ring-offset-2 disabled:opacity-60 ${
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#78bda5] focus:ring-offset-2 disabled:opacity-60 ${
                   recibirNotificaciones ? 'bg-[#087d70]' : 'bg-[#a8bbb4]'
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    recibirNotificaciones ? 'translate-x-[22px]' : 'translate-x-0.5'
+                  className={`block h-5 w-5 rounded-full bg-white shadow-sm ring-1 ring-[#173d3b]/15 transition-transform duration-200 ${
+                    recibirNotificaciones ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

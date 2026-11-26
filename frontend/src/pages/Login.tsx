@@ -75,8 +75,16 @@ export default function Login() {
   }
 
   return (
-    <main className="grid min-h-[100dvh] bg-[#f2f7f4] lg:grid-cols-[1.05fr_.95fr]">
-      <section className="relative hidden overflow-hidden bg-[#087366] px-[8%] py-12 text-[#f3fffa] lg:flex lg:flex-col lg:justify-between">
+    <main className="relative grid min-h-[100dvh] bg-[#f2f7f4] lg:grid-cols-[1.05fr_.95fr]">
+      <Link
+        to="/"
+        className="absolute left-5 top-5 z-20 inline-flex h-10 items-center gap-2 rounded-xl border border-[#cfe4dc] bg-white/95 px-4 text-xs font-semibold text-[#173d3b] shadow-sm backdrop-blur-sm transition hover:bg-white hover:text-[#07584f] focus:outline-none focus:ring-4 focus:ring-[#bce8d8]/70 sm:left-8 sm:top-7"
+      >
+        <ArrowLeft size={16} />
+        Volver al portal
+      </Link>
+
+      <section className="relative hidden overflow-hidden bg-[#087366] px-[8%] pb-12 pt-24 text-[#f3fffa] lg:flex lg:flex-col lg:justify-between">
         <div className="absolute -right-32 -top-32 h-[570px] w-[570px] rounded-full border border-[#a8ead5]/25" />
         <div className="absolute -right-12 -top-12 h-[330px] w-[330px] rounded-full border border-[#a8ead5]/30" />
         <div className="absolute bottom-[-260px] left-[-170px] h-[560px] w-[560px] rounded-full border border-[#a8ead5]/20" />
@@ -112,14 +120,7 @@ export default function Login() {
         </div>
       </section>
 
-      <section className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12 sm:px-12">
-        <Link
-          to="/"
-          className="absolute left-6 top-6 z-10 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-800 md:left-8 md:top-8"
-        >
-          <ArrowLeft size={18} />
-          Volver al portal
-        </Link>
+      <section className="relative flex min-h-[100dvh] items-center justify-center px-6 pb-12 pt-20 sm:px-12 lg:py-12">
         <div className="w-full max-w-[400px] page-enter">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#087d70] text-[#f4fffb]">
