@@ -112,3 +112,6 @@ button { cursor: pointer; }
   padding: 8px 10px !important;
   font-size: 0.875rem !important;
 }
+.password-mask {
+  -webkit-text-security: disc;
+}

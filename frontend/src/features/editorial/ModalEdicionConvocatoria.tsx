@@ -7,6 +7,7 @@ import {
   type EditarConvocatoriaRequest,
   type EstadoConvocatoria,
 } from '../../api/convocatorias.api';
+import { ConfirmPasswordInput } from '../../components/ui/ConfirmPasswordInput';
 import { CustomDatePicker } from '../../components/ui/DatePicker';
 import { Modal } from '../../components/ui/Modal';
 import {
@@ -104,6 +105,10 @@ export const ModalEdicionConvocatoria = ({
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!convocatoria || !password) return;
+    if (!fechaFin || (canEditLifecycle && !fechaInicio)) {
+      setError('Debes seleccionar la fecha y hora de inicio y de fin.');
+      return;
+    }
 
     const dateStart = canEditLifecycle ? new Date(fechaInicio) : null;
     const dateEnd = new Date(fechaFin);
@@ -180,13 +185,14 @@ export const ModalEdicionConvocatoria = ({
     >
       {convocatoria && (
         <div className="space-y-6">
-          <form onSubmit={handleSave} className="space-y-5">
+          <form onSubmit={handleSave} autoComplete="off" className="space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Título
               </span>
               <input
                 required
+                autoComplete="off"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 className={inputClassName}
@@ -206,7 +212,6 @@ export const ModalEdicionConvocatoria = ({
                   }
                   disabled={!canEditLifecycle}
                   placeholder="Seleccionar fecha y hora de inicio"
-                  className={inputClassName}
                 />
                 {!canEditLifecycle && (
                   <span className="mt-1 block text-xs text-slate-500">
@@ -226,7 +231,6 @@ export const ModalEdicionConvocatoria = ({
                     setFechaFin(date ? toLocalDateTimeValue(date) : '')
                   }
                   placeholder="Seleccionar fecha y hora de fin"
-                  className={inputClassName}
                 />
               </label>
             </div>
@@ -268,10 +272,8 @@ export const ModalEdicionConvocatoria = ({
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Contraseña actual
               </span>
-              <input
+              <ConfirmPasswordInput
                 required
-                type="password"
-                autoComplete="current-password"
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
@@ -319,9 +321,7 @@ export const ModalEdicionConvocatoria = ({
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Confirma con tu contraseña actual
                 </span>
-                <input
-                  type="password"
-                  autoComplete="current-password"
+                <ConfirmPasswordInput
                   value={finalizePassword}
                   onChange={(event) => {
                     setFinalizePassword(event.target.value);
