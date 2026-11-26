@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { sendApprovalEmail } from '../../config/email.js';
 import { uploadsDirectory } from '../../config/uploads.js';
 import { registrarAuditoria } from '../../services/auditoria.service.js';
+import {
+  sendActivationEmail,
+  sendDeactivationEmail,
+} from '../../utils/mailer.js';
 import type { ApiResponse } from '../auth/auth.dto.js';
 import { UsuariosService } from './usuarios.service.js';
 
@@ -318,11 +322,26 @@ export class UsuariosController {
     }
 
     try {
-      const user = await this.usuariosService.update(
+      const { user, activated, deactivated } = await this.usuariosService.update(
         id,
         parsedBody.data,
         req.user.id,
       );
+      let warning: string | undefined;
+      if (activated || deactivated) {
+        try {
+          const fullName = `${user.first_name} ${user.last_name}`;
+          if (activated) {
+            await sendActivationEmail(user.email, fullName);
+          } else {
+            await sendDeactivationEmail(user.email, fullName);
+          }
+        } catch {
+          warning = activated
+            ? 'La cuenta fue habilitada, pero no se pudo enviar el correo. Verifica la configuración de correo.'
+            : 'La cuenta fue deshabilitada, pero no se pudo enviar el correo. Verifica la configuración de correo.';
+        }
+      }
       await registrarAuditoria({
         userId: req.user.id,
         actorRole: req.user.role,
@@ -336,7 +355,10 @@ export class UsuariosController {
           is_author: user.is_author,
         },
       });
-      res.status(200).json({ success: true, data: user });
+      res.status(200).json({
+        success: true,
+        data: { ...user, ...(warning ? { warning } : {}) },
+      });
     } catch (error: unknown) {
       next(error);
     }
@@ -364,7 +386,22 @@ export class UsuariosController {
     }
 
     try {
-      await this.usuariosService.suspend(id, req.user.id);
+      const { user, deactivated } = await this.usuariosService.suspend(
+        id,
+        req.user.id,
+      );
+      let warning: string | undefined;
+      if (deactivated) {
+        try {
+          await sendDeactivationEmail(
+            user.email,
+            `${user.first_name} ${user.last_name}`,
+          );
+        } catch {
+          warning =
+            'La cuenta fue deshabilitada, pero no se pudo enviar el correo. Verifica la configuración de correo.';
+        }
+      }
       await registrarAuditoria({
         userId: req.user.id,
         actorRole: req.user.role,
@@ -373,7 +410,10 @@ export class UsuariosController {
         entityId: id,
         summary: `Suspendió (baja lógica) al usuario #${id}.`,
       });
-      res.status(200).json({ success: true, data: {} });
+      res.status(200).json({
+        success: true,
+        data: warning ? { warning } : {},
+      });
     } catch (error: unknown) {
       next(error);
     }

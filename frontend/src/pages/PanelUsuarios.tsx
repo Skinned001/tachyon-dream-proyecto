@@ -20,11 +20,13 @@ import {
 interface PanelUsuariosProps {
   embedded?: boolean;
   onPendingCountChange?: (count: number) => void;
+  onRequestProcessed?: () => void;
 }
 
 export const PanelUsuarios = ({
   embedded = false,
   onPendingCountChange,
+  onRequestProcessed,
 }: PanelUsuariosProps) => {
   const [usuarios, setUsuarios] = useState<UsuarioPendiente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export const PanelUsuarios = ({
       setUsuarios((current) => current.filter((usuario) => usuario.id !== id));
       setIsWarning(Boolean(result.warning));
       setFeedback(result.warning ?? 'Usuario aprobado y correo enviado.');
+      onRequestProcessed?.();
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error
@@ -88,6 +91,7 @@ export const PanelUsuarios = ({
       setUsuarios((current) => current.filter((usuario) => usuario.id !== id));
       setIsWarning(Boolean(result.warning));
       setFeedback(result.warning ?? 'Solicitud rechazada.');
+      onRequestProcessed?.();
     } catch (requestError: unknown) {
       setError(
         requestError instanceof Error

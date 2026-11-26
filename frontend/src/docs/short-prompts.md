@@ -9055,3 +9055,135 @@ Reemplaza el `<InputPassword>` por este código exacto:
 ## Respuesta esperada
 
 Confirmame que aplicaste los 3 cambios y si `npm run build` pasó.
+
+# Tarea 113 (Backend): Configurar Nodemailer y variables de entorno
+
+## Contexto
+Necesitamos enviar un correo electrónico automático al usuario cuando el Administrador habilite su cuenta.
+
+## Objetivo
+1. Instalar Nodemailer.
+2. Configurar las variables de entorno para el correo.
+3. Crear un servicio de envío de correos.
+
+## Lo que debés hacer
+
+### 1. Instalar dependencias
+Ejecutar en la terminal (dentro de la carpeta del backend):
+```bash
+npm install nodemailer
+npm install -D @types/nodemailer
+```
+
+### 2. Configurar variables de entorno (`.env`)
+Agregar estas variables al archivo `.env` de tu backend (y también al `.env.example`):
+```env
+# Configuración de correo (Ejemplo con Gmail)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=465
+EMAIL_USER=tu_correo_institucional@gmail.com
+EMAIL_PASS=tu_contraseña_de_aplicacion
+```
+*(Nota para el humano: En Gmail, no sirve la contraseña normal. Hay que activar la verificación en 2 pasos y generar una "Contraseña de aplicación" en la configuración de seguridad de Google).*
+
+### 3. Crear el servicio `src/utils/mailer.ts`
+```typescript
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Creamos el transportador (conexión con el servidor de correo)
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: Number(process.env.EMAIL_PORT) || 465,
+  secure: true, // true para el puerto 465
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+export const sendActivationEmail = async (to: string, name: string) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Portal Científico Evita" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: '¡Tu cuenta ha sido habilitada! - Portal Científico Evita',
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <h2 style="color: #2563eb;">¡Hola ${name}!</h2>
+          <p>Te informamos que un administrador ha <strong>habilitado tu cuenta</strong> en el Portal Científico Evita.</p>
+          <p>Ya puedes iniciar sesión con tus credenciales para participar en las convocatorias o enviar tus manuscritos.</p>
+          <br />
+          <a href="http://localhost:5173/login" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px;">Iniciar Sesión</a>
+          <br /><br />
+          <p style="font-size: 12px; color: #6b7280;">Si no reconoces esta acción, por favor contacta al administrador del sistema.</p>
+        </div>
+      `,
+    });
+    console.log('Correo enviado: %s', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error al enviar correo:', error);
+    return false;
+  }
+};
+```
+
+### 4. Verificación
+- Correr `npm run build` para verificar que no haya errores de TypeScript.
+# Tarea 116: Corregir lógica de usuario deshabilitado y verificar correo
+
+## Contexto
+1. El envío de correo falla por configuración SMTP (el humano ya sabe que debe usar una Contraseña de Aplicación de Gmail).
+2. **Error grave de lógica:** Al deshabilitar un usuario, la tabla lo muestra como "Pendiente de aprobación" en lugar de "Deshabilitado". Esto ocurre porque el frontend o backend están mezclando el estado `active: false` con el estado de "Invitado pendiente" (`is_guest: true`).
+
+## Lo que debés hacer
+
+### 1. Backend - Revisar la lógica de estados
+En `src/modules/usuarios/usuarios.controller.ts`:
+- La función `updateUsuario` solo debe cambiar `active` a `false` cuando se deshabilita. No debe tocar `is_guest` ni poner el estado en "Pendiente".
+- Asegurarse de que el endpoint que devuelve las "Solicitudes Pendientes" filtre por `active: false` Y `is_guest: true`. Si solo filtra por `active: false`, va a mostrar a los usuarios deshabilitados como si fueran nuevos.
+
+### 2. Frontend - Corregir la tabla de Admin (`AdminUsuarios.tsx`)
+En la tabla de usuarios, el estado debe calcularse así:
+```tsx
+// Lógica para el badge de estado:
+const getStatusBadge = (user: User) => {
+  if (user.active) {
+    return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">Habilitada</span>;
+  }
+  
+  // Si no está activo, pero es un invitado recién registrado y no tiene fecha de aprobación
+  if (user.is_guest) {
+    return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">Pendiente</span>;
+  }
+
+  // Si no está activo y no es invitado (o ya fue aprobado antes), está Deshabilitado
+  return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">Deshabilitada</span>;
+};
+
+// En la tabla, reemplazar la celda del estado por:
+<td className="py-3 px-4">
+  {getStatusBadge(u)}
+</td>
+```
+
+### 3. Frontend - Corregir la pestaña de "Solicitudes Pendientes"
+Si la pestaña de Solicitudes Pendientes se está trayendo a todos los usuarios inactivos, ajustar el `useEffect` o la función que los trae para que solo muestre a los que cumplen la condición:
+```typescript
+const pendientes = usuarios.filter(u => !u.active && u.is_guest);
+// O si se hace desde el backend, asegurarse de que la URL pida solo los pendientes.
+```
+
+### 4. Backend - Mejorar el log de error de correo
+En `src/utils/mailer.ts`, asegurarse de que si el correo falla, el error se muestre claramente en la consola del backend (ej. `console.error('Error de SMTP:', error.message)`), para que el humano sepa si es por contraseña o por puerto.
+
+### 5. Verificación
+- Correr `npm run build` en ambos proyectos.
+- Probar deshabilitar a un usuario: debe decir "Deshabilitada" en rojo.
+- Probar la pestaña de pendientes: solo debe mostrar a los invitados nuevos.
+
+## Respuesta esperada
+Confirmame que la lógica de estados fue corregida y si `npm run build` pasó.

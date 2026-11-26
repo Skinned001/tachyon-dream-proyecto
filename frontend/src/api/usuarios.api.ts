@@ -58,9 +58,19 @@ export const createUsuario = async (
   return { usuario, tempPassword: temporaryPassword };
 };
 
+export interface UpdateUsuarioResponse extends User {
+  warning?: string;
+}
+
 // Actualizar usuario (Admin)
-export const updateUsuario = async (id: number, payload: UpdateUserRequest): Promise<User> => {
-  const { data } = await axiosClient.put<ApiResponse<User>>(`/usuarios/${id}`, payload);
+export const updateUsuario = async (
+  id: number,
+  payload: UpdateUserRequest,
+): Promise<UpdateUsuarioResponse> => {
+  const { data } = await axiosClient.put<ApiResponse<UpdateUsuarioResponse>>(
+    `/usuarios/${id}`,
+    payload,
+  );
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al actualizar usuario');
   }
