@@ -12,6 +12,12 @@ const bibliotecaController = new BibliotecaController();
 const adminOnly = requireRole(['ADMIN']);
 
 router.get('/', optionalAuthenticateJWT, bibliotecaController.listar);
+router.get('/favoritos', authenticateJWT, bibliotecaController.listarFavoritos);
+router.post(
+  '/favoritos/toggle',
+  authenticateJWT,
+  bibliotecaController.toggleFavorito,
+);
 router.get('/:id', optionalAuthenticateJWT, bibliotecaController.obtenerPorId);
 router.post(
   '/',

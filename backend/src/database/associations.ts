@@ -5,6 +5,14 @@ import {
   initializeArticuloVersionModel,
 } from '../modules/articulos/ArticuloVersion.model.js';
 import {
+  AuditLog,
+  initializeAuditLogModel,
+} from '../modules/auditoria/AuditLog.model.js';
+import {
+  Favorito,
+  initializeFavoritoModel,
+} from '../modules/biblioteca/Favorito.model.js';
+import {
   RecursoBiblioteca,
   initializeRecursoBibliotecaModel,
 } from '../modules/biblioteca/RecursoBiblioteca.model.js';
@@ -25,6 +33,10 @@ import {
   Notificacion,
   initializeNotificacionModel,
 } from '../modules/notificaciones/Notificacion.model.js';
+import {
+  MetricEvent,
+  initializeMetricEventModel,
+} from '../modules/metricas/MetricEvent.model.js';
 import { Rol, initializeRolModel } from '../modules/usuarios/Rol.model.js';
 import { Usuario, initializeUsuarioModel } from '../modules/usuarios/Usuario.model.js';
 
@@ -44,7 +56,10 @@ export const setupAssociations = (): void => {
   initializeAsignacionComiteModel(sequelize);
   initializeRevisionModel(sequelize);
   initializeRecursoBibliotecaModel(sequelize);
+  initializeFavoritoModel(sequelize);
+  initializeAuditLogModel(sequelize);
   initializeNotificacionModel(sequelize);
+  initializeMetricEventModel(sequelize);
 
   Rol.hasMany(Usuario, { foreignKey: 'roleId', as: 'users' });
   Usuario.belongsTo(Rol, { foreignKey: 'roleId', as: 'role' });
@@ -58,8 +73,8 @@ export const setupAssociations = (): void => {
   Especialidad.hasMany(Articulo, { foreignKey: 'specialtyId', as: 'articles' });
   Articulo.belongsTo(Especialidad, { foreignKey: 'specialtyId', as: 'specialty' });
 
-  Convocatoria.hasMany(Articulo, { foreignKey: 'convocationId', as: 'articles' });
-  Articulo.belongsTo(Convocatoria, { foreignKey: 'convocationId', as: 'convocation' });
+  Convocatoria.hasMany(Articulo, { foreignKey: 'convocatoriaId', as: 'articles' });
+  Articulo.belongsTo(Convocatoria, { foreignKey: 'convocatoriaId', as: 'convocatoria' });
 
   Articulo.hasMany(ArticuloVersion, { foreignKey: 'articleId', as: 'versions' });
   ArticuloVersion.belongsTo(Articulo, { foreignKey: 'articleId', as: 'article' });
@@ -76,14 +91,49 @@ export const setupAssociations = (): void => {
   ArticuloVersion.hasMany(Revision, { foreignKey: 'versionId', as: 'reviews' });
   Revision.belongsTo(ArticuloVersion, { foreignKey: 'versionId', as: 'version' });
 
-  Usuario.hasMany(RecursoBiblioteca, { foreignKey: 'uploadedBy', as: 'uploadedResources' });
-  RecursoBiblioteca.belongsTo(Usuario, { foreignKey: 'uploadedBy', as: 'uploader' });
+  Usuario.hasMany(RecursoBiblioteca, {
+    foreignKey: 'uploadedBy',
+    as: 'uploadedResources',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
+  RecursoBiblioteca.belongsTo(Usuario, {
+    foreignKey: 'uploadedBy',
+    as: 'uploader',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
 
   Especialidad.hasMany(RecursoBiblioteca, { foreignKey: 'specialtyId', as: 'libraryResources' });
   RecursoBiblioteca.belongsTo(Especialidad, { foreignKey: 'specialtyId', as: 'specialty' });
 
   Usuario.hasMany(Notificacion, { foreignKey: 'userId', as: 'notifications' });
   Notificacion.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
+
+  Usuario.hasMany(Favorito, {
+    foreignKey: 'userId',
+    as: 'favorites',
+    onDelete: 'CASCADE',
+  });
+  Favorito.belongsTo(Usuario, { foreignKey: 'userId', as: 'user' });
+
+  Usuario.hasMany(AuditLog, {
+    foreignKey: 'userId',
+    as: 'auditLogs',
+    onDelete: 'SET NULL',
+  });
+  AuditLog.belongsTo(Usuario, { foreignKey: 'userId', as: 'actor' });
+
+  Especialidad.hasMany(MetricEvent, {
+    foreignKey: 'specialtyId',
+    as: 'metricEvents',
+    onDelete: 'SET NULL',
+  });
+  MetricEvent.belongsTo(Especialidad, {
+    foreignKey: 'specialtyId',
+    as: 'specialty',
+    onDelete: 'SET NULL',
+  });
 
   associationsConfigured = true;
 };

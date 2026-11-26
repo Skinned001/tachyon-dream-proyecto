@@ -3,6 +3,28 @@ import { axiosClient } from './axiosClient';
 import type { ApiResponse, Paginated } from '../types/api.types';
 import type { User, CreateUserRequest, UpdateUserRequest } from '../types/user.types';
 
+export interface UsuarioPendiente {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  email: string;
+  comentarios?: string;
+  credencialUrl?: string;
+  createdAt: string;
+}
+
+interface ApprovalResponse {
+  message: string;
+  emailSent: boolean;
+  warning?: string;
+}
+
+interface RejectionResponse {
+  message: string;
+  warning?: string;
+}
+
 export interface CreateUsuarioResponse {
   usuario: User;
   tempPassword: string;
@@ -54,9 +76,49 @@ export const deleteUsuario = async (id: number): Promise<void> => {
 };
 
 // Reiniciar contraseña (Admin)
-export const resetPassword = async (id: number): Promise<void> => {
-  const { data } = await axiosClient.post<ApiResponse<void>>(`/usuarios/${id}/reset-password`);
-  if (!data.success) {
+export const resetPassword = async (id: number): Promise<string> => {
+  const { data } = await axiosClient.post<ApiResponse<{ temporaryPassword: string }>>(
+    `/usuarios/${id}/reset-password`,
+  );
+  if (!data.success || !data.data) {
     throw new Error(data.error || 'Error al reiniciar contraseña');
   }
+  return data.data.temporaryPassword;
 };
+
+export const getUsuariosPendientes = async (): Promise<UsuarioPendiente[]> => {
+  const { data } = await axiosClient.get<
+    ApiResponse<Paginated<UsuarioPendiente>>
+  >('/usuarios?estado=PENDIENTE');
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al obtener solicitudes pendientes');
+  }
+  return data.data.items;
+};
+
+export const aprobarUsuario = async (
+  id: number,
+): Promise<ApprovalResponse> => {
+  const { data } = await axiosClient.patch<ApiResponse<ApprovalResponse>>(
+    `/usuarios/${id}/aprobar`,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al aprobar usuario');
+  }
+  return data.data;
+};
+
+export const rechazarUsuario = async (
+  id: number,
+): Promise<RejectionResponse> => {
+  const { data } = await axiosClient.patch<ApiResponse<RejectionResponse>>(
+    `/usuarios/${id}/rechazar`,
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al rechazar solicitud');
+  }
+  return data.data;
+};
+
+export const getCredencialUrl = (id: number): string =>
+  axiosClient.getUri({ url: `/usuarios/${id}/credencial` });

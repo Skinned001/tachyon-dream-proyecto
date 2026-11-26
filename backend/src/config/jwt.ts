@@ -7,6 +7,7 @@ export const JWT_EXPIRES_IN = '8h';
 export interface AuthTokenPayload {
   id: number;
   role: RoleName;
+  is_author: boolean;
   specialtyId: number | null;
   email: string;
 }
@@ -39,6 +40,7 @@ export const verifyToken = (token: string): AuthTokenPayload => {
   return {
     id: verifiedPayload.id,
     role: verifiedPayload.role,
+    is_author: verifiedPayload.is_author,
     specialtyId: verifiedPayload.specialtyId,
     email: verifiedPayload.email,
   };
@@ -51,6 +53,7 @@ const isTokenPayload = (
   Number.isInteger(payload.id) &&
   typeof payload.role === 'string' &&
   isRoleName(payload.role) &&
+  typeof payload.is_author === 'boolean' &&
   (payload.specialtyId === null ||
     (typeof payload.specialtyId === 'number' && Number.isInteger(payload.specialtyId))) &&
   typeof payload.email === 'string';

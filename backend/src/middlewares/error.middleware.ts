@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import multer from 'multer';
 import type { ApiResponse } from '../modules/auth/auth.dto.js';
 
 interface ErrorWithStatusCode extends Error {
@@ -11,6 +12,11 @@ const isErrorWithStatusCode = (error: unknown): error is ErrorWithStatusCode =>
   typeof error.statusCode === 'number';
 
 const getErrorMessage = (error: unknown): string => {
+  if (error instanceof multer.MulterError) {
+    return error.code === 'LIMIT_FILE_SIZE'
+      ? 'El archivo supera el tamaño máximo permitido.'
+      : 'El archivo enviado no es válido.';
+  }
   if (error instanceof Error && error.message) {
     return error.message;
   }
@@ -38,7 +44,13 @@ export const errorMiddleware = (
   }
 
   const message = getErrorMessage(err);
-  const statusCode = isErrorWithStatusCode(err) ? err.statusCode : undefined;
+  const statusCode = isErrorWithStatusCode(err)
+    ? err.statusCode
+    : err instanceof multer.MulterError
+      ? err.code === 'LIMIT_FILE_SIZE'
+        ? 413
+        : 400
+      : undefined;
   const status = statusCode && statusCode >= 400 && statusCode <= 599 ? statusCode : 500;
 
   res.status(status).json({ success: false, error: message });

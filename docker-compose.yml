@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: mysql:8.0
@@ -10,35 +8,44 @@ services:
       MYSQL_USER: chief_user
       MYSQL_PASSWORD: chief_pass
       MYSQL_ROOT_PASSWORD: root_pass
-    ports:
-      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
 
   backend:
     build:
       context: ./backend
     container_name: chief-journal-backend
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
+      PORT: 3000
+      DB_DIALECT: mariadb
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: chief_journal
       DB_USER: chief_user
       DB_PASSWORD: chief_pass
-      JWT_SECRET: supersecret
+      JWT_SECRET: ${JWT_SECRET:-cambia_este_secreto_en_produccion}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
+      # Poner COOKIE_SECURE=true cuando se sirva detras de HTTPS en produccion
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       AI_SERVICE_URL: http://ai-service:8000
-    ports:
-      - "4000:4000"
     volumes:
-      - ./backend:/app
+      - uploads_data:/app/uploads
 
   ai-service:
     build:
       context: ./ai-service
     container_name: chief-journal-ai
+    restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -46,5 +53,18 @@ services:
     volumes:
       - ./ai-service:/app
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: chief-journal-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${APP_PORT:-8080}:80"
+
 volumes:
   db_data:
+  uploads_data:

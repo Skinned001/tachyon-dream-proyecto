@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import { authenticateJWT } from '../../middlewares/auth.middleware.js';
-import { requireRole } from '../../middlewares/role.middleware.js';
+import { requireAuthorOrRole } from '../../middlewares/role.middleware.js';
 import { AiController } from './ai.controller.js';
 
 const router = Router();
@@ -51,7 +51,7 @@ const handleUploadErrors: RequestHandler = (req, res, next) => {
 router.post(
   '/similarity/check',
   authenticateJWT,
-  requireRole(['AUTOR', 'DDI', 'COMITE', 'ADMIN']),
+  requireAuthorOrRole(['DDI', 'COMITE', 'ADMIN']),
   handleUploadErrors,
   aiController.analyzeSimilarity,
 );

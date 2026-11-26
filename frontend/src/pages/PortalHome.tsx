@@ -3,16 +3,42 @@ import {
   Activity,
   ArrowDown,
   ArrowRight,
+  BookMarked,
   BookOpen,
   CalendarDays,
   Download,
   FileText,
   Search,
+  Megaphone,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { articulosApi, type PublishedArticle } from '../api/articulos.api';
+import {
+  getFavoritosBiblioteca,
+  toggleFavoritoBiblioteca,
+} from '../api/biblioteca.api';
+import { Modal } from '../components/ui/Modal';
+import {
+  getConvocatoriasPublicas,
+  type Convocatoria,
+  type ConvocatoriaCerrada,
+} from '../api/convocatorias.api';
+import { useAuth } from '../context/AuthContext';
+import { trackPortalVisit } from '../api/metricas.api';
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+const formatDate = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'fecha no disponible';
+  return new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
 
 export function PortalHome() {
   const [articles, setArticles] = useState<PublishedArticle[]>([]);
@@ -20,6 +46,19 @@ export function PortalHome() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selectedYear, setSelectedYear] = useState('all');
+  const [abiertas, setAbiertas] = useState<Convocatoria[]>([]);
+  const [proximas, setProximas] = useState<Convocatoria[]>([]);
+  const [cerradas, setCerradas] = useState<ConvocatoriaCerrada[]>([]);
+  const [loadingConvocatorias, setLoadingConvocatorias] = useState(true);
+  const [convocatoriaError, setConvocatoriaError] = useState('');
+  const [convocatoriaParaParticipar, setConvocatoriaParaParticipar] =
+    useState<Convocatoria | null>(null);
+  const [savedArticleIds, setSavedArticleIds] = useState<number[]>([]);
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  useEffect(() => {
+    void trackPortalVisit();
+  }, []);
 
   async function loadArticles() {
     setLoading(true);
@@ -33,9 +72,81 @@ export function PortalHome() {
     }
   }
 
+  async function loadConvocatorias() {
+    setLoadingConvocatorias(true);
+    setConvocatoriaError('');
+    try {
+      const convocatorias = await getConvocatoriasPublicas();
+      setAbiertas(
+        Array.isArray(convocatorias?.abiertas) ? convocatorias.abiertas : [],
+      );
+      setProximas(
+        Array.isArray(convocatorias?.proximas) ? convocatorias.proximas : [],
+      );
+      setCerradas(
+        Array.isArray(convocatorias?.cerradas) ? convocatorias.cerradas : [],
+      );
+    } catch (loadError: unknown) {
+      setConvocatoriaError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No se pudieron cargar las convocatorias.',
+      );
+      setAbiertas([]);
+      setProximas([]);
+      setCerradas([]);
+    } finally {
+      setLoadingConvocatorias(false);
+    }
+  }
+
   useEffect(() => {
     void loadArticles();
+    void loadConvocatorias();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setSavedArticleIds([]);
+      return;
+    }
+    let active = true;
+    getFavoritosBiblioteca()
+      .then((items) => {
+        if (active) {
+          setSavedArticleIds(
+            items
+              .filter((item) => item.targetType === 'ARTICULO')
+              .map((item) => item.targetId),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) setSavedArticleIds([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  async function handleToggleArticleFavorite(articleId: number) {
+    if (!user) return;
+    const wasSaved = savedArticleIds.includes(articleId);
+    setSavedArticleIds((current) =>
+      wasSaved
+        ? current.filter((id) => id !== articleId)
+        : [...current, articleId],
+    );
+    try {
+      await toggleFavoritoBiblioteca('ARTICULO', articleId);
+    } catch {
+      setSavedArticleIds((current) =>
+        wasSaved
+          ? [...current, articleId]
+          : current.filter((id) => id !== articleId),
+      );
+    }
+  }
 
   const years = useMemo(
     () => [...new Set(articles.map((article) => new Date(article.createdAt).getFullYear()))]
@@ -52,13 +163,17 @@ export function PortalHome() {
       const searchableText = [
         article.title,
         article.summary,
+        article.authorName,
         article.specialty?.name,
+        article.editionNumber,
+        article.doi,
         ...(article.keywords ?? []),
         ...(article.coauthors ?? []),
       ].filter(Boolean).join(' ').toLocaleLowerCase('es');
       return matchesYear && (!normalizedSearch || searchableText.includes(normalizedSearch));
     });
   }, [articles, search, selectedYear]);
+  const isAuthor = user?.is_author === true || String(user?.role) === 'AUTOR';
 
   return (
     <main className="min-h-screen bg-[#f2f7f4] text-[#173d3b]">
@@ -123,6 +238,232 @@ export function PortalHome() {
           </aside>
         </div>
       </section>
+
+      <section
+        id="convocatorias-abiertas"
+        className="mx-auto max-w-[1240px] px-5 pt-12 md:px-8 md:pt-16"
+      >
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Recepción de manuscritos
+            </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Convocatorias Abiertas
+            </h2>
+          </div>
+          {!loadingConvocatorias && (
+            <span className="rounded-full bg-[#e1f3eb] px-3 py-1 text-[11px] font-semibold text-[#07584f]">
+              {abiertas.length}
+            </span>
+          )}
+        </div>
+
+        {loadingConvocatorias ? (
+          <div role="status" className="rounded-2xl border border-[#d5e6df] bg-white p-8 text-center text-sm text-[#52766d]">
+            Cargando convocatorias…
+          </div>
+        ) : convocatoriaError ? (
+          <div role="alert" className="rounded-2xl border border-[#e7c6bb] bg-[#fff9f6] p-5 text-sm text-[#7b342d]">
+            <p>No se pudieron cargar las convocatorias: {convocatoriaError}</p>
+            <button
+              type="button"
+              onClick={() => void loadConvocatorias()}
+              className="mt-3 font-semibold text-[#087366] hover:text-[#07584f]"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : abiertas.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#a9d2c1] bg-[#f3faf6] px-6 py-10 text-center">
+            <Megaphone className="mx-auto text-[#77a995]" size={24} />
+            <p className="mt-3 text-sm font-semibold text-[#244f47]">
+              No hay convocatorias abiertas en este momento.
+            </p>
+            <p className="mt-1 text-xs text-[#526e68]">
+              Vuelve pronto para conocer nuevas oportunidades de publicación.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {abiertas.map((convocatoria) => (
+              <article
+                key={convocatoria.id}
+                className="flex flex-col justify-between rounded-2xl border border-[#cfe4dc] bg-white p-5 shadow-sm transition hover:border-[#9bcfbb] hover:shadow-[0_12px_30px_rgba(23,61,59,.07)] md:p-6"
+              >
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f5ee] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#07584f]">
+                    <Megaphone size={12} />
+                    ABIERTA
+                  </span>
+                  <h3 className="font-editorial mt-4 text-[25px] leading-tight text-[#173d3b]">
+                    {convocatoria.title}
+                  </h3>
+                  <p className="mt-3 flex items-center gap-2 text-xs text-[#526e68]">
+                    <CalendarDays size={14} />
+                    Cierra el {formatDate(convocatoria.fechaFin)}
+                  </p>
+                </div>
+                <div className="mt-6">
+                  {isAuthLoading ? (
+                    <span className="inline-flex h-11 items-center rounded-xl bg-slate-100 px-4 text-xs font-semibold text-slate-500">
+                      Verificando sesión…
+                    </span>
+                  ) : isAuthor ? (
+                    <Link
+                      to={`/articulos?convocatoriaId=${convocatoria.id}`}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#087d70] px-5 text-xs font-semibold text-white transition hover:bg-[#07584f]"
+                    >
+                      Postular manuscrito <ArrowUpRight size={15} />
+                    </Link>
+                  ) : user ? (
+                    <button
+                      type="button"
+                      disabled
+                      title="La postulación está disponible para usuarios con cuenta de Autor."
+                      className="inline-flex h-11 cursor-not-allowed items-center rounded-xl bg-slate-100 px-4 text-xs font-medium text-slate-600"
+                    >
+                      Solo autores
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConvocatoriaParaParticipar(convocatoria)}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#087d70] px-5 text-xs font-semibold text-white transition hover:bg-[#07584f]"
+                    >
+                      Participar <ArrowUpRight size={15} />
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {!loadingConvocatorias && !convocatoriaError && proximas.length > 0 && (
+        <section className="mx-auto max-w-[1240px] px-5 pt-14 md:px-8">
+          <div className="mb-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Próximamente
+            </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Próximas Aperturas
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {proximas.map((convocatoria) => (
+              <article
+                key={convocatoria.id}
+                className="rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 md:p-6"
+              >
+                <span className="inline-flex rounded-full bg-[#fff0cf] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#85500b]">
+                  PROGRAMADA
+                </span>
+                <h3 className="font-editorial mt-4 text-[24px] leading-tight text-[#173d3b]">
+                  {convocatoria.title}
+                </h3>
+                <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#fff8e9] px-3 py-2 text-xs font-semibold text-[#85500b]">
+                  <CalendarDays size={14} />
+                  A abrir el {formatDate(convocatoria.fechaInicio)}
+                </p>
+                <p className="mt-3 text-xs text-[#718a81]">
+                  La postulación estará disponible al abrirse la convocatoria.
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!loadingConvocatorias && !convocatoriaError && cerradas.length > 0 && (
+        <section className="mx-auto max-w-[1240px] px-5 pt-14 md:px-8">
+          <div className="mb-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#52766d]">
+              Convocatorias finalizadas recientemente
+            </p>
+            <h2 className="font-editorial mt-2 text-[32px] tracking-[-.03em] text-[#173d3b] md:text-[38px]">
+              Historial Reciente
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {cerradas.map((convocatoria) => {
+              const publishedCount = convocatoria.articulosPublicadosCount ?? 0;
+              return (
+                <article
+                  key={convocatoria.id}
+                  className="flex flex-col justify-between rounded-2xl border border-[#d5e6df] bg-white p-5 md:p-6"
+                >
+                  <div>
+                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                      CERRADA
+                    </span>
+                    <h3 className="font-editorial mt-4 text-[24px] leading-tight text-[#173d3b]">
+                      {convocatoria.title}
+                    </h3>
+                    <p className="mt-3 flex items-center gap-2 text-xs text-[#526e68]">
+                      <CalendarDays size={14} />
+                      Cerró el {formatDate(convocatoria.fechaFin)}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-[#244f47]">
+                      {publishedCount}{' '}
+                      {publishedCount === 1
+                        ? 'artículo publicado'
+                        : 'artículos publicados'}
+                    </p>
+                  </div>
+                  <Link
+                    to={`/biblioteca?convocatoriaId=${convocatoria.id}`}
+                    className="mt-5 inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-[#087d70]/30 px-4 text-xs font-semibold text-[#087d70] transition hover:bg-[#e8f5f1]"
+                  >
+                    Ver en Biblioteca <ArrowRight size={14} />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <Modal
+        isOpen={convocatoriaParaParticipar !== null}
+        onClose={() => setConvocatoriaParaParticipar(null)}
+        title="Participar de la convocatoria"
+      >
+        {convocatoriaParaParticipar && (
+          <div className="space-y-5">
+            <p className="text-sm leading-6 text-slate-600">
+              Para participar en{' '}
+              <span className="font-semibold text-[#173d3b]">
+                {convocatoriaParaParticipar.title}
+              </span>{' '}
+              necesitás acceder con tu cuenta de Autor.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              {[
+                ['/login', 'Iniciar sesión'],
+                ['/register', 'Registrarse'],
+              ].map(([route, label]) => {
+                const redirect = `/articulos?convocatoriaId=${convocatoriaParaParticipar.id}`;
+                return (
+                  <Link
+                    key={route}
+                    to={`${route}?redirect=${encodeURIComponent(redirect)}`}
+                    onClick={() => setConvocatoriaParaParticipar(null)}
+                    className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold transition ${
+                      route === '/login'
+                        ? 'bg-[#087d70] text-white hover:bg-[#07584f]'
+                        : 'border border-[#087d70]/30 bg-white text-[#087d70] hover:bg-[#e8f5f1]'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <section id="archivo" className="mx-auto max-w-[1240px] px-5 py-16 md:px-8 md:py-20">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -190,7 +531,7 @@ export function PortalHome() {
                 <article key={article.id} className="flex flex-col rounded-2xl border border-[#d5e6df] bg-[#fcfefd] p-5 transition hover:border-[#9bcfbb] hover:shadow-[0_12px_30px_rgba(23,61,59,.06)] md:p-6">
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6f5ee] px-3 py-1.5 text-[10px] font-semibold text-[#07584f]">
-                      <CalendarDays size={12} /> {new Date(article.createdAt).getFullYear()}
+                      <CalendarDays size={12} /> {new Date(article.publishedAt || article.createdAt).getFullYear()}
                     </span>
                     {article.specialty?.name && (
                       <span className="truncate text-[10px] font-medium text-[#58786f]">{article.specialty.name}</span>
@@ -198,8 +539,15 @@ export function PortalHome() {
                   </div>
                   <h3 className="font-editorial mt-5 text-[24px] leading-tight text-[#173d3b]">{article.title}</h3>
                   {article.summary && <p className="mt-3 line-clamp-3 text-[12px] leading-6 text-[#526e68]">{article.summary}</p>}
-                  {article.coauthors && article.coauthors.length > 0 && (
-                    <p className="mt-3 text-[11px] text-[#58786f]">{article.coauthors.join(' · ')}</p>
+                  {(article.authorName || (article.coauthors && article.coauthors.length > 0)) && (
+                    <p className="mt-3 text-[11px] text-[#58786f]">
+                      {[article.authorName, ...(article.coauthors ?? [])].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {(article.editionNumber || article.doi) && (
+                    <p className="font-data mt-2 text-[10px] text-[#718a81]">
+                      {[article.editionNumber, article.doi ? `DOI: ${article.doi}` : null].filter(Boolean).join(' · ')}
+                    </p>
                   )}
                   {article.keywords && article.keywords.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -208,7 +556,7 @@ export function PortalHome() {
                       ))}
                     </div>
                   )}
-                  <div className="mt-auto border-t border-[#e3eee9] pt-5">
+                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#e3eee9] pt-5">
                     {article.pdfAvailable ? (
                       <a
                         href={`${apiBaseUrl}/articulos/publicados/${article.id}/pdf`}
@@ -218,6 +566,36 @@ export function PortalHome() {
                       </a>
                     ) : (
                       <span className="text-[11px] text-[#718a81]">PDF no disponible</span>
+                    )}
+                    {user && (
+                      <button
+                        type="button"
+                        aria-label={
+                          savedArticleIds.includes(article.id)
+                            ? 'Quitar de guardados'
+                            : 'Guardar en favoritos'
+                        }
+                        title={
+                          savedArticleIds.includes(article.id)
+                            ? 'Quitar de guardados'
+                            : 'Guardar en favoritos'
+                        }
+                        onClick={() => void handleToggleArticleFavorite(article.id)}
+                        className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+                          savedArticleIds.includes(article.id)
+                            ? 'bg-[#bce8d8] text-[#07584f]'
+                            : 'text-[#52766d] hover:bg-[#dff2e9] hover:text-[#07584f]'
+                        }`}
+                      >
+                        <BookMarked
+                          size={16}
+                          fill={
+                            savedArticleIds.includes(article.id)
+                              ? 'currentColor'
+                              : 'none'
+                          }
+                        />
+                      </button>
                     )}
                   </div>
                 </article>

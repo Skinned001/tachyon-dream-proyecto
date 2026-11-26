@@ -1,17 +1,71 @@
+import { isAxiosError } from "axios";
 import { axiosClient } from "./axiosClient";
 import type { ApiResponse } from "../types/api.types";
 import type { User } from "../types/user.types";
 
-export const login = async (email: string, password: string): Promise<User> => {
-  const { data } = await axiosClient.post<
-    ApiResponse<{ token: string; user: User }>
-  >("/auth/login", { email, password });
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  dni: string;
+  specialtyId?: number | null;
+}
 
-  if (!data.success || !data.data) {
-    throw new Error(data.error || "Error al iniciar sesión");
+const getRequestError = (error: unknown, fallback: string): Error => {
+  if (isAxiosError<ApiResponse>(error)) {
+    return new Error(error.response?.data.error || error.message || fallback);
   }
+  return error instanceof Error ? error : new Error(fallback);
+};
 
-  return data.data.user;
+export const login = async (email: string, password: string): Promise<User> => {
+  try {
+    const { data } = await axiosClient.post<
+      ApiResponse<{ token: string; user: User }>
+    >("/auth/login", { email, password });
+
+    if (!data.success || !data.data) {
+      throw new Error(data.error || "Error al iniciar sesión");
+    }
+
+    return data.data.user;
+  } catch (error: unknown) {
+    throw getRequestError(error, "Error al iniciar sesión");
+  }
+};
+
+export const register = async (
+  user: RegisterRequest,
+  extras: { credencial?: File | null; comentarios?: string } = {},
+): Promise<string> => {
+  try {
+    const formData = new FormData();
+    Object.entries(user).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    if (extras.comentarios?.trim()) {
+      formData.append('comentarios', extras.comentarios.trim());
+    }
+    if (extras.credencial) {
+      formData.append('credencial', extras.credencial);
+    }
+
+    const { data } = await axiosClient.post<ApiResponse<{ message: string }>>(
+      "/auth/register",
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    if (!data.success || !data.data) {
+      throw new Error(data.error || "Error al registrar usuario");
+    }
+    return data.data.message;
+  } catch (error: unknown) {
+    throw getRequestError(error, "Error al registrar usuario");
+  }
 };
 
 export const logout = async (): Promise<void> => {
@@ -37,4 +91,29 @@ export const verify = async (): Promise<User | null> => {
   } catch {
     return null;
   }
+};
+
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  const { data } = await axiosClient.post<ApiResponse<void>>(
+    '/auth/change-password',
+    { currentPassword, newPassword },
+  );
+  if (!data.success) {
+    throw new Error(data.error || 'Error al cambiar la contraseña');
+  }
+};
+
+export const updateProfile = async (formData: FormData): Promise<User> => {
+  const { data } = await axiosClient.put<ApiResponse<User>>(
+    '/auth/profile',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Error al actualizar perfil');
+  }
+  return data.data;
 };

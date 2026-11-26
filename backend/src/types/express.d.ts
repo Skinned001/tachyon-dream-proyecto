@@ -6,6 +6,7 @@ declare global {
       user?: {
         id: number;
         role: RoleName;
+        is_author: boolean;
         specialtyId: number | null;
         email: string;
       };

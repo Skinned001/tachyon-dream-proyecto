@@ -3,12 +3,20 @@ import { z } from 'zod';
 import type { ApiResponse } from '../auth/auth.dto.js';
 import type {
   CreateLibraryResourceRequest,
+  FavoriteItemDTO,
   LibraryResourceDTO,
+  ToggleFavoriteResultDTO,
   UpdateLibraryResourceRequest,
 } from './biblioteca.dto.js';
 import { BibliotecaService } from './biblioteca.service.js';
+import { ArticuloService } from '../articulos/articulo.service.js';
 
 const visibilitySchema = z.enum(['PUBLICO', 'INTERNO', 'CONFIDENCIAL']);
+
+const toggleFavoriteSchema = z.object({
+  targetType: z.enum(['ARTICULO', 'RECURSO']),
+  targetId: z.number().int().positive(),
+});
 
 const createResourceSchema = z.object({
   title: z.string().trim().min(1),
@@ -41,9 +49,28 @@ export class BibliotecaController {
 
   listar = async (
     req: Request,
-    res: Response<ApiResponse<LibraryResourceDTO[]>>,
+    res: Response<ApiResponse<LibraryResourceDTO[] | unknown[]>>,
     next: NextFunction,
   ): Promise<void> => {
+    const convocatoriaIdValue = getQueryString(req.query.convocatoriaId);
+    if (convocatoriaIdValue !== undefined) {
+      const convocatoriaId = Number(convocatoriaIdValue);
+      if (!Number.isSafeInteger(convocatoriaId) || convocatoriaId < 1) {
+        res.status(400).json({
+          success: false,
+          error: 'convocatoriaId debe ser un entero positivo',
+        });
+        return;
+      }
+      try {
+        const data = await new ArticuloService().listarArticulosPublicados(convocatoriaId);
+        res.status(200).json({ success: true, data });
+      } catch (error: unknown) {
+        next(error);
+      }
+      return;
+    }
+
     const specialtyIdValue = getQueryString(req.query.specialtyId);
     const specialtyId = specialtyIdValue === undefined ? undefined : Number(specialtyIdValue);
     if (
@@ -183,6 +210,65 @@ export class BibliotecaController {
         success: true,
         data: { message: 'Recurso eliminado correctamente' },
       });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  listarFavoritos = async (
+    req: Request,
+    res: Response<ApiResponse<FavoriteItemDTO[]>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Sesión expirada. Inicie sesión nuevamente',
+      });
+      return;
+    }
+
+    try {
+      const data = await this.bibliotecaService.listarFavoritos(
+        req.user.id,
+        req.user.role,
+      );
+      res.status(200).json({ success: true, data });
+    } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  toggleFavorito = async (
+    req: Request,
+    res: Response<ApiResponse<ToggleFavoriteResultDTO>>,
+    next: NextFunction,
+  ): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Sesión expirada. Inicie sesión nuevamente',
+      });
+      return;
+    }
+
+    const parsed = toggleFavoriteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: 'targetType y targetId son obligatorios',
+      });
+      return;
+    }
+
+    try {
+      const data = await this.bibliotecaService.toggleFavorito(
+        req.user.id,
+        parsed.data.targetType,
+        parsed.data.targetId,
+        req.user.role,
+      );
+      res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);
     }
