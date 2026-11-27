@@ -129,7 +129,7 @@ export const AdminAuditoria = () => {
             Auditoría del Sistema
           </h2>
           <p className="mt-1 text-[13px] text-[#526e68]">
-            Historial inmutable de acciones críticas sobre manuscritos, convocatorias, usuarios, biblioteca y especialidades.
+            Historial inmutable de acciones críticas sobre manuscritos, convocatorias, usuarios, biblioteca, especialidades y portal oficial.
           </p>
         </div>
         <button
@@ -175,6 +175,8 @@ export const AdminAuditoria = () => {
           <option value="USUARIO">Usuarios</option>
           <option value="RECURSO_BIBLIOTECA">Biblioteca</option>
           <option value="ESPECIALIDAD">Especialidades</option>
+          <option value="REVISTA">Revista Oficial</option>
+          <option value="PORTAL_NOVEDAD">Portada / Novedades</option>
         </select>
 
         <label className="block">

@@ -32,7 +32,7 @@ password: string;
 // CONTRATOS GLOBALES DE API - TRY-TACHYON / HIEF JOURNAL PLATFORM
 // ============================================================================
 
-export type RoleName = 'AUTOR' | 'DDI' | 'COMITE' | 'PUBLISHER' | 'EDITOR' | 'ADMIN';
+export type RoleName = 'STAFF' | 'DDI' | 'COMITE' | 'EDITOR' | 'ADMIN';
 
 export type ConvocationState = 'BORRADOR' | 'PROGRAMADA' | 'ABIERTA' | 'CERRADA';
 
@@ -43,11 +43,12 @@ export type ArticleState =
   | 'REVISION_MENOR'
   | 'REVISION_MAYOR'
   | 'PENDIENTE_DECISION'
+  | 'APROBADO'
   | 'ACEPTADO'
   | 'RECHAZADO'
   | 'PUBLICADO';
 
-export type ReviewVerdict = 'ACEPTAR' | 'ACEPTAR_CON_CORRECCIONES' | 'RECHAZAR';
+export type ReviewVerdict = 'APROBAR' | 'APROBAR_CON_CORRECCIONES' | 'RECHAZAR';
 
 export type LibraryVisibility = 'PUBLICO' | 'INTERNO' | 'CONFIDENCIAL';
 
@@ -72,7 +73,9 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
+  profile_image: string | null;
   active: boolean;
+  is_author: boolean;
   role: RoleName;
   specialtyId: number | null;
   must_change_password: boolean;
@@ -114,6 +117,20 @@ export interface SpecialtyDTO {
   articlesCount?: number;
   reviewersCount?: number;
 }
+
+// GET /api/especialidades — público (sesión opcional).
+// Devuelve especialidades activas ordenadas alfabéticamente; si el usuario autenticado
+// es ADMIN devuelve también las inactivas para su administración.
+//
+// POST /api/especialidades — JWT; solo ADMIN.
+// Body: { name: string, description?: string }.
+// Crea la especialidad activa y registra ESPECIALIDAD_CREADA en audit_logs.
+// Respuesta 409 si ya existe otra especialidad con el mismo nombre.
+//
+// PUT /api/especialidades/:id — JWT; solo ADMIN.
+// Body parcial: { name?: string, description?: string, active?: boolean }.
+// Actualiza datos o habilita/deshabilita (baja lógica) y registra ESPECIALIDAD_EDITADA.
+// Respuesta 409 si el nuevo nombre duplica otra especialidad existente.
 
 // ----------------------------------------------------------------------------
 // 4. MÓDULO ARTÍCULOS (/api/articulos)
@@ -362,6 +379,46 @@ export interface SpecialtyMetricDTO {
   downloads: number;
 }
 
+export interface TopDownloadedItemDTO {
+  entityType: 'ARTICULO' | 'RECURSO_BIBLIOTECA';
+  entityId: number;
+  title: string;
+  specialtyName: string | null;
+  downloads: number;
+}
+
+export interface MonthlyTrendPointDTO {
+  month: string;
+  label: string;
+  submissions: number;
+  publications: number;
+}
+
+export interface EditorialMetricsDTO {
+  totalSubmissions: number;
+  approvedOrPublishedCount: number;
+  rejectedCount: number;
+  approvalRate: number | null;
+  avgDaysToPublish: number | null;
+  avgDaysToFirstReview: number | null;
+  monthlyTrend: MonthlyTrendPointDTO[];
+}
+
+export interface MetricsOverviewDTO {
+  period: '30d' | '90d' | 'all';
+  summary: MetricsSummaryDTO;
+  bySpecialty: SpecialtyMetricDTO[];
+  topDownloaded: TopDownloadedItemDTO[];
+  editorial: EditorialMetricsDTO;
+}
+
+// POST /api/metricas/track — público.
+// Body: { eventType: 'VISIT' | 'DOWNLOAD', entityType: 'PORTAL' | 'ARTICULO' | 'RECURSO_BIBLIOTECA', entityId?: number | null, specialtyId?: number | null, visitorHash?: string }.
+// Deduplica eventos repetidos del mismo visitorHash en ventana temporal (30 min portal, 24 h documentos).
+//
+// GET /api/metricas/overview?period=30d|90d|all — JWT; roles ADMIN y EDITOR.
+// Devuelve MetricsOverviewDTO consolidando metric_events y tiempos/tasas del flujo editorial.
+
 // ----------------------------------------------------------------------------
 // 8. MÓDULO MIGRACIÓN HISTÓRICA (/api/migracion)
 // ----------------------------------------------------------------------------
@@ -466,11 +523,13 @@ export interface PublishedArticleDTO {
   specialty?: { id: number; name: string };
   createdAt: string;
   pdfAvailable: boolean;
+  originalFilename?: string | null;
 }
 
-// GET /articulos/publicados — sin autenticación; solo estado PUBLICADO.
-// GET /articulos/publicados/:id/pdf — sin autenticación; descarga el PDF de la última
+// GET /api/articulos/publicados — sin autenticación; solo estado PUBLICADO.
+// GET /api/articulos/publicados/:id/pdf — sin autenticación; descarga el PDF de la última
 // versión con el nombre original del archivo (original_filename) mientras siga PUBLICADO.
+// Con ?inline=1 responde Content-Disposition: inline para visualización directa en navegador.
 
 // ----------------------------------------------------------------------------
 // 10. MÓDULO IA (/api/ai)
@@ -522,7 +581,10 @@ export type AuditEntityType =
   | 'ARTICULO'
   | 'CONVOCATORIA'
   | 'USUARIO'
-  | 'RECURSO_BIBLIOTECA';
+  | 'RECURSO_BIBLIOTECA'
+  | 'ESPECIALIDAD'
+  | 'REVISTA'
+  | 'PORTAL_NOVEDAD';
 
 export interface AuditLogDTO {
   id: number;
@@ -542,3 +604,59 @@ export interface AuditLogDTO {
 // page (default 1), limit (default 25, max 100).
 // Devuelve { items: AuditLogDTO[], total, page, limit } ordenado por createdAt DESC.
 // Tabla audit_logs alimentada por backend/src/services/auditoria.service.ts.
+
+// ----------------------------------------------------------------------------
+// 13. MÓDULO PORTAL PÚBLICO Y REVISTA OFICIAL (/api/portal)
+// ----------------------------------------------------------------------------
+export type PortalNovedadCategory =
+  | 'NOVEDAD'
+  | 'JORNADA'
+  | 'COMUNICADO'
+  | 'DESTACADO';
+
+export interface RevistaEdicionDTO {
+  id: number;
+  title: string;
+  editionLabel: string;
+  summary: string | null;
+  coverImageUrl: string | null;
+  pdfUrl: string;
+  pdfFileName: string | null;
+  publishedDate: string;
+  isFeatured: boolean;
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface PortalNovedadDTO {
+  id: number;
+  title: string;
+  category: PortalNovedadCategory;
+  summary: string;
+  imageUrl: string | null;
+  attachmentUrl: string | null;
+  attachmentFileName: string | null;
+  externalLink: string | null;
+  isPublished: boolean;
+  isPinned: boolean;
+  createdAt: string;
+}
+
+export interface PortalPublicContentDTO {
+  featuredEdition: RevistaEdicionDTO | null;
+  pastEditions: RevistaEdicionDTO[];
+  news: PortalNovedadDTO[];
+}
+
+// GET /api/portal/public — público.
+// Devuelve featuredEdition, pastEditions y hasta 12 novedades publicadas (fijadas primero).
+//
+// GET /api/portal/revistas — JWT; roles ADMIN y EDITOR.
+// POST /api/portal/revistas — JWT; roles ADMIN y EDITOR. Multipart/form-data: pdf (obligatorio, max 50 MB), cover (imagen opcional), title, editionLabel, summary?, publishedDate?, isFeatured, isPublished.
+// PATCH /api/portal/revistas/:id — JWT; roles ADMIN y EDITOR. Actualiza metadatos, publicación o edición protagonista.
+// DELETE /api/portal/revistas/:id — JWT; roles ADMIN y EDITOR. Elimina registro y archivos asociados en /uploads/portal/.
+//
+// GET /api/portal/novedades — JWT; roles ADMIN y EDITOR.
+// POST /api/portal/novedades — JWT; roles ADMIN y EDITOR. Multipart/form-data: image (opcional), attachment (PDF opcional, max 25 MB), title, category, summary, externalLink?, isPublished, isPinned.
+// PATCH /api/portal/novedades/:id — JWT; roles ADMIN y EDITOR.
+// DELETE /api/portal/novedades/:id — JWT; roles ADMIN y EDITOR.

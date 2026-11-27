@@ -45,10 +45,6 @@ export interface WithdrawArticleRequest {
   password: string;
 }
 
-export interface UpdateArticleStateRequest {
-  state: ArticleState;
-}
-
 export interface ArticleSpecialtyDTO {
   id: number;
   name: string;
@@ -152,6 +148,7 @@ export interface PublishedArticleDTO {
   specialty?: { id: number; name: string };
   createdAt: string;
   pdfAvailable: boolean;
+  originalFilename?: string | null;
 }
 
 export interface AuthenticatedArticleUser {

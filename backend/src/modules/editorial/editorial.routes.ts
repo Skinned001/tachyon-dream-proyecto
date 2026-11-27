@@ -7,18 +7,6 @@ const router = Router();
 const controller = new EditorialController();
 
 router.get('/publicas', controller.listarPublicas);
-router.get(
-  '/articulos-pendientes',
-  authenticateJWT,
-  requireRole(['ADMIN', 'EDITOR', 'DDI']),
-  controller.listarArticulosPendientes,
-);
-router.post(
-  '/:id/asignar',
-  authenticateJWT,
-  requireRole(['ADMIN', 'EDITOR', 'DDI']),
-  controller.asignarRevisor,
-);
 router.get('/', authenticateJWT, requireRole(['ADMIN', 'EDITOR']), controller.listar);
 router.post('/', authenticateJWT, requireRole(['ADMIN', 'EDITOR']), controller.crear);
 router.put('/:id', authenticateJWT, requireRole(['ADMIN', 'EDITOR']), controller.editar);

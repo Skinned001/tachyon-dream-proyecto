@@ -235,12 +235,21 @@ export const AdminMetricas = () => {
                               {item.visits} visitas · {item.downloads} descargas
                             </span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-[#e6f1ec]">
-                            <div
-                              className="h-full rounded-full bg-[#087d70] transition-all"
-                              style={{ width: `${total === 0 ? 0 : Math.max(4, widthPct)}%` }}
+                          <svg
+                            viewBox="0 0 100 8"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                            className="h-2 w-full overflow-hidden rounded-full bg-[#e6f1ec]"
+                          >
+                            <rect
+                              x="0"
+                              y="0"
+                              width={total === 0 ? 0 : Math.max(4, widthPct)}
+                              height="8"
+                              rx="4"
+                              className="fill-[#087d70] transition-all"
                             />
-                          </div>
+                          </svg>
                         </div>
                       );
                     })}
@@ -337,25 +346,63 @@ export const AdminMetricas = () => {
                           <span className="font-data text-[10px] text-[#52766d]">
                             {point.submissions}
                           </span>
-                          <div
-                            className="w-4 rounded-t bg-[#9bd4c1]"
-                            style={{
-                              height: `${point.submissions === 0 ? 4 : Math.max(10, subHeight)}%`,
-                            }}
-                            title={`Envíos: ${point.submissions}`}
-                          />
+                          <svg
+                            viewBox="0 0 16 100"
+                            preserveAspectRatio="none"
+                            role="img"
+                            aria-label={`Envíos: ${point.submissions}`}
+                            className="h-20 w-4 overflow-hidden"
+                          >
+                            <title>{`Envíos: ${point.submissions}`}</title>
+                            <rect
+                              x="0"
+                              y={
+                                100 -
+                                (point.submissions === 0
+                                  ? 4
+                                  : Math.max(10, subHeight))
+                              }
+                              width="16"
+                              height={
+                                point.submissions === 0
+                                  ? 4
+                                  : Math.max(10, subHeight)
+                              }
+                              rx="2"
+                              className="fill-[#9bd4c1]"
+                            />
+                          </svg>
                         </div>
                         <div className="flex h-full flex-col items-center justify-end gap-1">
                           <span className="font-data text-[10px] text-[#07584f]">
                             {point.publications}
                           </span>
-                          <div
-                            className="w-4 rounded-t bg-[#087d70]"
-                            style={{
-                              height: `${point.publications === 0 ? 4 : Math.max(10, pubHeight)}%`,
-                            }}
-                            title={`Publicaciones: ${point.publications}`}
-                          />
+                          <svg
+                            viewBox="0 0 16 100"
+                            preserveAspectRatio="none"
+                            role="img"
+                            aria-label={`Publicaciones: ${point.publications}`}
+                            className="h-20 w-4 overflow-hidden"
+                          >
+                            <title>{`Publicaciones: ${point.publications}`}</title>
+                            <rect
+                              x="0"
+                              y={
+                                100 -
+                                (point.publications === 0
+                                  ? 4
+                                  : Math.max(10, pubHeight))
+                              }
+                              width="16"
+                              height={
+                                point.publications === 0
+                                  ? 4
+                                  : Math.max(10, pubHeight)
+                              }
+                              rx="2"
+                              className="fill-[#087d70]"
+                            />
+                          </svg>
                         </div>
                       </div>
                       <span className="mt-2 text-[11px] font-semibold capitalize text-[#244f47]">

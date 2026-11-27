@@ -317,7 +317,7 @@ const publishedArticleIncludes: Includeable[] = [
   {
     model: ArticuloVersion,
     as: 'versions',
-    attributes: ['version_number', 'pdf_path'],
+    attributes: ['version_number', 'pdf_path', 'original_filename'],
     where: { pdf_path: { [Op.ne]: null } },
     separate: true,
     order: [['version_number', 'DESC']],
@@ -392,69 +392,6 @@ const cleanupUploadedFile = (filePath: string): void => {
 };
 
 export class ArticuloService {
-  async listarPendientesDeAsignacion(): Promise<ArticleDTO[]> {
-    const assignments = await AsignacionComite.findAll({
-      attributes: ['articleId'],
-    });
-    const where: WhereOptions = {
-      state: { [Op.in]: ['PENDIENTE', 'EN_REVISION'] },
-    };
-    if (assignments.length > 0) {
-      Object.assign(where, {
-        id: { [Op.notIn]: assignments.map(({ articleId }) => articleId) },
-      });
-    }
-
-    const articles = await Articulo.findAll({
-      where,
-      include: articleIncludes,
-      order: [['createdAt', 'ASC']],
-    });
-    return articles.map((article) => toArticleDTO(article));
-  }
-
-  async asignarRevisor(
-    articleId: number,
-    reviewerId: number,
-  ): Promise<{ articleId: number; reviewerId: number }> {
-    return sequelize.transaction(async (transaction) => {
-      const article = await Articulo.findByPk(articleId, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      if (!article) {
-        throw new ArticuloError(404, 'Artículo no encontrado');
-      }
-      if (article.state !== 'PENDIENTE' && article.state !== 'EN_REVISION') {
-        throw new ArticuloError(409, 'El artículo no está pendiente de asignación');
-      }
-
-      const existingAssignment = await AsignacionComite.findOne({
-        where: { articleId },
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
-      if (existingAssignment) {
-        throw new ArticuloError(409, 'El artículo ya tiene un revisor asignado');
-      }
-
-      const reviewer = await Usuario.findByPk(reviewerId, { transaction });
-      if (!reviewer || !reviewer.active) {
-        throw new ArticuloError(400, 'El especialista no existe o está inactivo');
-      }
-      const reviewerRole = await Rol.findByPk(reviewer.roleId, { transaction });
-      if (!reviewerRole || (reviewerRole.name !== 'DDI' && reviewerRole.name !== 'COMITE')) {
-        throw new ArticuloError(400, 'Solo se puede asignar el artículo a usuarios DDI o COMITE');
-      }
-
-      await AsignacionComite.create(
-        { articleId, reviewerId, read_status: false },
-        { transaction },
-      );
-      return { articleId, reviewerId };
-    });
-  }
-
   async listarArticulosPublicados(convocatoriaId?: number): Promise<PublishedArticleDTO[]> {
     const where: WhereOptions = { state: 'PUBLICADO' };
     if (convocatoriaId !== undefined) {
@@ -468,9 +405,17 @@ export class ArticuloService {
 
     return articles.map((article) => {
       const dto = toPublishedArticleDTO(article);
-      const pdfPath = article.versions?.[0]?.pdf_path;
+      const latestVersion = article.versions?.[0];
+      const pdfPath = latestVersion?.pdf_path;
       if (pdfPath) {
         dto.pdfAvailable = fs.existsSync(getArticlePdfPath(pdfPath));
+        dto.originalFilename = resolveDownloadFileName(
+          latestVersion.original_filename,
+          pdfPath,
+          `publicacion-${article.id}.pdf`,
+        );
+      } else {
+        dto.originalFilename = null;
       }
       return dto;
     });
@@ -1328,26 +1273,6 @@ export class ArticuloService {
       order: [['createdAt', 'DESC']],
     });
     return articles.map((article) => toArticleDTO(article, user));
-  }
-
-  async actualizarEstado(
-    id: number,
-    nuevoEstado: ArticleState,
-    revisorId: number,
-  ): Promise<ArticleDTO> {
-    const reviewer = await Usuario.findByPk(revisorId);
-    if (!reviewer) {
-      throw new ArticuloError(401, 'Sesión expirada. Inicie sesión nuevamente');
-    }
-
-    const reviewerRole = await Rol.findByPk(reviewer.roleId);
-    if (!reviewerRole || (reviewerRole.name !== 'COMITE' && reviewerRole.name !== 'ADMIN')) {
-      throw new ArticuloError(403, 'No tiene permisos para cambiar el estado del artículo');
-    }
-
-    const article = await findArticleOrThrow(id);
-    await article.update({ state: nuevoEstado });
-    return toArticleDTO(await findArticleOrThrow(id));
   }
 
   private async assertForeignKeys(

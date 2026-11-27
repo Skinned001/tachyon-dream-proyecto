@@ -23,6 +23,7 @@ const app = express();
 const corsOptions = {
   origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
   credentials: true,
+  exposedHeaders: ["Content-Disposition"],
 };
 const uploadsCors = cors(corsOptions);
 const uploadsPath = path.resolve(uploadsDirectory);

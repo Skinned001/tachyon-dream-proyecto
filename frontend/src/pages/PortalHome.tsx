@@ -59,6 +59,28 @@ const formatDate = (value: string): string => {
   }).format(date);
 };
 
+const extractDownloadFileName = (
+  disposition: string | null,
+): string | null => {
+  if (!disposition) return null;
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]).trim();
+    } catch {
+      // Fallback to quoted filename below
+    }
+  }
+  const asciiMatch = /filename="?([^";]+)"?/i.exec(disposition);
+  return asciiMatch?.[1]?.trim() || null;
+};
+
+const sanitizePdfDownloadName = (candidate: string): string => {
+  const cleaned = candidate.replace(/[\\/:*?"<>|]+/g, '_').trim();
+  const base = cleaned || 'documento.pdf';
+  return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
+};
+
 export function PortalHome() {
   const [articles, setArticles] = useState<PublishedArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,13 +220,13 @@ export function PortalHome() {
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const safeName = (article.title || `articulo-${article.id}`)
-        .replace(/[\\/:*?"<>|]+/g, '_')
-        .trim();
+      const preferredName =
+        extractDownloadFileName(response.headers.get('Content-Disposition')) ||
+        article.originalFilename ||
+        article.title ||
+        `articulo-${article.id}`;
       link.href = objectUrl;
-      link.download = safeName.toLowerCase().endsWith('.pdf')
-        ? safeName
-        : `${safeName}.pdf`;
+      link.download = sanitizePdfDownloadName(preferredName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -228,13 +250,10 @@ export function PortalHome() {
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const safeName = (edition.title || `revista-hief-${edition.id}`)
-        .replace(/[\\/:*?"<>|]+/g, '_')
-        .trim();
+      const preferredName =
+        edition.pdfFileName || edition.title || `revista-hief-${edition.id}`;
       link.href = objectUrl;
-      link.download = safeName.toLowerCase().endsWith('.pdf')
-        ? safeName
-        : `${safeName}.pdf`;
+      link.download = sanitizePdfDownloadName(preferredName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1187,7 +1206,7 @@ export function PortalHome() {
                       {article.pdfAvailable ? (
                         <div className="flex items-center gap-2.5">
                           <a
-                            href={pdfUrl}
+                            href={`${pdfUrl}?inline=1`}
                             target="_blank"
                             rel="noreferrer"
                             onClick={() =>

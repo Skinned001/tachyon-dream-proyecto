@@ -50,6 +50,19 @@ const stateColors: Record<DashboardArticleState, string> = {
   PUBLICADO: 'bg-[#087d70]',
 };
 
+const stateFillColors: Record<DashboardArticleState, string> = {
+  BORRADOR: 'fill-slate-400',
+  PENDIENTE: 'fill-amber-400',
+  EN_REVISION: 'fill-blue-500',
+  REVISION_MENOR: 'fill-cyan-500',
+  REVISION_MAYOR: 'fill-indigo-500',
+  PENDIENTE_DECISION: 'fill-violet-500',
+  APROBADO: 'fill-teal-500',
+  ACEPTADO: 'fill-emerald-500',
+  RECHAZADO: 'fill-rose-500',
+  PUBLICADO: 'fill-[#087d70]',
+};
+
 const formatDate = (value: string, withTime = false): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Fecha no disponible';
@@ -347,22 +360,36 @@ export const DashboardHome = () => {
           </div>
           {distributionTotal > 0 ? (
             <>
-              <div
-                className="flex h-3 overflow-hidden rounded-full bg-[#edf4f0]"
+              <svg
+                viewBox="0 0 100 12"
+                preserveAspectRatio="none"
+                className="h-3 w-full overflow-hidden rounded-full bg-[#edf4f0]"
                 role="img"
                 aria-label="Distribución de artículos por estado"
               >
-                {distribution
-                  .filter((item) => item.count > 0)
-                  .map((item) => (
-                    <span
-                      key={item.estado}
-                      className={`${stateColors[item.estado]} first:rounded-l-full last:rounded-r-full`}
-                      style={{ flexGrow: item.count, flexBasis: 0 }}
-                      title={`${stateLabels[item.estado]}: ${item.count}`}
-                    />
-                  ))}
-              </div>
+                {(() => {
+                  let accumulated = 0;
+                  return distribution
+                    .filter((item) => item.count > 0)
+                    .map((item) => {
+                      const widthPct = (item.count / distributionTotal) * 100;
+                      const xPct = accumulated;
+                      accumulated += widthPct;
+                      return (
+                        <rect
+                          key={item.estado}
+                          x={xPct}
+                          y="0"
+                          width={widthPct}
+                          height="12"
+                          className={stateFillColors[item.estado]}
+                        >
+                          <title>{`${stateLabels[item.estado]}: ${item.count}`}</title>
+                        </rect>
+                      );
+                    });
+                })()}
+              </svg>
               <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
                 {distribution
                   .filter((item) => item.count > 0)

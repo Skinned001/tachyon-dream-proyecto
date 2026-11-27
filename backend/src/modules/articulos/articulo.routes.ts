@@ -84,11 +84,4 @@ router.patch(
   articuloController.retirar,
 );
 
-router.put(
-  '/:id/status',
-  authenticateJWT,
-  requireRole(['COMITE', 'ADMIN']),
-  articuloController.actualizarEstado,
-);
-
 export default router;

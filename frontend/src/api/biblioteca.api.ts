@@ -10,6 +10,8 @@ export interface RecursoBiblioteca {
   autor?: string;
   descripcion: string;
   archivoUrl: string;
+  vistaUrl?: string;
+  nombreArchivo?: string;
   visibilidad: 'PUBLICO' | 'INTERNO' | 'CONFIDENCIAL';
   createdAt: string;
   updatedAt?: string;
@@ -29,6 +31,7 @@ interface LibraryResourceDTO {
   file_path: string;
   file_size: string;
   fileUrl?: string | null;
+  fileName?: string | null;
   visibility: RecursoBiblioteca['visibilidad'];
   specialtyId: number | null;
   specialty?: { id: number; name: string };
@@ -47,19 +50,25 @@ const getUploadedFileUrl = (filePath: string): string => {
 
 const toLibraryResource = (
   resource: LibraryResourceDTO,
-): RecursoBiblioteca => ({
-  id: resource.id,
-  source: 'recurso',
-  titulo: resource.title,
-  tipo: resource.category,
-  area: resource.specialty?.name ?? '',
-  descripcion: resource.description ?? '',
-  archivoUrl: resource.fileUrl
+): RecursoBiblioteca => {
+  const archivoUrl = resource.fileUrl
     ? `${serverBaseUrl}${resource.fileUrl.startsWith('/') ? '' : '/'}${resource.fileUrl}`
-    : getUploadedFileUrl(resource.file_path),
-  visibilidad: resource.visibility,
-  createdAt: resource.createdAt,
-});
+    : getUploadedFileUrl(resource.file_path);
+
+  return {
+    id: resource.id,
+    source: 'recurso',
+    titulo: resource.title,
+    tipo: resource.category,
+    area: resource.specialty?.name ?? '',
+    descripcion: resource.description ?? '',
+    archivoUrl,
+    vistaUrl: archivoUrl,
+    ...(resource.fileName ? { nombreArchivo: resource.fileName } : {}),
+    visibilidad: resource.visibility,
+    createdAt: resource.createdAt,
+  };
+};
 
 const toPublishedArticleResource = (
   article: PublishedArticle,
@@ -76,6 +85,10 @@ const toPublishedArticleResource = (
   archivoUrl: article.pdfAvailable
     ? `${apiBaseUrl}/articulos/publicados/${article.id}/pdf`
     : '',
+  vistaUrl: article.pdfAvailable
+    ? `${apiBaseUrl}/articulos/publicados/${article.id}/pdf?inline=1`
+    : '',
+  ...(article.originalFilename ? { nombreArchivo: article.originalFilename } : {}),
   visibilidad: 'PUBLICO',
   createdAt: article.publishedAt ?? article.createdAt,
 });

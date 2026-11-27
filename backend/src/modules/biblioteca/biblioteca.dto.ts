@@ -20,6 +20,7 @@ export interface LibraryResourceDTO {
   file_path: string;
   file_size: string;
   fileUrl?: string | null;
+  fileName?: string | null;
   visibility: LibraryVisibility;
   uploadedBy: number | null;
   specialtyId: number | null;

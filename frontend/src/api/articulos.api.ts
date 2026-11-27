@@ -134,6 +134,7 @@ export interface PublishedArticle {
   specialty?: { id: number; name: string };
   createdAt: string;
   pdfAvailable: boolean;
+  originalFilename?: string | null;
 }
 
 export interface SubmitVerdictPayload {

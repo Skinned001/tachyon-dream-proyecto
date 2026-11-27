@@ -57,6 +57,7 @@ const toLibraryResourceDTO = (
     file_path: resource.file_path,
     file_size: resource.file_size,
     ...(resource.fileUrl !== null ? { fileUrl: resource.fileUrl } : {}),
+    ...(resource.fileName !== null ? { fileName: resource.fileName } : {}),
     visibility: resource.visibility,
     uploadedBy: resource.uploadedBy,
     specialtyId: resource.specialtyId,
@@ -173,6 +174,8 @@ export class BibliotecaService {
       category: data.category,
       file_path: path.relative(backendRootDirectory, file.path),
       file_size: formatFileSize(file.size),
+      fileUrl: `/uploads/library/${path.basename(file.path)}`,
+      fileName: file.originalname,
       visibility: data.visibility,
       uploadedBy,
       specialtyId: data.specialtyId,
@@ -283,7 +286,7 @@ export class BibliotecaService {
           title: article.title,
           category: 'Artículo publicado',
           area: article.specialty?.name ?? '',
-          fileUrl: hasPdf ? `/api/articulos/publicados/${article.id}/pdf` : null,
+          fileUrl: hasPdf ? `/api/articulos/publicados/${article.id}/pdf?inline=1` : null,
           createdAt: fav.createdAt.toISOString(),
         });
       } else {

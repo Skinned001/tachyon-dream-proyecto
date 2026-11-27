@@ -2,11 +2,11 @@ import type { NextFunction, Request, Response } from 'express';
 import { access, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { sendApprovalEmail } from '../../config/email.js';
 import { uploadsDirectory } from '../../config/uploads.js';
 import { registrarAuditoria } from '../../services/auditoria.service.js';
 import {
   sendActivationEmail,
+  sendApprovalEmail,
   sendDeactivationEmail,
 } from '../../utils/mailer.js';
 import type { ApiResponse } from '../auth/auth.dto.js';

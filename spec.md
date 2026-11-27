@@ -22,32 +22,27 @@ Plataforma web digital institucional diseñada para comunicar conocimiento cient
 ---
 
 ## 3. Arquitectura de Directorios (Modular / Feature-Based)
-*   **Backend:** Organizado por dominios en `backend/src/modules/` (`auth`, `usuarios`, `especialidades`, `articulos`, `editorial`, `biblioteca`, `ai`, `notificaciones`, `metricas`, `migracion`). Las asociaciones de Sequelize se centralizan en `backend/src/database/associations.ts`.
+*   **Backend:** Organizado por dominios en `backend/src/modules/` (`auth`, `usuarios`, `especialidades`, `articulos`, `editorial`, `biblioteca`, `portal`, `dashboard`, `auditoria`, `metricas`, `notificaciones`, `ai`, `migracion`). Las asociaciones de Sequelize se centralizan en `backend/src/database/associations.ts`.
 *   **Frontend:** Organizado en `frontend/src/features/` por dominio, `frontend/src/pages/` para vistas de ruta, `frontend/src/layouts/` (`DashboardLayout`, `Sidebar`, `Navbar`), y `frontend/src/api/` para clientes Axios tipados.
 
 ---
 
 ## 4. Matriz de Roles, Perfiles y Permisos (RBAC)
-El sistema reconoce **7 perfiles institucionales operativos** (creados exclusivamente por el Administrador, sin registro público abierto):
+El sistema modela **5 roles persistidos en base de datos** (`STAFF`, `DDI`, `COMITE`, `EDITOR`, `ADMIN`) combinados con el atributo `is_author` y el acceso público de invitado:
 
-1. **INVITADO (Sin Autenticación):** Consulta pública de artículos con estado `PUBLICO` / `PUBLICADO` y descarga de PDFs.
-2. **AUTOR (`AUTOR`):** Profesionales que inician sesión para enviar manuscritos (`Article`) y subir nuevas versiones (`ArticleVersion`).
-3. **DEPARTAMENTO DE DOCENCIA E INVESTIGACIÓN (`DDI`):** Recibe envíos, valida pertinencia, realiza rechazos en escritorio y asigna manuscritos a los revisores del Comité Científico según especialidad.
-4. **MIEMBRO DEL COMITÉ CIENTÍFICO (`COMITE`):** Lee expedientes asignados, puede revisar análisis asistidos como apoyo (sin que estos determinen plagio ni reemplacen la evaluación humana) y emite dictámenes formales (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`) con comentarios.
-5. **ENCARGADO DE PUBLICACIÓN / PRENSA (`PUBLISHER`):** Revisa el formato final de artículos aprobados, ejecuta la publicación oficial en el portal y maneja la **Carga Masiva de Históricos** (migración de PDFs antiguos).
-6. **EDITOR (`EDITOR`):** Gestiona convocatorias y puede editar las convocatorias según las reglas de Convocatorias v2.
-7. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD completo de usuarios, habilitación de especialidades médicas (`specialties`), auditoría de logs y configuración general.
+1. **INVITADO (Sin Autenticación):** Consulta pública de la Revista Oficial HIEF, novedades institucionales, convocatorias, biblioteca pública y artículos con estado `PUBLICADO` (lectura online y descarga gratuita de PDFs).
+2. **PERSONAL / AUTOR (`STAFF` con `is_author = true`):** Profesionales que inician sesión (dados de alta por `ADMIN` o mediante solicitud de registro en `/registro` con credencial adjunta aprobada por `ADMIN`) para enviar manuscritos (`Article`), consultar dictámenes anónimos y subir versiones corregidas (`ArticleVersion`).
+3. **DEPARTAMENTO DE DOCENCIA E INVESTIGACIÓN (`DDI`):** Recibe envíos en Mesa de Entrada, valida pertinencia, realiza rechazos en escritorio fundamentados y asigna manuscritos a **1 o 3 revisores** activos del Comité Científico.
+4. **MIEMBRO DEL COMITÉ CIENTÍFICO (`COMITE`):** Evalúa los expedientes asignados, consulta análisis asistidos preliminares como apoyo (sin reemplazar el criterio humano) y emite dictámenes formales (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`) con observaciones.
+5. **EDITOR (`EDITOR`):** Gestiona Convocatorias v2, valida correcciones editoriales, ejecuta la publicación o el retiro protegido por contraseña de manuscritos aprobados, administra documentos institucionales de Biblioteca, gestiona ediciones de la Revista Oficial HIEF / novedades de portada y consulta métricas analíticas. (También tendrá a cargo la Carga Masiva de Históricos cuando se habilite `/api/migracion`).
+6. **ADMINISTRADOR (`ADMIN`):** Control total del sistema. Gestiona el CRUD de usuarios y solicitudes de registro, catálogo de especialidades médicas (`specialties`), auditoría inmutable (`audit_logs`), métricas y todos los flujos operativos.
 
 ## 4.1 Portal público y acceso institucional
 
 La ruta inicial (`/`) presenta dos accesos claramente diferenciados:
 
-- **Portal público:** no requiere autenticación. Permite consultar manuscritos
-  publicados de este año y de años anteriores, buscar por texto, filtrar por
-  año, ver sus metadatos editoriales y descargar el PDF publicado.
-- **Acceso institucional:** dirige al inicio de sesión de autores y personal
-  hospitalario. No hay registro público; las cuentas son creadas por un
-  administrador.
+- **Portal público:** no requiere autenticación. Presenta la identidad conjunta HIEF + Instituto Politécnico Formosa, la **Revista Oficial HIEF** (edición destacada y números anteriores), **Novedades y Comunicados**, convocatorias vigentes/próximas/recientes y el archivo público de manuscritos con búsqueda, filtro por año, lectura online y descarga de PDF respetando el nombre original del archivo.
+- **Acceso institucional:** dirige al inicio de sesión (`/login`) de autores y personal hospitalario, e incluye solicitud de alta para autores (`/registro`) con carga de credencial profesional sujeta a aprobación expresa de un `ADMIN` antes de habilitar el ingreso.
 
 La API pública solo devuelve artículos con estado `PUBLICADO`. No expone
 borradores, manuscritos en revisión, dictámenes, reportes de IA, identificadores
@@ -77,16 +72,21 @@ frontend.
 ---
 
 ## 5. Modelo de Datos Esencial (Sequelize TS)
-*   `roles`: id, name (`AUTOR`, `DDI`, `COMITE`, `PUBLISHER`, `EDITOR`, `ADMIN`), description.
+*   `roles`: id, name (`STAFF`, `DDI`, `COMITE`, `EDITOR`, `ADMIN`), description.
 *   `specialties`: id, name, description, active (baja lógica).
-*   `users`: id, username, email, password, first_name, last_name, dni, active, roleId (FK), specialtyId (FK).
+*   `users`: id, username, email, password, first_name, last_name, dni, active, is_author, is_guest, must_change_password, recibirNotificaciones, approvedAt, credential_filename, roleId (FK), specialtyId (FK).
 *   `convocations`: id, title, fechaInicio (`DATETIME`), fechaFin (`DATETIME`), estado (`BORRADOR`, `PROGRAMADA`, `ABIERTA`, `CERRADA`), visibleEnLanding (`BOOLEAN`, default `false`).
-*   `articles`: id, title, state (`PENDIENTE`, `EN_REVISION`, `APROBADO`, `RECHAZADO`, `PUBLICADO`), responsibleId (FK), specialtyId (FK), convocatoriaId (FK).
-*   `article_versions`: id, version_number, body_text, pdf_path, ai_report (JSON), articleId (FK).
+*   `articles`: id, title, summary, keywords (JSON), coauthors (JSON), rejection_reason, state (`BORRADOR`, `PENDIENTE`, `EN_REVISION`, `REVISION_MENOR`, `APROBADO`, `RECHAZADO`, `PUBLICADO`), publishedAt, editionNumber, doi, responsibleId (FK), specialtyId (FK), convocatoriaId (FK).
+*   `article_versions`: id, version_number, body_text, pdf_path, original_filename, ai_report (JSON), articleId (FK).
 *   `committee_assignments`: id, read_status, reviewerId (FK), articleId (FK).
-*   `reviews`: id, verdict, comments, assignmentId (FK), versionId (FK).
+*   `reviews`: id, verdict (`APROBAR`, `APROBAR_CON_CORRECCIONES`, `RECHAZAR`), comments, observations (JSON), assignmentId (FK), versionId (FK).
 *   `library_resources`: id, title, description, category, file_path, file_size, fileUrl, fileName, visibility (`PUBLICO`, `INTERNO`, `CONFIDENCIAL`), uploadedBy (FK opcional), specialtyId (FK opcional), createdAt, updatedAt.
-*   `metrics_logs`: id, action_type (`VISITA`, `DESCARGA`), articleId (FK), ip_hash, timestamp.
+*   `user_favorites`: id, userId (FK), targetType (`ARTICULO`, `RECURSO`), targetId, createdAt.
+*   `revista_ediciones`: id, title, editionLabel, summary, coverImageUrl, pdfUrl, pdfFileName, publishedDate, isFeatured, isPublished, createdBy (FK), createdAt, updatedAt.
+*   `portal_novedades`: id, title, category (`NOVEDAD`, `JORNADA`, `COMUNICADO`, `DESTACADO`), summary, imageUrl, attachmentUrl, attachmentFileName, externalLink, isPublished, isPinned, createdBy (FK), createdAt, updatedAt.
+*   `notificaciones`: id, userId (FK), title, message, read, tipo, referenciaId, createdAt.
+*   `audit_logs`: id, userId (FK opcional), actorName, actorRole, action, entityType, entityId, summary, details (JSON), createdAt.
+*   `metric_events`: id, eventType (`VISIT`, `DOWNLOAD`), entityType (`PORTAL`, `ARTICULO`, `RECURSO_BIBLIOTECA`), entityId, specialtyId (FK opcional), visitorHash, createdAt.
 
 ---
 
@@ -154,5 +154,5 @@ Cuando un `AUTOR` sube un manuscrito, es obligatorio seleccionar una convocatori
 *   **Formato JSON estándar:** 
     *   Éxito: `{ "success": true, "data": <payload> }`
     *   Error: `{ "success": false, "error": "Mensaje legible" }`
-*   **Seguridad:** Autenticación por Bearer Token JWT en cabecera `Authorization`. Contraseñas protegidas con `bcrypt`. Límite de 10 intentos fallidos con bloqueo temporal.
-*   **Manejo de Archivos:** Middleware `multer` para filtrado exclusivo de `application/pdf` (máx. 10MB) guardados en almacenamiento local aislado.
+*   **Seguridad:** Autenticación mediante cookie `HttpOnly` `token` (con soporte de Bearer Token JWT en cabecera `Authorization`). Contraseñas protegidas con `bcrypt`. Límite de 10 intentos fallidos con bloqueo temporal de 30 minutos.
+*   **Manejo de Archivos:** Middleware `multer` para validación estricta de formato y tamaño (manuscritos PDF hasta 10 MB en almacenamiento privado, manuales de biblioteca PDF hasta 20 MB y ediciones completas de la Revista Oficial hasta 50 MB).

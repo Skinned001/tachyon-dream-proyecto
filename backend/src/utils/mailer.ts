@@ -1,5 +1,17 @@
 import nodemailer from 'nodemailer';
 
+export interface ApprovalEmailRecipient {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface AccountStatusEmailParams {
+  to: string;
+  name: string;
+  enabled: boolean;
+}
+
 const escapeHtml = (value: string): string =>
   value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -12,23 +24,19 @@ const escapeHtml = (value: string): string =>
     return entities[character] ?? character;
   });
 
-interface AccountStatusEmailParams {
-  to: string;
-  name: string;
-  enabled: boolean;
-}
-
 const getMailConfig = () => {
-  const host = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
+  const host =
+    process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 465);
   const user = process.env.EMAIL_USER || process.env.SMTP_USER;
   const pass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
   const from =
     process.env.EMAIL_FROM ||
     process.env.SMTP_FROM ||
-    (user ? `"Hief Journal" <${user}>` : '');
+    (user ? `"Revista HIEF" <${user}>` : '');
 
   if (
+    !host ||
     !user ||
     !pass ||
     !Number.isInteger(port) ||
@@ -36,13 +44,42 @@ const getMailConfig = () => {
     port > 65535
   ) {
     const error = new Error(
-      'La configuración de correo no está completa o no es válida.',
+      'La configuración SMTP/correo no está completa o no es válida.',
     );
     console.error('Error de SMTP:', error.message);
     throw error;
   }
 
   return { host, port, user, pass, from };
+};
+
+export const sendApprovalEmail = async (
+  recipient: ApprovalEmailRecipient,
+): Promise<void> => {
+  const { host, port, user, pass, from } = getMailConfig();
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+  const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: recipient.email,
+      subject: 'Tu cuenta ha sido activada - Revista HIEF',
+      text: `Hola ${fullName}, tu solicitud fue aprobada por el Comité Editorial y tu cuenta en Revista HIEF ha sido activada. Ya puedes iniciar sesión con tus credenciales.`,
+      html: `<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #087d70;">¡Bienvenido a Revista HIEF, ${escapeHtml(fullName)}!</h2>
+        <p>Tu solicitud de registro fue aprobada por el Comité Editorial y <strong>tu cuenta ha sido activada</strong>.</p>
+        <p>Ya puedes iniciar sesión con tus credenciales.</p>
+      </div>`,
+    });
+  } finally {
+    transporter.close();
+  }
 };
 
 export const sendAccountStatusEmail = async ({
@@ -60,12 +97,12 @@ export const sendAccountStatusEmail = async ({
   const safeName = escapeHtml(name);
 
   const subject = enabled
-    ? 'Tu cuenta ha sido habilitada - Hief Journal'
-    : 'Tu cuenta ha sido deshabilitada - Hief Journal';
+    ? 'Tu cuenta ha sido habilitada - Revista HIEF'
+    : 'Tu cuenta ha sido deshabilitada - Revista HIEF';
 
   const text = enabled
-    ? `Hola ${name}, te informamos que tu cuenta en Hief Journal ha sido habilitada por un administrador. Ya puedes iniciar sesión con tus credenciales.`
-    : `Hola ${name}, te informamos que tu cuenta en Hief Journal ha sido deshabilitada por un administrador. Mientras permanezca deshabilitada no podrás iniciar sesión. Si necesitas más información, contacta al equipo administrador.`;
+    ? `Hola ${name}, te informamos que tu cuenta en Revista HIEF ha sido habilitada por un administrador. Ya puedes iniciar sesión con tus credenciales.`
+    : `Hola ${name}, te informamos que tu cuenta en Revista HIEF ha sido deshabilitada por un administrador. Mientras permanezca deshabilitada no podrás iniciar sesión. Si necesitas más información, contacta al equipo administrador.`;
 
   const headingColor = enabled ? '#087d70' : '#b91c1c';
   const statusPhrase = enabled ? 'habilitada' : 'deshabilitada';
@@ -75,7 +112,7 @@ export const sendAccountStatusEmail = async ({
 
   const html = `<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
     <h2 style="color: ${headingColor};">¡Hola ${safeName}!</h2>
-    <p>Te informamos que <strong>tu cuenta en Hief Journal ha sido ${statusPhrase}</strong> por un administrador.</p>
+    <p>Te informamos que <strong>tu cuenta en Revista HIEF ha sido ${statusPhrase}</strong> por un administrador.</p>
     <p>${detailParagraph}</p>
     <p style="font-size: 12px; color: #6b7280;">Si no reconoces esta acción, contacta al administrador del sistema.</p>
   </div>`;

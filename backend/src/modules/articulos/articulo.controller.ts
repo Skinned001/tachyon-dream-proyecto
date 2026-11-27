@@ -113,10 +113,6 @@ const withdrawArticleSchema = z.object({
   password: z.string().min(1, 'La contraseña actual es obligatoria'),
 });
 
-const updateArticleStateSchema = z.object({
-  status: z.enum(['PENDIENTE', 'EN_REVISION', 'REVISION_MENOR', 'APROBADO', 'RECHAZADO', 'PUBLICADO']),
-});
-
 const getId = (value: string): number | undefined => {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : undefined;
@@ -241,6 +237,28 @@ export class ArticuloController {
     try {
       const { pdfPath, fileName } =
         await this.articuloService.obtenerPdfPublicado(id);
+      const openInline =
+        req.query.inline === '1' || req.query.inline === 'true';
+
+      if (openInline) {
+        const asciiFallback = fileName.replace(/[^\x20-\x7E]/g, '_');
+        res.sendFile(
+          pdfPath,
+          {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+            },
+          },
+          (error) => {
+            if (error) {
+              next(error);
+            }
+          },
+        );
+        return;
+      }
+
       res.download(pdfPath, fileName, (error) => {
         if (error) {
           next(error);
@@ -659,44 +677,6 @@ export class ArticuloController {
 
     try {
       const data = await this.articuloService.listarArticulos(user);
-      res.status(200).json({ success: true, data });
-    } catch (error: unknown) {
-      next(error);
-    }
-  };
-
-  actualizarEstado = async (
-    req: Request<{ id: string }>,
-    res: Response<ApiResponse<ArticleDTO>>,
-    next: NextFunction,
-  ): Promise<void> => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: 'Sesión expirada. Inicie sesión nuevamente',
-      });
-      return;
-    }
-
-    const id = getId(req.params.id);
-    if (!id) {
-      res.status(400).json({ success: false, error: 'El id debe ser un entero positivo' });
-      return;
-    }
-
-    const parsedData = updateArticleStateSchema.safeParse(req.body);
-    if (!parsedData.success) {
-      res.status(400).json({ success: false, error: 'El estado del artículo no es válido' });
-      return;
-    }
-
-    try {
-      const data = await this.articuloService.actualizarEstado(
-        id,
-        parsedData.data.status,
-        user.id,
-      );
       res.status(200).json({ success: true, data });
     } catch (error: unknown) {
       next(error);
